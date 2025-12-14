@@ -1,0 +1,360 @@
+
+
+/* ======================================================
+app/global.css   
+LexTrack – globale Styles
+   Tailwind v4 Basis + eigenes Theming
+   ====================================================== */
+
+@import "tailwindcss";
+
+/* ------------------------------------------------------
+   1) Grundfarben & Accent-Farben (Light-Default)
+   ------------------------------------------------------ */
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+
+  /* LexTrack Accent – Default: Türkis */
+  --accent-500: #009a93;
+  --accent-600: #007f79;
+  --accent-soft: #e0f7f5;
+
+  /* UI Design Tokens (Light) */
+  --bg: #f8fafc;
+  --bg-elevated: #ffffff;
+  --fg: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --accent-ui: #009a93;
+}
+
+/* Accent-Farbschemata (optional) */
+
+html[data-accent='blue'] {
+  --accent-500: #2563eb;
+  --accent-600: #1d4ed8;
+  --accent-soft: #dbeafe;
+}
+
+html[data-accent='violet'] {
+  --accent-500: #8b5cf6;
+  --accent-600: #7c3aed;
+  --accent-soft: #ede9fe;
+}
+
+html[data-accent='amber'] {
+  --accent-500: #f59e0b;
+  --accent-600: #d97706;
+  --accent-soft: #fef3c7;
+}
+
+/* ------------------------------------------------------
+   2) Theme-Modi: light / dark / high-contrast / colorblind
+   gesteuert über data-theme am <html>
+   ------------------------------------------------------ */
+
+/* ---- DARK MODE ---- */
+html[data-theme='dark'] {
+  color-scheme: dark;
+
+  --background: #020617;
+  --foreground: #e5e7eb;
+
+  --bg: #020617;
+  --bg-elevated: #020617;
+  --fg: #e5e7eb;
+  --muted: #94a3b8;
+  --border: #1e293b;
+  --accent-ui: #22d3ee;
+}
+
+/* ---- COLORBLIND (allgemein farbenblind-freundlich) ---- */
+html[data-theme='colorblind'] {
+  color-scheme: light;
+
+  --background: #f9fafb;
+  --foreground: #111827;
+
+  --bg: #f9fafb;
+  --bg-elevated: #ffffff;
+  --fg: #111827;
+  --muted: #374151;
+  --border: #9ca3af;
+
+  /* CVD-safe Blau als Akzent */
+  --accent-ui: #0072b2;
+  --accent-500: #0072b2;
+  --accent-600: #00558a;
+  --accent-soft: #dbeafe;
+}
+
+/* ---- COLORBLIND (Deuteranopie) ---- */
+html[data-theme='colorblind-deuter'] {
+  color-scheme: light;
+
+  --background: #f9fafb;
+  --foreground: #111827;
+
+  --bg: #f9fafb;
+  --bg-elevated: #ffffff;
+  --fg: #111827;
+  --muted: #374151;
+  --border: #9ca3af;
+
+  /* Blau als Akzent, kein Grün nötig */
+  --accent-ui: #1f78b4;
+  --accent-500: #1f78b4;
+  --accent-600: #15508b;
+  --accent-soft: #dbeafe;
+}
+
+/* ---- HIGH CONTRAST (Tokens, Details unten bei main) ---- */
+html[data-theme='high-contrast'] {
+  color-scheme: dark;
+
+  --background: #000000;
+  --foreground: #ffffff;
+
+  --bg: #000000;
+  --bg-elevated: #000000;
+  --fg: #ffffff;
+  --muted: #ffffff;
+  --border: #ffffff;
+  --accent-ui: #ffea00;
+}
+
+/* System-Fallback, wenn noch kein Theme gesetzt ist */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+/* ------------------------------------------------------
+   3) Body-Basis
+   ------------------------------------------------------ */
+
+body {
+  margin: 0; /* ✅ weiße Linie / Rand entfernen */
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ------------------------------------------------------
+   4) CONTENT-BEREICH – Light / Dark / Colorblind / HC
+   Sidebar / Header / Footer werden NICHT verändert
+   ------------------------------------------------------ */
+
+/* ---- Light ---- */
+main {
+  background-color: #f3f4f6; /* slate-100 */
+}
+
+/* ---- Dark Mode ---- */
+html[data-theme='dark'] main {
+  background-color: #020617;
+}
+
+/* Karten abdunkeln */
+html[data-theme='dark'] main .bg-white {
+  background-color: #0b1120;
+}
+
+html[data-theme='dark'] main .bg-slate-50,
+html[data-theme='dark'] main .bg-slate-100 {
+  background-color: #020617;
+}
+
+html[data-theme='dark'] main .border-slate-200 {
+  border-color: #1f2937;
+}
+
+/* Textfarben */
+html[data-theme='dark'] main .text-slate-900,
+html[data-theme='dark'] main .text-slate-800,
+html[data-theme='dark'] main .text-slate-700 {
+  color: #e5e7eb;
+}
+
+html[data-theme='dark'] main .text-slate-600,
+html[data-theme='dark'] main .text-slate-500 {
+  color: #cbd5f5;
+}
+
+/* Tabellenheader im Dark Mode */
+html[data-theme='dark'] main table thead th {
+  background-color: #020617;
+  color: #e5e7eb;
+}
+
+/* ----- COLORBLIND: sichtbare Anpassungen im Content ----- */
+
+/* leicht blau-grauer Hintergrund im Content */
+html[data-theme='colorblind'] main {
+  background-color: #e5edf7; /* bläuliches Grau */
+}
+
+/* Tabellenheader klar und mit blauem Akzent */
+html[data-theme='colorblind'] main table thead th {
+  background-color: #1f2937;           /* sehr dunkles Grau */
+  color: #f9fafb;
+  border-bottom: 2px solid #0072b2;
+}
+
+/* Türkis-Akzent (#009A93) im Content in Blau umfärben */
+html[data-theme='colorblind'] main [class*="bg-[#009A93]"],
+html[data-theme='colorblind'] main [class*="bg-\\[\\#009A93\\]"] {
+  background-color: #0072b2 !important;
+}
+
+html[data-theme='colorblind'] main [class*="text-[#009A93]"],
+html[data-theme='colorblind'] main [class*="text-\\[\\#009A93\\]"] {
+  color: #0072b2 !important;
+}
+
+html[data-theme='colorblind'] main [class*="border-[#009A93]"],
+html[data-theme='colorblind'] main [class*="border-\\[\\#009A93\\]"] {
+  border-color: #0072b2 !important;
+}
+
+/* Dezent mehr Kontrast für Sekundärtexte */
+html[data-theme='colorblind'] main .text-slate-500,
+html[data-theme='colorblind'] main .text-slate-600 {
+  color: #374151;
+}
+
+/* ----- COLORBLIND DEUTERANOPIE ----- */
+
+/* leicht warmes helles Grau im Content */
+html[data-theme='colorblind-deuter'] main {
+  background-color: #f4f3ee;
+}
+
+/* Tabellenheader mit kräftigem Blau */
+html[data-theme='colorblind-deuter'] main table thead th {
+  background-color: #111827;
+  color: #f9fafb;
+  border-bottom: 2px solid #1f78b4;
+}
+
+/* Türkis-Akzent in „Deuteranopie-Blau“ umfärben */
+html[data-theme='colorblind-deuter'] main [class*="bg-[#009A93]"],
+html[data-theme='colorblind-deuter'] main [class*="bg-\\[\\#009A93\\]"] {
+  background-color: #1f78b4 !important;
+}
+
+html[data-theme='colorblind-deuter'] main [class*="text-[#009A93]"],
+html[data-theme='colorblind-deuter'] main [class*="text-\\[\\#009A93\\]"] {
+  color: #1f78b4 !important;
+}
+
+html[data-theme='colorblind-deuter'] main [class*="border-[#009A93]"],
+html[data-theme='colorblind-deuter'] main [class*="border-\\[\\#009A93\\]"] {
+  border-color: #1f78b4 !important;
+}
+
+/* ------------------------------------------------------
+   5) Schriftgrößen (global, MVP)
+   ------------------------------------------------------ */
+
+:root {
+  font-size: 16px;
+}
+
+html[data-font-size='large'] {
+  font-size: 18px;
+}
+
+html[data-font-size='xlarge'] {
+  font-size: 20px;
+}
+
+html[data-font-size='large'],
+html[data-font-size='xlarge'] {
+  line-height: 1.55;
+}
+
+/* Headlines */
+h1 { font-size: 1.5rem; line-height: 1.3; }
+h2 { font-size: 1.25rem; line-height: 1.35; }
+h3 { font-size: 1.125rem; line-height: 1.35; }
+
+html[data-font-size='large'] h1 { font-size: 1.7rem; }
+html[data-font-size='large'] h2 { font-size: 1.4rem; }
+html[data-font-size='large'] h3 { font-size: 1.25rem; }
+
+html[data-font-size='xlarge'] h1 { font-size: 1.9rem; }
+html[data-font-size='xlarge'] h2 { font-size: 1.6rem; }
+html[data-font-size='xlarge'] h3 { font-size: 1.4rem; }
+
+/* ------------------------------------------------------
+   6) Weiche Übergänge
+   ------------------------------------------------------ */
+
+main,
+main .bg-white,
+main .bg-slate-50,
+main .bg-slate-100,
+main .bg-slate-200,
+main .border-slate-200,
+main .text-slate-900,
+main .text-slate-800,
+main .text-slate-700,
+main .text-slate-600,
+main .text-slate-500,
+main .text-slate-400 {
+  transition:
+    background-color 180ms ease-out,
+    border-color 180ms ease-out,
+    color 180ms ease-out;
+}
+
+/* ------------------------------------------------------
+   7) HIGH CONTRAST – Nur im Content
+   ------------------------------------------------------ */
+
+html[data-theme='high-contrast'] main {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme='high-contrast'] main * {
+  background-color: transparent !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+}
+
+html[data-theme='high-contrast'] main button {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 2px solid #ffffff !important;
+}
+
+html[data-theme='high-contrast'] main table thead th {
+  background-color: #000000 !important;
+  color: #ffea00 !important;
+  border-bottom: 2px solid #ffffff !important;
+}
+
+html[data-theme='high-contrast'] main table td {
+  border-color: #ffffff !important;
+}
+
+html[data-theme='high-contrast'] main .chip,
+html[data-theme='high-contrast'] main .badge {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 1px solid #ffffff !important;
+}
+
+html[data-theme='high-contrast'] main input,
+html[data-theme='high-contrast'] main select,
+html[data-theme='high-contrast'] main textarea {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 2px solid #ffffff !important;
+}
