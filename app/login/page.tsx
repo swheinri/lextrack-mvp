@@ -160,15 +160,6 @@ export default function LoginPage() {
                 Kontakt mit dem LexTrack-Team aufnehmen
               </Link>
             </p>
-
-            {/* Demo-Zugang nur in DEV anzeigen, NIE in Produktion */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
-                <div className="font-semibold mb-1">Demo-Zugang (nur lokal)</div>
-                <div>E-Mail: admin@lextrack.local</div>
-                <div>Passwort: lextrack123</div>
-              </div>
-            )}
           </div>
         </div>
       </div>
