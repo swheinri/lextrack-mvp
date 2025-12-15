@@ -1,8 +1,8 @@
 // app/components/shell/header.tsx
 'use client';
 
-import React from 'react';
-import { usePathname } from 'next/navigation';
+import React, { useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useLanguage } from '../i18n/language';
 import { useUserPreferences } from '../userpreferences';
 import { LogOut } from 'lucide-react';
@@ -25,8 +25,10 @@ function getTimeGreeting(lang: 'de' | 'en') {
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const { language } = useLanguage();
   const { displayName, personalGreeting } = useUserPreferences();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const isDe = language === 'de';
 
@@ -64,28 +66,46 @@ export default function Header() {
 
   const greetingText = `${timeGreeting}, ${name}.`;
 
+  // Logout-Handler
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+
+    try {
+      await fetch('/api/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Logout fehlgeschlagen:', error);
+    } finally {
+      setIsLoggingOut(false);
+      router.push('/login');
+    }
+  };
+
   return (
-    <header className="flex items-center justify-between px-6 py-3 bg-gradient-to-r from-[#021633] via-[#003a5e] to-[#009A93] text-white shadow-sm">
+    <header className="flex items-center justify-between bg-gradient-to-r from-[#021633] via-[#003a5e] to-[#009A93] px-6 py-3 text-white shadow-sm">
       {/* links: Produkt + Seitentitel */}
-      <div className="flex flex-col min-w-[180px]">
+      <div className="min-w-[180px] flex flex-col">
         <span className="text-sm font-semibold">LexTrack Compliance Suite</span>
         <span className="text-xs text-white/80">{pageTitle}</span>
       </div>
 
-      {/* Mitte: nur anzeigen, wenn persönliche Begrüßung aktiv */}
-      <div className="flex-1 flex justify-center">
+      {/* Mitte: persönliche Begrüßung (optional) */}
+      <div className="flex flex-1 justify-center">
         {personalGreeting && (
-          <p className="text-xs sm:text-sm font-medium text-white text-center">
+          <p className="text-center text-xs font-medium text-white sm:text-sm">
             {greetingText}
           </p>
         )}
       </div>
 
-      {/* rechts: Abmelden-Button (optisch sekundär) */}
-      <div className="flex items-center justify-end min-w-[120px]">
+      {/* rechts: Abmelden-Button */}
+      <div className="flex min-w-[120px] items-center justify-end">
         <button
           type="button"
-          className="inline-flex items-center gap-1 rounded-full border border-white/40 bg-white/10 px-3 py-1 text-[11px] text-white hover:bg-white/20"
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className="inline-flex items-center gap-1 rounded-full border border-white/40 bg-white/10 px-3 py-1 text-[11px] text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label={isDe ? 'Abmelden' : 'Sign out'}
         >
           <LogOut className="h-3 w-3" />
           <span>{isDe ? 'Abmelden' : 'Sign out'}</span>

@@ -3,10 +3,10 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 
-import Shell from './components/shell';
 import { LanguageProvider } from './components/i18n/language';
 import { ThemeProvider } from './components/themecontext';
 import { UserPreferencesProvider } from './components/userpreferences';
+import ClientRoot from './client-root';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -36,7 +36,7 @@ export default function RootLayout({
         <ThemeProvider>
           <LanguageProvider>
             <UserPreferencesProvider>
-              <Shell>{children}</Shell>
+              <ClientRoot>{children}</ClientRoot>
             </UserPreferencesProvider>
           </LanguageProvider>
         </ThemeProvider>

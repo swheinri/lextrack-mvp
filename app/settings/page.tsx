@@ -23,6 +23,7 @@ import {
 import { useTheme } from '../components/themecontext';
 import { useLanguage } from '../components/i18n/language';
 import { useUserPreferences } from '../components/userpreferences';
+import { APP_VERSION, APP_BUILD_DATE } from '../config/app-meta';
 
 /* ---------- Typen ---------- */
 
@@ -62,6 +63,7 @@ const TEXT = {
     },
 
     generalHeading: 'Allgemein',
+    dataHeading: 'Daten & Export',
 
     themeLabel: 'Theme-Modus',
     themeHelp:
@@ -102,6 +104,14 @@ const TEXT = {
     blueFilterSub:
       'Reduziert den Blauanteil der Oberfläche für entspannteres Arbeiten am Abend.',
 
+    // Daten & Export – Texte
+    versionCardTitle: 'Anwendungsversion',
+    versionLabel: 'Aktuelle Version',
+    versionBuildLabel: 'Build-Datum',
+    backupCardTitle: 'Datensicherungen & Exporte',
+    backupCardSubtitle:
+      'In einem späteren Release kannst du hier Backups und Exporte deiner LexTrack-Daten verwalten. Aktuell dient dieser Bereich als Überblick über den technischen Stand der Anwendung.',
+
     wipTitle: 'In Vorbereitung',
     wipText:
       'Diese Einstellungskategorie ist im MVP noch nicht aktiv. Die Funktionen werden in einem späteren Release ergänzt.',
@@ -124,6 +134,7 @@ const TEXT = {
     },
 
     generalHeading: 'General',
+    dataHeading: 'Data & export',
 
     themeLabel: 'Theme mode',
     themeHelp:
@@ -163,6 +174,14 @@ const TEXT = {
     blueFilterTitle: 'Coming soon – Blue light filter',
     blueFilterSub:
       'Reduces blue light to make working in the evening more comfortable.',
+
+    // Data & export – texts
+    versionCardTitle: 'Application version',
+    versionLabel: 'Current version',
+    versionBuildLabel: 'Build date',
+    backupCardTitle: 'Backups & exports',
+    backupCardSubtitle:
+      'In a later release you will be able to manage backups and exports of your LexTrack data here. For now this section gives you an overview of the technical application status.',
 
     wipTitle: 'Coming soon',
     wipText:
@@ -783,15 +802,83 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Andere Settings-Kategorien noch als generisches „In Vorbereitung“ */}
-      {active !== 'general' && active !== 'notifications' && (
-        <div className="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-          <h2 className="text-base font-semibold text-slate-800 mb-2">
-            {t.wipTitle}
-          </h2>
-          <p className="text-sm text-slate-600">{t.wipText}</p>
+      {/* Detailbereich: DATEN & EXPORT */}
+      {active === 'data' && (
+        <div className="space-y-6">
+          {/* Headline-Band */}
+          <div className="rounded-xl bg-[#041225] text-white px-4 py-3 shadow-sm">
+            <h2 className="text-base sm:text-lg font-semibold">
+              {t.dataHeading}
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Anwendungsversion */}
+            <section className="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm space-y-3">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-slate-500" />
+                <h3 className="text-sm font-semibold text-slate-800">
+                  {t.versionCardTitle}
+                </h3>
+              </div>
+
+              <div className="mt-1 text-xs text-slate-600 space-y-1">
+                <p>
+                  <span className="font-medium">{t.versionLabel}:</span>{' '}
+                  <span className="font-mono">{APP_VERSION}</span>
+                </p>
+                <p>
+                  <span className="font-medium">{t.versionBuildLabel}:</span>{' '}
+                  <span className="font-mono">{APP_BUILD_DATE}</span>
+                </p>
+              </div>
+
+              <p className="mt-2 text-[11px] text-slate-500">
+                {isDe
+                  ? 'Diese Informationen helfen dir bei Rückfragen an den Support oder in Audits, den Stand der Anwendung zu dokumentieren.'
+                  : 'Use this information for support requests or audits to document the current application state.'}
+              </p>
+            </section>
+
+            {/* Backups & Exporte – Platzhalter */}
+            <section className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-4 shadow-sm space-y-3">
+              <div className="flex items-center gap-2">
+                <Database className="h-4 w-4 text-slate-500" />
+                <h3 className="text-sm font-semibold text-slate-800">
+                  {t.backupCardTitle}
+                </h3>
+              </div>
+
+              <p className="text-xs text-slate-600">{t.backupCardSubtitle}</p>
+
+              <ul className="mt-1 text-[11px] text-slate-500 list-disc list-inside space-y-1">
+                <li>
+                  {isDe
+                    ? 'Geplant: manueller Export von Konfigurationsdaten (Register, Matrizen, Rollen).'
+                    : 'Planned: manual export of configuration data (registers, matrices, roles).'}
+                </li>
+                <li>
+                  {isDe
+                    ? 'Geplant: Snapshots für revisionssichere Stände.'
+                    : 'Planned: snapshots for revision-proof states.'}
+                </li>
+              </ul>
+            </section>
+          </div>
         </div>
       )}
+
+      {/* Andere Settings-Kategorien noch als generisches „In Vorbereitung“ */}
+      {active !== 'general' &&
+        active !== 'notifications' &&
+        active !== 'data' && (
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+            <h2 className="text-base font-semibold text-slate-800 mb-2">
+              {t.wipTitle}
+            </h2>
+            <p className="text-sm text-slate-600">{t.wipText}</p>
+          </div>
+        )}
     </div>
   );
 }

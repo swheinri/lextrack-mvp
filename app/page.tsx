@@ -30,6 +30,21 @@ type MetricKey =
   | 'statusDistribution'
   | 'relevanceDistribution';
 
+/* ---------- iPhone-inspirierte Chart-Palette ---------- */
+
+const CHART_COLORS = {
+  // Register-Status
+  statusOpen: '#aeb4bc', // blaugrau
+  statusActive: '#009A93', // LexTrack-Teal
+  statusObsolete: '#a8a6b2', // graulavendel
+  statusArchived: '#3c4057', // tiefes Blau/Anthrazit
+
+  // Matrix-Status
+  matrixDraft: '#aeb4bc',
+  matrixReview: '#9097ab',
+  matrixFinal: '#3c4057',
+} as const;
+
 /* ---------- Auswertungs-Helper ---------- */
 
 function countByRelevance(rows: LawRow[]) {
@@ -113,16 +128,18 @@ function HorizontalBarChart({
   );
 }
 
-/* ---------- Einfaches Kreisdiagramm ---------- */
+/* ---------- Modernes Donut-Diagramm ---------- */
 
 function PieChart({
   title,
   items,
   emptyLabel,
+  centerLabel,
 }: {
   title: string;
   items: { label: string; value: number; color: string }[];
   emptyLabel: string;
+  centerLabel?: string;
 }) {
   const total = items.reduce((sum, it) => sum + it.value, 0);
   if (total === 0) {
@@ -152,10 +169,25 @@ function PieChart({
     <div className="space-y-3 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
       <div className="text-sm font-semibold text-slate-800">{title}</div>
       <div className="flex items-center gap-4">
-        <div
-          className="h-24 w-24 rounded-full border border-slate-200"
-          style={{ backgroundImage: gradient }}
-        />
+        {/* Donut */}
+        <div className="relative h-28 w-28">
+          <div
+            className="absolute inset-0 rounded-full border border-slate-200 shadow-sm"
+            style={{ backgroundImage: gradient }}
+          />
+          <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full bg-white text-[11px] text-slate-500">
+            {centerLabel && (
+              <span className="text-[9px] uppercase tracking-wide text-slate-400">
+                {centerLabel}
+              </span>
+            )}
+            <span className="text-sm font-semibold text-slate-700">
+              {total}
+            </span>
+          </div>
+        </div>
+
+        {/* Legende */}
         <div className="space-y-1 text-xs text-slate-700">
           {items.map((it) => {
             const pct = ((it.value / total) * 100).toFixed(0);
@@ -533,26 +565,27 @@ export default function OverviewPage() {
                   title={
                     isDe ? 'Status-Verteilung' : 'Status distribution'
                   }
+                  centerLabel={isDe ? 'Dokumente' : 'Documents'}
                   items={[
                     {
                       label: isDe ? 'offen' : 'open',
                       value: stats.status.offen,
-                      color: '#64748b',
+                      color: CHART_COLORS.statusOpen,
                     },
                     {
                       label: isDe ? 'aktiv' : 'active',
                       value: stats.status.aktiv,
-                      color: '#009a93',
+                      color: CHART_COLORS.statusActive,
                     },
                     {
                       label: isDe ? 'obsolet' : 'obsolete',
                       value: stats.status.obsolet,
-                      color: '#f97316',
+                      color: CHART_COLORS.statusObsolete,
                     },
                     {
                       label: isDe ? 'archiviert' : 'archived',
                       value: stats.status.archiviert,
-                      color: '#0f172a',
+                      color: CHART_COLORS.statusArchived,
                     },
                   ].filter((it) => it.value > 0)}
                   emptyLabel={noDataLabel}
@@ -685,21 +718,22 @@ export default function OverviewPage() {
               <div className="mt-3">
                 <PieChart
                   title={isDe ? 'Matrixstatus' : 'Matrix status'}
+                  centerLabel={isDe ? 'Matrizen' : 'Matrices'}
                   items={[
                     {
                       label: isDe ? 'Angelegt' : 'Draft',
                       value: matrixStats.statusCounts.draft,
-                      color: '#64748b',
+                      color: CHART_COLORS.matrixDraft,
                     },
                     {
                       label: isDe ? 'In Bewertung' : 'In review',
                       value: matrixStats.statusCounts.in_review,
-                      color: '#f59e0b',
+                      color: CHART_COLORS.matrixReview,
                     },
                     {
                       label: isDe ? 'Abgeschlossen' : 'Completed',
                       value: matrixStats.statusCounts.final,
-                      color: '#10b981',
+                      color: CHART_COLORS.matrixFinal,
                     },
                   ].filter((it) => it.value > 0)}
                   emptyLabel={noDataLabel}

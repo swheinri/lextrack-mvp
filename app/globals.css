@@ -358,3 +358,10 @@ html[data-theme='high-contrast'] main textarea {
   color: #ffffff !important;
   border: 2px solid #ffffff !important;
 }
+/* Login-Hintergrundbild */
+.login-bg {
+  background-image: url('/images/login-mountains.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
