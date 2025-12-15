@@ -2,6 +2,7 @@
 'use client';
 
 import React from 'react';
+import { APP_VERSION } from '../../config/app-version';
 
 export default function Footer() {
   const year = new Date().getFullYear();
@@ -25,7 +26,7 @@ export default function Footer() {
 
         {/* Version ganz rechts im Footer */}
         <div className="flex-1 text-right">
-          Version v0.10
+          Version v{APP_VERSION}
         </div>
       </div>
     </footer>

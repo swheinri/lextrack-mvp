@@ -421,27 +421,26 @@ export default function SettingsPage() {
               </p>
 
               <div className="mt-2 inline-flex rounded-full border border-slate-300 bg-slate-100 p-1 text-xs">
-                {[
-                  { id: 'de', label: t.languageGerman },
-                  { id: 'en', label: t.languageEnglish },
-                ].map((opt) => {
-                  const isActive = language === opt.id;
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setLanguage(opt.id as 'de' | 'en')}
-                      className={[
-                        'px-3 py-1 rounded-full transition',
-                        isActive
-                          ? 'bg-white shadow-sm text-slate-900'
-                          : 'bg-transparent text-slate-600 hover:text-slate-900',
-                      ].join(' ')}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
+                {[{ id: 'de', label: t.languageGerman }, { id: 'en', label: t.languageEnglish }].map(
+                  (opt) => {
+                    const isActive = language === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setLanguage(opt.id as 'de' | 'en')}
+                        className={[
+                          'px-3 py-1 rounded-full transition',
+                          isActive
+                            ? 'bg-white shadow-sm text-slate-900'
+                            : 'bg-transparent text-slate-600 hover:text-slate-900',
+                        ].join(' ')}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  }
+                )}
               </div>
             </section>
 
@@ -828,7 +827,9 @@ export default function SettingsPage() {
                   <span className="font-mono">{APP_VERSION}</span>
                 </p>
                 <p>
-                  <span className="font-medium">{t.versionBuildLabel}:</span>{' '}
+                  <span className="font-medium">
+                    {t.versionBuildLabel}:
+                  </span>{' '}
                   <span className="font-mono">{APP_BUILD_DATE}</span>
                 </p>
               </div>
