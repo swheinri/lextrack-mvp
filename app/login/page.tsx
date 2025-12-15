@@ -1,21 +1,16 @@
 // app/login/page.tsx
 'use client';
 
-import React, { useState, FormEvent } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const router = useRouter();
-
-  // Demo-Vorbelegung, damit du nichts tippen musst
   const [email, setEmail] = useState('admin@lextrack.local');
   const [password, setPassword] = useState('lextrack123');
-
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -28,15 +23,16 @@ export default function LoginPage() {
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => null);
+        const data = await res.json().catch(() => ({}));
         setError(data?.message ?? 'Login fehlgeschlagen.');
         return;
       }
 
-      // Login erfolgreich → Startseite
-      router.push('/');
+      // nach erfolgreichem Login auf die Startseite
+      window.location.href = '/';
     } catch (err) {
-      setError('Es ist ein technischer Fehler aufgetreten. Bitte später erneut versuchen.');
+      console.error(err);
+      setError('Es ist ein technischer Fehler aufgetreten.');
     } finally {
       setLoading(false);
     }
@@ -57,7 +53,7 @@ export default function LoginPage() {
       <div className="relative flex min-h-screen items-center justify-center px-4 py-10">
         {/* Login-Card */}
         <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white/95 shadow-2xl ring-1 ring-slate-900/10 backdrop-blur">
-          {/* Header / Brand-Bereich mit Verlauf */}
+          {/* Header / Brand-Bereich mit weicherem Verlauf */}
           <div
             className="rounded-t-3xl px-8 py-7 text-center text-teal-50"
             style={{
@@ -97,13 +93,6 @@ export default function LoginPage() {
                 Melde dich mit deinen Zugangsdaten bei LexTrack an.
               </p>
             </div>
-
-            {/* Fehlermeldung */}
-            {error && (
-              <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
-                {error}
-              </div>
-            )}
 
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-1 text-xs">
@@ -147,12 +136,18 @@ export default function LoginPage() {
                 />
               </div>
 
+              {error && (
+                <p className="text-[11px] text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                  {error}
+                </p>
+              )}
+
               <button
                 type="submit"
                 disabled={loading}
-                className="mt-2 inline-flex w-full items-center justify-center rounded-md bg-teal-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-teal-500 disabled:cursor-not-allowed disabled:opacity-70 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-white"
+                className="mt-2 inline-flex w-full items-center justify-center rounded-md bg-teal-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-teal-500 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-white"
               >
-                {loading ? 'Anmelden…' : 'Anmelden'}
+                {loading ? 'Anmeldung läuft…' : 'Anmelden'}
               </button>
             </form>
 
@@ -166,12 +161,14 @@ export default function LoginPage() {
               </Link>
             </p>
 
-            {/* Optional: Demo-Zugang-Hinweis */}
-            <div className="mt-4 rounded-md bg-slate-50 px-3 py-2 text-[10px] text-slate-500">
-              <div className="font-semibold text-slate-600">Demo-Zugang</div>
-              <div>E-Mail: admin@lextrack.local</div>
-              <div>Passwort: lextrack123</div>
-            </div>
+            {/* Demo-Zugang nur in DEV anzeigen, NIE in Produktion */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
+                <div className="font-semibold mb-1">Demo-Zugang (nur lokal)</div>
+                <div>E-Mail: admin@lextrack.local</div>
+                <div>Passwort: lextrack123</div>
+              </div>
+            )}
           </div>
         </div>
       </div>
