@@ -5,8 +5,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('admin@lextrack.local');
-  const [password, setPassword] = useState('lextrack123');
+  // ❗ Keine Demo-Vorgabedaten mehr
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -94,7 +95,7 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="space-y-4" onSubmit={handleSubmit} autoComplete="on">
               <div className="space-y-1 text-xs">
                 <label
                   htmlFor="email"
@@ -108,6 +109,7 @@ export default function LoginPage() {
                   placeholder="name@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="username"
                   className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 shadow-sm outline-none ring-0 transition hover:border-teal-500/60 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/70"
                 />
               </div>
@@ -132,6 +134,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
                   className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 shadow-sm outline-none ring-0 transition hover:border-teal-500/60 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/70"
                 />
               </div>
