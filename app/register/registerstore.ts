@@ -15,6 +15,29 @@ export type Relevanz = 'Niedrig' | 'Mittel' | 'Hoch';
 export type RiskMode = 'qualitativ' | 'emv' | 'fmea' | 'fta' | 'bia';
 
 /**
+ * Norm-/Rechtsfamilie zur Auswertung (Reporting / KI).
+ */
+export type NormFamily = 'DIN' | 'ISO' | 'EU' | 'Sonstige';
+
+/**
+ * Strukturierte Dokumentenart für das Kataster.
+ */
+export type Dokumentenart =
+  | 'Verordnung'
+  | 'Gesetz'
+  | 'Norm'
+  | 'Vorschrift'
+  | 'Vertrag'
+  | 'Richtlinie'
+  | 'Sonstige';
+
+/**
+ * Vertragsumfeld – nur relevant, wenn Dokumentenart = „Vertrag“,
+ * kann aber generell gepflegt werden.
+ */
+export type Vertragsumfeld = 'B2B' | 'B2C' | 'B2G' | 'Intern';
+
+/**
  * Workflow-Zustände – aktuell im Register nicht aktiv verwendet,
  * bleiben aber als optionale Alt-Felder erhalten.
  */
@@ -43,8 +66,8 @@ export type EvaluationStatus =
 export type BewertungErgebnis = 'muss' | 'kann' | 'nicht_relevant';
 
 export type HistoryItem = {
-  date: string;  // ISO
-  text: string;  // z. B. "Bezeichnung: 'alt' → 'neu'"
+  date: string; // ISO
+  text: string; // z. B. "Bezeichnung: 'alt' → 'neu'"
   user?: string; // optional (z. B. 'Admin')
 };
 
@@ -52,7 +75,11 @@ export type LawRow = {
   id: string;
 
   // Grundlegende Metadaten
-  rechtsart: string;
+  dokumentenart?: Dokumentenart;      // neue strukturierte Dokumentenart
+  vertragsumfeld?: Vertragsumfeld;    // optionales Vertragsumfeld
+  rechtsart?: string;                 // legacy / Freitext
+  normFamily?: NormFamily;            // z. B. DIN / ISO / EU / Sonstige
+
   kuerzel: string;
   bezeichnung: string;
   themenfeld: string;
@@ -95,9 +122,9 @@ export type LawRow = {
   bewertungErgebnis?: BewertungErgebnis;
   evaluationNote?: string;
 
-  evaluationLikelihood?: number;                   // 1..5
-  evaluationImpact?: number;                       // 1..5
-  evaluationScore?: number;                        // P×I
+  evaluationLikelihood?: number; // 1..5
+  evaluationImpact?: number; // 1..5
+  evaluationScore?: number; // P×I
   evaluationLevel?: 'Niedrig' | 'Mittel' | 'Hoch'; // abgeleitet aus Score
   evaluatedAt?: string;
   evaluatedBy?: string;
@@ -109,16 +136,22 @@ export type LawRow = {
   mitigationAt?: string;
 
   // Rollen/Governance
-  assignedTo?: string;   // Reviewer- oder Bearbeiter-User-ID
-  reviewedBy?: string;   // User-ID des Reviewers
-  approvedBy?: string;   // User-ID des Approvers
+  assignedTo?: string; // Reviewer- oder Bearbeiter-User-ID
+  reviewedBy?: string; // User-ID des Reviewers
+  approvedBy?: string; // User-ID des Approvers
   reviewerNote?: string; // optionale Prüfnotiz
   approverNote?: string; // optionale Freigabenotiz
 
   projekt?: {
     owner?: string;
     milestones?: { id: string; title: string; due: string; done?: boolean }[];
-    tasks?: { id: string; title: string; due?: string; assignee?: string; done?: boolean }[];
+    tasks?: {
+      id: string;
+      title: string;
+      due?: string;
+      assignee?: string;
+      done?: boolean;
+    }[];
   };
 
   history?: HistoryItem[];
@@ -145,9 +178,7 @@ const stateRef: { current: Snapshot } = {
 const serverSnapshot: Snapshot = { rows: [], lastAddedId: undefined };
 
 /**
- * Laden aus LocalStorage.
- * Es findet KEINE Workflow-/Status-Nachberechnung mehr statt,
- * wir lesen die Daten 1:1 ein (MVP: reines Dokumentenregister).
+ * Laden aus LocalStorage (ohne Nachberechnung).
  */
 function loadFromLS(): LawRow[] {
   if (typeof window === 'undefined') return [];
@@ -203,7 +234,6 @@ const store: Store = {
       ...row,
       createdAt: created,
       history,
-      // KEINE automatische Workflow-/Evaluation-Logik mehr
     };
 
     const next = [toInsert, ...stateRef.current.rows];
@@ -214,7 +244,7 @@ const store: Store = {
 
   update: (id, patch) => {
     const next = stateRef.current.rows.map((r) =>
-      r.id === id ? { ...r, ...patch } : r
+      r.id === id ? { ...r, ...patch } : r,
     );
     stateRef.current = { rows: next, lastAddedId: undefined };
     saveToLS(next);
@@ -241,7 +271,7 @@ export function useRegisterStore() {
   const snapshot = React.useSyncExternalStore(
     store.subscribe,
     store.getSnapshot,
-    () => serverSnapshot
+    () => serverSnapshot,
   );
   return {
     rows: snapshot.rows,

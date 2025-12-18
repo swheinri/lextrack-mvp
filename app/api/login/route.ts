@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const DEMO_USER = {
   email: 'admin@lextrack.local',
-  password: 'lextrack123',
+  password: 'lex#track#20#25!',
 };
 
 const AUTH_COOKIE_NAME = 'lextrack_auth';

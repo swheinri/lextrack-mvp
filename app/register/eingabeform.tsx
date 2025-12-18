@@ -1,13 +1,19 @@
 // app/register/eingabeform.tsx
 'use client';
 
-import React, { useRef } from 'react';
-import { useRegisterStore, Relevanz, makeId } from './registerstore';
+import React, { useRef, useState } from 'react';
+import {
+  useRegisterStore,
+  Relevanz,
+  makeId,
+  Dokumentenart,
+  Vertragsumfeld,
+  LawRow,
+} from './registerstore';
 import { useLanguage } from '../components/i18n/language';
 
 /* --------------------------------------------------
    Kopfbereich-Texte (für Überschrift & Subline)
-   Kann z.B. in register/page.tsx importiert werden
    -------------------------------------------------- */
 export const FORM_TEXT = {
   de: {
@@ -27,8 +33,15 @@ export const FORM_TEXT = {
    -------------------------------------------------- */
 const FIELD_TEXT = {
   de: {
-    legalTypeLabel: 'Rechtsart',
-    legalTypePlaceholder: 'EU, DE, DIN …',
+    docTypeLabel: 'Dokumentenart',
+    docTypePlaceholder: '— Dokumentenart wählen —',
+
+    contractEnvLabel: 'Vertragsumfeld',
+    contractEnvPlaceholder: '— Vertragsumfeld wählen —',
+    contractEnvB2B: 'B2B – Geschäftskunden',
+    contractEnvB2C: 'B2C – Privatkunden',
+    contractEnvB2G: 'B2G – öffentliche Hand',
+    contractEnvInternal: 'Intern – konzernintern',
 
     refLabel: 'Kürzel',
     refPlaceholder: '2014/95/EU …',
@@ -38,10 +51,11 @@ const FIELD_TEXT = {
 
     topicLabel: 'Themenfeld',
     topicPlaceholder: '— Themenfeld wählen —',
-    topicESG: 'ESG',
-    topicCompliance: 'Compliance',
-    topicDataProtection: 'Datenschutz',
-    topicHSE: 'Arbeitsschutz',
+    topicSafety: 'Sicherheit und Arbeitsschutz',
+    topicInfoSec: 'Daten- und Informationssicherheit',
+    topicEnv: 'Umweltschutz',
+    topicEnergy: 'Energiemanagement',
+    topicCert: 'Zertifizierung',
 
     firstNameLabel: 'Vorname',
     firstNamePlaceholder: 'Vorname',
@@ -66,8 +80,15 @@ const FIELD_TEXT = {
     submitButton: 'Ins Register übernehmen',
   },
   en: {
-    legalTypeLabel: 'Legal type',
-    legalTypePlaceholder: 'EU, DE, DIN …',
+    docTypeLabel: 'Document type',
+    docTypePlaceholder: '— Select document type —',
+
+    contractEnvLabel: 'Contract context',
+    contractEnvPlaceholder: '— Select contract context —',
+    contractEnvB2B: 'B2B – business customers',
+    contractEnvB2C: 'B2C – consumers',
+    contractEnvB2G: 'B2G – public sector',
+    contractEnvInternal: 'Internal – intra-group',
 
     refLabel: 'Reference',
     refPlaceholder: '2014/95/EU …',
@@ -77,10 +98,11 @@ const FIELD_TEXT = {
 
     topicLabel: 'Topic area',
     topicPlaceholder: '— Select topic —',
-    topicESG: 'ESG',
-    topicCompliance: 'Compliance',
-    topicDataProtection: 'Data protection',
-    topicHSE: 'Occupational safety',
+    topicSafety: 'Safety and occupational health',
+    topicInfoSec: 'Data and information security',
+    topicEnv: 'Environmental protection',
+    topicEnergy: 'Energy management',
+    topicCert: 'Certification',
 
     firstNameLabel: 'First name',
     firstNamePlaceholder: 'First name',
@@ -106,18 +128,14 @@ const FIELD_TEXT = {
   },
 } as const;
 
-const label =
-  'text-xs font-semibold text-slate-700 mb-1';
+const label = 'text-xs font-semibold text-slate-700 mb-1';
 const input =
   'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm placeholder-slate-400 outline-none transition duration-200 hover:border-slate-300 focus:border-[#009A93] focus:ring-4 focus:ring-[#009A93]/20';
-const box =
-  'bg-white rounded-xl shadow-sm ring-1 ring-slate-200';
+const box = 'bg-white rounded-xl shadow-sm ring-1 ring-slate-200';
 const btn =
   'inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition';
-const btnPrimary =
-  `${btn} bg-[#14295f] text-white hover:brightness-110`;
-const btnAttach =
-  `${btn} bg-[#009A93] text-white hover:brightness-110`;
+const btnPrimary = `${btn} bg-[#14295f] text-white hover:brightness-110`;
+const btnAttach = `${btn} bg-[#009A93] text-white hover:brightness-110`;
 
 function Field({
   labelText,
@@ -143,6 +161,9 @@ export default React.memo(function Eingabeform() {
   const { language } = useLanguage();
   const t = FIELD_TEXT[language];
 
+  const [docType, setDocType] = useState<Dokumentenart | ''>('');
+  const [contractEnv, setContractEnv] = useState<Vertragsumfeld | ''>('');
+
   const pickPdf = () => fileRef.current?.click();
 
   const submit: React.FormEventHandler<HTMLFormElement> = (e) => {
@@ -150,7 +171,6 @@ export default React.memo(function Eingabeform() {
     const fd = new FormData(e.currentTarget);
     const get = (name: string) => (fd.get(name)?.toString().trim() ?? '');
 
-    // PDF Datei
     const pdf = fd.get('pdfFile') as File | null;
 
     const createdAt = new Date().toISOString();
@@ -163,15 +183,22 @@ export default React.memo(function Eingabeform() {
         .filter(Boolean)
         .join(' ') || 'System';
 
-    const row: any = {
+    const dokumentenart = (get('dokumentenart') ||
+      undefined) as Dokumentenart | undefined;
+    const vertragsumfeld = (get('vertragsumfeld') ||
+      undefined) as Vertragsumfeld | undefined;
+
+    const row: LawRow = {
       id: makeId(),
-      rechtsart: get('rechtsart'),
+      dokumentenart,
+      vertragsumfeld,
+
       kuerzel: get('kuerzel'),
       bezeichnung: get('bezeichnung'),
       themenfeld: get('themenfeld'),
+
       publiziert: get('publiziert'),
       frist: get('frist'),
-
       relevanz: (get('relevanz') || undefined) as Relevanz | undefined,
 
       // Erfassung durch
@@ -204,35 +231,39 @@ export default React.memo(function Eingabeform() {
     }
 
     // Minimalbedingung: irgendein Basisfeld gesetzt
-    if (row.rechtsart || row.kuerzel || row.bezeichnung) {
+    if (row.dokumentenart || row.kuerzel || row.bezeichnung || row.themenfeld) {
       add(row);
       e.currentTarget.reset();
       if (fileRef.current) fileRef.current.value = '';
+      setDocType('');
+      setContractEnv('');
     }
   };
 
   return (
-    <form
-      ref={formRef}
-      onSubmit={submit}
-      className={`${box} p-4 sm:p-5`}
-    >
-      {/* Reihe 1 */}
+    <form ref={formRef} onSubmit={submit} className={`${box} p-4 sm:p-5`}>
+      {/* Reihe 1: Dokumentenart, Kürzel, Bezeichnung, Themenfeld */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-        <Field labelText={t.legalTypeLabel} className="md:col-span-3">
-          <input
-            name="rechtsart"
+        <Field labelText={t.docTypeLabel} className="md:col-span-3">
+          <select
+            name="dokumentenart"
             className={input}
-            placeholder={t.legalTypePlaceholder}
-          />
+            value={docType}
+            onChange={(e) => setDocType(e.target.value as Dokumentenart | '')}
+          >
+            <option value="">{t.docTypePlaceholder}</option>
+            <option value="Verordnung">Verordnung</option>
+            <option value="Gesetz">Gesetz</option>
+            <option value="Norm">Norm</option>
+            <option value="Vorschrift">Vorschrift</option>
+            <option value="Vertrag">Vertrag</option>
+            <option value="Richtlinie">Richtlinie</option>
+            <option value="Sonstige">Sonstige</option>
+          </select>
         </Field>
 
         <Field labelText={t.refLabel} className="md:col-span-3">
-          <input
-            name="kuerzel"
-            className={input}
-            placeholder={t.refPlaceholder}
-          />
+          <input name="kuerzel" className={input} placeholder={t.refPlaceholder} />
         </Field>
 
         <Field labelText={t.titleLabel} className="md:col-span-4">
@@ -246,16 +277,16 @@ export default React.memo(function Eingabeform() {
         <Field labelText={t.topicLabel} className="md:col-span-2">
           <select name="themenfeld" className={input} defaultValue="">
             <option value="">{t.topicPlaceholder}</option>
-            <option value="ESG">{t.topicESG}</option>
-            <option value="Compliance">{t.topicCompliance}</option>
-            {/* Werte bleiben deutsch für Konsistenz im Store */}
-            <option value="Datenschutz">{t.topicDataProtection}</option>
-            <option value="Arbeitsschutz">{t.topicHSE}</option>
+            <option value="Sicherheit und Arbeitsschutz">{t.topicSafety}</option>
+            <option value="Daten- und Informationssicherheit">{t.topicInfoSec}</option>
+            <option value="Umweltschutz">{t.topicEnv}</option>
+            <option value="Energiemanagement">{t.topicEnergy}</option>
+            <option value="Zertifizierung">{t.topicCert}</option>
           </select>
         </Field>
       </div>
 
-      {/* Reihe 2 */}
+      {/* Reihe 2: Person, Abteilung, Vertragsumfeld, Relevanz */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mt-3">
         <Field labelText={t.firstNameLabel} className="md:col-span-2">
           <input
@@ -281,10 +312,24 @@ export default React.memo(function Eingabeform() {
           />
         </Field>
 
-        <Field labelText={t.relevanzLabel} className="md:col-span-3">
+        <Field labelText={t.contractEnvLabel} className="md:col-span-3">
+          <select
+            name="vertragsumfeld"
+            className={input}
+            value={contractEnv}
+            onChange={(e) => setContractEnv(e.target.value as Vertragsumfeld | '')}
+          >
+            <option value="">{t.contractEnvPlaceholder}</option>
+            <option value="B2B">{t.contractEnvB2B}</option>
+            <option value="B2C">{t.contractEnvB2C}</option>
+            <option value="B2G">{t.contractEnvB2G}</option>
+            <option value="Intern">{t.contractEnvInternal}</option>
+          </select>
+        </Field>
+
+        <Field labelText={t.relevanzLabel} className="md:col-span-2">
           <select name="relevanz" className={input} defaultValue="">
             <option value="">{t.relevanzPlaceholder}</option>
-            {/* Werte bleiben: Niedrig / Mittel / Hoch */}
             <option value="Niedrig">{t.relLow}</option>
             <option value="Mittel">{t.relMedium}</option>
             <option value="Hoch">{t.relHigh}</option>
@@ -292,14 +337,10 @@ export default React.memo(function Eingabeform() {
         </Field>
       </div>
 
-      {/* Reihe 3 */}
+      {/* Reihe 3: Dokument / Publiziert / Frist */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mt-3">
-        <Field labelText={t.docLabel}>
-          <input
-            name="dokumentUrl"
-            className={input}
-            placeholder={t.docPlaceholder}
-          />
+        <Field labelText={t.docLabel} className="md:col-span-6">
+          <input name="dokumentUrl" className={input} placeholder={t.docPlaceholder} />
         </Field>
 
         <Field labelText={t.publishedLabel} className="md:col-span-3">
@@ -314,11 +355,7 @@ export default React.memo(function Eingabeform() {
       {/* Aktionen */}
       <div className="flex items-end gap-4 mt-4">
         <div className="relative">
-          <button
-            type="button"
-            className={btnAttach}
-            onClick={pickPdf}
-          >
+          <button type="button" className={btnAttach} onClick={pickPdf}>
             {t.attachButton}
           </button>
           <span className="absolute left-0 top-full mt-1 text-xs text-slate-500">

@@ -629,7 +629,7 @@ export default function Registerview({
           <thead>
             <tr className="bg-[#009A93] text-white">
               <th className={th}>
-                {uiLang === 'de' ? 'Rechtsart' : 'Legal type'}
+                {uiLang === 'de' ? 'Dokumentenart' : 'Document type'}
               </th>
               <th className={th}>
                 {uiLang === 'de' ? 'Kürzel' : 'Reference'}
@@ -681,6 +681,7 @@ export default function Registerview({
                   key={r.id}
                   className="border-t border-slate-100 hover:bg-slate-50/50 dark:border-slate-700 dark:hover:bg-slate-800"
                 >
+                  {/* Dokumentenart = rechtsart-Feld aus dem Store, UI-Label angepasst */}
                   <td className={td}>{r.rechtsart || '—'}</td>
                   <td className={td}>{r.kuerzel || '—'}</td>
                   <td

@@ -78,19 +78,19 @@ const TEXT = {
 
 /* ---- Hilfsfunktionen für History ---- */
 
-function displayValue(val: any): string {
+function displayValue(val: unknown): string {
   if (val == null || val === '') return '—';
   return String(val);
 }
 
-function displayDate(val: any): string {
+function displayDate(val: unknown): string {
   if (!val) return '';
-  const d = new Date(val);
+  const d = new Date(String(val));
   if (isNaN(d.getTime())) return String(val);
   return d.toLocaleDateString('de-DE');
 }
 
-function describeDateChange(label: string, beforeVal?: any, afterVal?: any) {
+function describeDateChange(label: string, beforeVal?: unknown, afterVal?: unknown) {
   const from = beforeVal ? displayDate(beforeVal) : '';
   const to = afterVal ? displayDate(afterVal) : '';
 
@@ -188,8 +188,7 @@ function buildHistoryEntries(before: LawRow, after: Partial<LawRow>) {
 function ensureCreationEntry(existing: any[] | undefined, before: LawRow) {
   const history = existing ? [...existing] : [];
   if (history.length === 0) {
-    const createdAt =
-      before.createdAt || before.publiziert || new Date().toISOString();
+    const createdAt = before.createdAt || before.publiziert || new Date().toISOString();
     const creator =
       [before.erfasserVorname ?? '', before.erfasserNachname ?? '']
         .filter(Boolean)
@@ -203,9 +202,9 @@ function ensureCreationEntry(existing: any[] | undefined, before: LawRow) {
 
 export default function Page() {
   const { rows, remove, update } = useRegisterStore();
-  const { docs } = useMatrixStore();
+  const { docs = [] } = useMatrixStore() as any;
   const { language } = useLanguage();
-  const t = TEXT[language] ?? TEXT.de;
+  const t = (TEXT as any)[language] ?? TEXT.de;
   const isDe = language === 'de';
 
   const role: UiRole = 'admin';
@@ -243,8 +242,8 @@ export default function Page() {
 
   const computeBlockReasons = (row: LawRow): string[] => {
     const reasons: string[] = [];
+    const hasMatrix = (docs ?? []).some((d: any) => d.lawId === row.id);
 
-    const hasMatrix = docs.some((d: any) => d.lawId === row.id);
     if (hasMatrix) reasons.push(t.cannotDeleteReasonMatrix);
     if (row.status === 'aktiv') reasons.push(t.cannotDeleteReasonActive);
     if (row.status === 'archiviert') reasons.push(t.cannotDeleteReasonArchived);
@@ -337,8 +336,7 @@ export default function Page() {
         const relevanz = r.relevanz || '—';
         const status = r.status || '—';
         const erfasser =
-          [r.erfasserVorname, r.erfasserNachname].filter(Boolean).join(' ') ||
-          '—';
+          [r.erfasserVorname, r.erfasserNachname].filter(Boolean).join(' ') || '—';
 
         return `
           <tr>
@@ -365,124 +363,28 @@ export default function Page() {
   <meta charset="utf-8" />
   <title>LexTrack – ${titleLine}</title>
   <style>
-    * {
-      box-sizing: border-box;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    body {
-      margin: 24px;
-      background:#f3f4f6;
-      color:#111827;
-      font-size: 11px;
-    }
-    .page {
-      max-width: 980px;
-      margin: 0 auto;
-      background: #ffffff;
-      border-radius: 12px;
-      padding: 16px 20px 20px;
-      box-shadow: 0 0 0 1px #e5e7eb;
-    }
-    .topbar {
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      margin-bottom:10px;
-    }
-    .brand {
-      font-size:10px;
-      color:#6b7280;
-    }
-    h1 {
-      font-size:16px;
-      margin:2px 0 0 0;
-    }
-    h2 {
-      font-size:12px;
-      margin:2px 0 0 0;
-      font-weight:500;
-      color:#4b5563;
-    }
-    .meta-line {
-      margin-top:4px;
-      font-size:10px;
-      color:#6b7280;
-    }
-    .badges {
-      margin-top:6px;
-      display:flex;
-      flex-wrap:wrap;
-      gap:4px;
-    }
-    .badge {
-      border-radius:999px;
-      padding:2px 8px;
-      border:1px solid #e5e7eb;
-      background:#f9fafb;
-      font-size:10px;
-      color:#374151;
-      display:inline-flex;
-      align-items:center;
-      gap:4px;
-    }
-    .badge-label {
-      font-weight:500;
-      text-transform:uppercase;
-      letter-spacing:0.03em;
-      font-size:9px;
-      color:#6b7280;
-    }
-    .badge strong {
-      font-weight:600;
-    }
-    .badge-primary {
-      border-color:#bfdbfe;
-      background:#eff6ff;
-      color:#1d4ed8;
-    }
-    .topbar-right {
-      text-align:right;
-      font-size:10px;
-      color:#6b7280;
-    }
-
-    table {
-      width:100%;
-      border-collapse:collapse;
-      margin-top:10px;
-    }
-    th, td {
-      border:1px solid #e5e7eb;
-      padding:4px 6px;
-      vertical-align:top;
-    }
-    th {
-      background:#f3f4f6;
-      font-weight:600;
-      text-align:left;
-    }
-    tbody tr:nth-child(even) td {
-      background:#f9fafb;
-    }
-
-    .footer {
-      margin-top:8px;
-      display:flex;
-      justify-content:space-between;
-      font-size:9px;
-      color:#6b7280;
-    }
-
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 24px; background:#f3f4f6; color:#111827; font-size: 11px; }
+    .page { max-width: 980px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 16px 20px 20px; box-shadow: 0 0 0 1px #e5e7eb; }
+    .topbar { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+    .brand { font-size:10px; color:#6b7280; }
+    h1 { font-size:16px; margin:2px 0 0 0; }
+    h2 { font-size:12px; margin:2px 0 0 0; font-weight:500; color:#4b5563; }
+    .meta-line { margin-top:4px; font-size:10px; color:#6b7280; }
+    .badges { margin-top:6px; display:flex; flex-wrap:wrap; gap:4px; }
+    .badge { border-radius:999px; padding:2px 8px; border:1px solid #e5e7eb; background:#f9fafb; font-size:10px; color:#374151; display:inline-flex; align-items:center; gap:4px; }
+    .badge-label { font-weight:500; text-transform:uppercase; letter-spacing:0.03em; font-size:9px; color:#6b7280; }
+    .badge strong { font-weight:600; }
+    .badge-primary { border-color:#bfdbfe; background:#eff6ff; color:#1d4ed8; }
+    .topbar-right { text-align:right; font-size:10px; color:#6b7280; }
+    table { width:100%; border-collapse:collapse; margin-top:10px; }
+    th, td { border:1px solid #e5e7eb; padding:4px 6px; vertical-align:top; }
+    th { background:#f3f4f6; font-weight:600; text-align:left; }
+    tbody tr:nth-child(even) td { background:#f9fafb; }
+    .footer { margin-top:8px; display:flex; justify-content:space-between; font-size:9px; color:#6b7280; }
     @media print {
-      body {
-        background:#ffffff;
-        margin: 10mm;
-      }
-      .page {
-        box-shadow:none;
-        border-radius:0;
-        padding:0;
-      }
+      body { background:#ffffff; margin: 10mm; }
+      .page { box-shadow:none; border-radius:0; padding:0; }
     }
   </style>
 </head>
@@ -494,11 +396,9 @@ export default function Page() {
         <h1>${titleLine}</h1>
         <h2>${isDe ? 'Regelwerkskataster' : 'Regulatory register'}</h2>
         <div class="meta-line">
-          ${
-            isDe
-              ? 'Kataster für gesetzliche, normative und interne Vorgaben.'
-              : 'Register for legal, normative and internal requirements.'
-          }
+          ${isDe
+            ? 'Kataster für gesetzliche, normative und interne Vorgaben.'
+            : 'Register for legal, normative and internal requirements.'}
         </div>
         <div class="badges">
           <div class="badge badge-primary">
@@ -540,26 +440,17 @@ export default function Page() {
           <th style="width:70px;">${isDe ? 'Frist' : 'Due date'}</th>
           <th style="width:70px;">${isDe ? 'Relevanz' : 'Relevance'}</th>
           <th style="width:70px;">${isDe ? 'Status' : 'Status'}</th>
-          <th style="width:130px;">${
-            isDe ? 'Erfassung durch' : 'Recorded by'
-          }</th>
+          <th style="width:130px;">${isDe ? 'Erfassung durch' : 'Recorded by'}</th>
         </tr>
       </thead>
       <tbody>
-        ${
-          rowsHtml ||
-          `
+        ${rowsHtml || `
         <tr>
           <td colspan="9" style="text-align:center; color:#9ca3af;">
-            ${
-              isDe
-                ? 'Keine Einträge im Kataster.'
-                : 'No entries in the register.'
-            }
+            ${isDe ? 'Keine Einträge im Kataster.' : 'No entries in the register.'}
           </td>
         </tr>
-        `
-        }
+        `}
       </tbody>
     </table>
 
@@ -567,11 +458,7 @@ export default function Page() {
       <div>© 2025 LexTrack – Regulatory Intelligence &amp; Compliance</div>
       <div style="text-align:right;">
         <div>${isDe ? 'Intern' : 'Internal'}</div>
-        <div>${
-          isDe
-            ? 'Generiert mit LexTrack Compliance Suite'
-            : 'Generated with LexTrack Compliance Suite'
-        }</div>
+        <div>${isDe ? 'Generiert mit LexTrack Compliance Suite' : 'Generated with LexTrack Compliance Suite'}</div>
       </div>
     </div>
   </div>
@@ -595,12 +482,8 @@ export default function Page() {
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-800 shadow-sm">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-2xl font-semibold leading-tight">
-              {t.headerTitle}
-            </div>
-            <div className="mt-1 text-sm text-slate-500">
-              {t.headerSubline}
-            </div>
+            <div className="text-2xl font-semibold leading-tight">{t.headerTitle}</div>
+            <div className="mt-1 text-sm text-slate-500">{t.headerSubline}</div>
           </div>
           <button
             type="button"
@@ -618,9 +501,7 @@ export default function Page() {
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl ring-1 ring-slate-200">
             <div className="flex items-start justify-between gap-3">
-              <h3 className="text-lg font-semibold text-slate-800">
-                {t.infoTitle}
-              </h3>
+              <h3 className="text-lg font-semibold text-slate-800">{t.infoTitle}</h3>
               <button
                 type="button"
                 className="rounded-full px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
@@ -671,7 +552,7 @@ export default function Page() {
         <EditorPanel
           row={current}
           onClose={() => setEditId(null)}
-          onSaveStay={(id, patch) => handleSave(id, patch)}
+          onSave={handleSave}
         />
       )}
 
@@ -679,35 +560,25 @@ export default function Page() {
       {blockedRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl ring-1 ring-slate-200">
-            <h3 className="text-lg font-semibold text-slate-900">
-              {t.cannotDeleteTitle}
-            </h3>
-            <p className="mt-2 text-sm text-slate-600">
-              {t.cannotDeleteLead}
-            </p>
+            <h3 className="text-lg font-semibold text-slate-900">{t.cannotDeleteTitle}</h3>
+            <p className="mt-2 text-sm text-slate-600">{t.cannotDeleteLead}</p>
 
             <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-800">
               <div className="grid grid-cols-4 gap-4">
                 <div>
-                  <div className="font-semibold text-slate-600">
-                    Rechtsart
-                  </div>
+                  <div className="font-semibold text-slate-600">Rechtsart</div>
                   <div className="mt-0.5 whitespace-normal break-words text-slate-900">
                     {blockedRow.rechtsart || '—'}
                   </div>
                 </div>
                 <div>
-                  <div className="font-semibold text-slate-600">
-                    Kürzel
-                  </div>
+                  <div className="font-semibold text-slate-600">Kürzel</div>
                   <div className="mt-0.5 whitespace-normal break-words text-slate-900">
                     {blockedRow.kuerzel || '—'}
                   </div>
                 </div>
                 <div className="col-span-2">
-                  <div className="font-semibold text-slate-600">
-                    Bezeichnung / Themenfeld
-                  </div>
+                  <div className="font-semibold text-slate-600">Bezeichnung / Themenfeld</div>
                   <div className="mt-0.5 whitespace-normal break-words text-slate-900">
                     {blockedRow.bezeichnung || 'Ohne Bezeichnung'}
                     {blockedRow.themenfeld ? ` – ${blockedRow.themenfeld}` : ''}
@@ -739,35 +610,25 @@ export default function Page() {
       {rowToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl ring-1 ring-slate-200">
-            <h3 className="text-lg font-semibold text-slate-900">
-              {t.deleteTitle}
-            </h3>
-            <p className="mt-2 text-sm text-slate-600">
-              {t.deleteText}
-            </p>
+            <h3 className="text-lg font-semibold text-slate-900">{t.deleteTitle}</h3>
+            <p className="mt-2 text-sm text-slate-600">{t.deleteText}</p>
 
             <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-800">
               <div className="grid grid-cols-4 gap-4">
                 <div>
-                  <div className="font-semibold text-slate-600">
-                    Rechtsart
-                  </div>
+                  <div className="font-semibold text-slate-600">Rechtsart</div>
                   <div className="mt-0.5 whitespace-normal break-words text-slate-900">
                     {rowToDelete.rechtsart || '—'}
                   </div>
                 </div>
                 <div>
-                  <div className="font-semibold text-slate-600">
-                    Kürzel
-                  </div>
+                  <div className="font-semibold text-slate-600">Kürzel</div>
                   <div className="mt-0.5 whitespace-normal break-words text-slate-900">
                     {rowToDelete.kuerzel || '—'}
                   </div>
                 </div>
                 <div className="col-span-2">
-                  <div className="font-semibold text-slate-600">
-                    Bezeichnung / Themenfeld
-                  </div>
+                  <div className="font-semibold text-slate-600">Bezeichnung / Themenfeld</div>
                   <div className="mt-0.5 whitespace-normal break-words text-slate-900">
                     {rowToDelete.bezeichnung || 'Ohne Bezeichnung'}
                     {rowToDelete.themenfeld ? ` – ${rowToDelete.themenfeld}` : ''}

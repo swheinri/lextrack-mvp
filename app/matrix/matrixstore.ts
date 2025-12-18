@@ -8,11 +8,17 @@ import type { LawRow } from '../register/registerstore';
 /* ---------- Typen ---------- */
 
 export type ComplianceStatus =
+  | 'open'
   | 'compliant'
   | 'not_fulfilled'
   | 'not_applicable';
 
 export type PsoeLevel = 'P' | 'S' | 'O' | 'E';
+
+export type RiskLevel = 1 | 2 | 3 | 4;
+
+export type RiskAggregationMode = 'worst_case' | 'index';
+export type RiskScope = 'all' | 'non_compliant';
 
 export type InternalManualRef = {
   id: string;
@@ -30,16 +36,20 @@ export type LegalRef = {
 
 export type ProcessRef = {
   id: string;
-  processNumber: string; // z.B. IQM.123456
+  processNumber: string; // z.B. IQM.123456 oder "Prozess 1234"
   processTitle: string;  // Titel des Prozesses
-  formRef: string;       // Formblatt / Dok.-Referenz
+};
+
+export type FormRef = {
+  id: string;
+  formNumber: string; // z.B. VA 1234 / Dok.-Nr.
+  formTitle: string;  // Bezeichnung
 };
 
 export type MatrixClause = {
   id: string;
 
-  // Mehrstufige Referenzstruktur, z.B.:
-  // 4.1  /  (a)  /  (1)
+  // Mehrstufige Referenzstruktur, z.B.: 4.1 / (a) / (1)
   refLevel1?: string;
   refLevel2?: string;
   refLevel3?: string;
@@ -49,21 +59,31 @@ export type MatrixClause = {
   titleLevel2?: string;
   titleLevel3?: string;
 
+  // Gesetzestext / Anforderung (Freitext)
   requirementText?: string;
+
+  // Evidence / Kommentar
   evidenceNote?: string;
   comment?: string;
+
   status: ComplianceStatus;
 
   // PSOE-Reifegrad (optional)
   psoeLevel?: PsoeLevel;
 
-  // Optional: Hierarchie (für spätere Features, aktuell eher „nice to have“)
+  // Risk (4x4) optional pro Clause
+  riskSeverity?: RiskLevel;
+  riskProbability?: RiskLevel;
+
   parentId?: string | null;
 
   // Verknüpfungen
   internalRefs: InternalManualRef[];
   legalRefs: LegalRef[];
+
+  // getrennt:
   processRefs: ProcessRef[];
+  formRefs: FormRef[];
 };
 
 /* ---------- Matrix-Dokumentstatus ---------- */
@@ -78,7 +98,11 @@ export type MatrixDocument = {
   lawRechtsart?: string;
   lawThemenfeld?: string;
   clauses: MatrixClause[];
-  status: MatrixStatus; // Bearbeitungsstatus der gesamten Matrix
+  status: MatrixStatus;
+
+  // ✅ pro Dokument konfigurierbar:
+  riskAggregationMode?: RiskAggregationMode; // worst_case | index
+  riskScope?: RiskScope; // all | non_compliant
 };
 
 type MatrixState = {
@@ -87,15 +111,17 @@ type MatrixState = {
   /* Aktionen */
   createOrGetDocumentForLaw: (law: LawRow) => MatrixDocument;
   addClause: (docId: string, parentId?: string) => void;
-  updateClause: (
-    docId: string,
-    clauseId: string,
-    patch: Partial<MatrixClause>
-  ) => void;
+  updateClause: (docId: string, clauseId: string, patch: Partial<MatrixClause>) => void;
   removeClause: (docId: string, clauseId: string) => void;
-  removeDoc: (docId: string) => void;
 
+  removeDoc: (docId: string) => void;
   updateDocStatus: (docId: string, status: MatrixStatus) => void;
+
+  // ✅ NEU: pro Dokument Risk-Settings
+  updateDocRiskSettings: (
+    docId: string,
+    patch: Partial<Pick<MatrixDocument, 'riskAggregationMode' | 'riskScope'>>
+  ) => void;
 };
 
 /* ---------- Helper ---------- */
@@ -116,12 +142,15 @@ function createDefaultClause(parentId?: string): MatrixClause {
     requirementText: '',
     evidenceNote: '',
     comment: '',
-    status: 'not_applicable',
+    status: 'open',
     psoeLevel: undefined,
+    riskSeverity: undefined,
+    riskProbability: undefined,
     parentId: parentId ?? null,
     internalRefs: [],
     legalRefs: [],
     processRefs: [],
+    formRefs: [],
   };
 }
 
@@ -135,9 +164,7 @@ export const useMatrixStore = create<MatrixState>()(
       createOrGetDocumentForLaw: (law: LawRow) => {
         const state = get();
         const existing = state.docs.find((d) => d.lawId === String(law.id));
-        if (existing) {
-          return existing;
-        }
+        if (existing) return existing;
 
         const newDoc: MatrixDocument = {
           id: createId('doc'),
@@ -151,6 +178,10 @@ export const useMatrixStore = create<MatrixState>()(
           lawThemenfeld: (law as any).themenfeld ?? '',
           clauses: [],
           status: 'draft',
+
+          // ✅ Defaults (pro Dokument):
+          riskAggregationMode: 'worst_case',
+          riskScope: 'non_compliant',
         };
 
         set({ docs: [...state.docs, newDoc] });
@@ -162,28 +193,47 @@ export const useMatrixStore = create<MatrixState>()(
           const docs = state.docs.map((doc) => {
             if (doc.id !== docId) return doc;
             const newClause = createDefaultClause(parentId);
-            return {
-              ...doc,
-              clauses: [...doc.clauses, newClause],
-            };
+            return { ...doc, clauses: [...doc.clauses, newClause] };
           });
           return { docs };
         });
       },
 
-      updateClause: (
-        docId: string,
-        clauseId: string,
-        patch: Partial<MatrixClause>
-      ) => {
+      updateClause: (docId: string, clauseId: string, patch: Partial<MatrixClause>) => {
         set((state) => {
           const docs = state.docs.map((doc) => {
             if (doc.id !== docId) return doc;
-            const clauses = doc.clauses.map((c) =>
-              c.id === clauseId ? { ...c, ...patch } : c
-            );
+
+            const clauses = doc.clauses.map((c) => {
+              if (c.id !== clauseId) return c;
+
+              // defensive defaults für alte Persist-Daten:
+              const safeCurrent: MatrixClause = {
+                ...c,
+                status: (c.status ?? 'open') as ComplianceStatus,
+                internalRefs: c.internalRefs ?? [],
+                legalRefs: c.legalRefs ?? [],
+                processRefs: (c as any).processRefs ?? [],
+                formRefs: (c as any).formRefs ?? [],
+              };
+
+              const next: MatrixClause = { ...safeCurrent, ...patch };
+
+              // ensure arrays
+              next.internalRefs = next.internalRefs ?? [];
+              next.legalRefs = next.legalRefs ?? [];
+              next.processRefs = next.processRefs ?? [];
+              next.formRefs = next.formRefs ?? [];
+
+              // ensure status
+              next.status = (next.status ?? 'open') as ComplianceStatus;
+
+              return next;
+            });
+
             return { ...doc, clauses };
           });
+
           return { docs };
         });
       },
@@ -213,9 +263,24 @@ export const useMatrixStore = create<MatrixState>()(
           return { docs };
         });
       },
+
+      updateDocRiskSettings: (docId, patch) => {
+        set((state) => {
+          const docs = state.docs.map((doc) => {
+            if (doc.id !== docId) return doc;
+            return {
+              ...doc,
+              riskAggregationMode: patch.riskAggregationMode ?? doc.riskAggregationMode ?? 'worst_case',
+              riskScope: patch.riskScope ?? doc.riskScope ?? 'non_compliant',
+            };
+          });
+          return { docs };
+        });
+      },
     }),
     {
-      name: 'lextrack_matrix_v2', // neuer Key, damit alte Testdaten nicht stören
+      // ✅ Key bump: neue Struktur (Risk Settings pro Dokument)
+      name: 'lextrack_matrix_v4',
     }
   )
 );

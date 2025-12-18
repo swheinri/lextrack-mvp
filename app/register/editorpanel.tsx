@@ -2,403 +2,431 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { LawRow, Relevanz, Status } from './registerstore';
-import { X, Check } from 'lucide-react';
-import { Field, AccordionHeader } from './ui';
+import { X } from 'lucide-react';
+import {
+  LawRow,
+  useRegisterStore,
+  Dokumentenart,
+  Vertragsumfeld,
+  Relevanz,
+  Status,
+} from './registerstore';
+import { useLanguage } from '../components/i18n/language';
 
-const input =
-  'w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#009A93] focus:ring-2 focus:ring-[#009A93]/20';
+/* ---------- Hilfs-UI ---------- */
 
-export default function EditorPanel({
-  row,
-  onClose,
-  onSaveStay,
+const sectionHeader =
+  'rounded-t-xl bg-[#0b2855] px-4 py-2 text-xs font-semibold text-white';
+const sectionBody =
+  'grid grid-cols-1 gap-3 rounded-b-xl border border-t-0 border-slate-200 bg-white px-4 py-3 md:grid-cols-12';
+const labelCls =
+  'mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500';
+const inputCls =
+  'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-[#009A93] focus:ring-4 focus:ring-[#009A93]/20';
+
+function Field({
+  label,
+  className = '',
+  children,
 }: {
-  row: LawRow;
-  onClose: () => void;
-  onSaveStay: (id: string, patch: Partial<LawRow>) => void;
+  label: string;
+  className?: string;
+  children: React.ReactNode;
 }) {
-  const [draft, setDraft] = useState<LawRow>({ ...row });
-  const ch = (k: keyof LawRow, v: any) =>
-    setDraft((p) => ({ ...p, [k]: v }));
+  return (
+    <div className={className}>
+      <label className={labelCls}>{label}</label>
+      {children}
+    </div>
+  );
+}
 
-  // Akkordeon-Bereiche
-  const [open, setOpen] = useState<Record<string, boolean>>({
-    allg: true,
-    org: true,
-    links: true,
-    hist: true,
-  });
-  const toggle = (k: string) =>
-    setOpen((p) => ({ ...p, [k]: !p[k] }));
+/* ---------- Props ---------- */
 
-  // Bei Wechsel des Datensatzes Draft neu befüllen
+type Props = {
+  row: LawRow | null;
+  onClose: () => void;
+
+  // ✅ NEU: damit page.tsx <EditorPanel onSave={...} /> keine TS-Fehler wirft
+  onSave: (id: string, patch: Partial<LawRow>) => void;
+};
+
+export default function EditorPanel({ row, onClose, onSave }: Props) {
+  // update bleibt drin, falls du es noch an anderen Stellen brauchst.
+  // Speichern läuft jetzt aber bewusst über onSave (damit History etc. zentral in page.tsx passiert).
+  const { update } = useRegisterStore();
+  const { language } = useLanguage();
+  const isDe = language === 'de';
+
+  const [draft, setDraft] = useState<LawRow | null>(row);
+
   useEffect(() => {
-    setDraft({ ...row });
+    setDraft(row);
   }, [row]);
 
-  // --- Button-Handler explizit definieren ---
-  const handleSaveOnly = () => {
-    onSaveStay(row.id, draft); // Speichern, Maske bleibt offen
+  if (!row || !draft) return null;
+
+  const setField = <K extends keyof LawRow>(key: K, value: LawRow[K]) => {
+    setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
+  };
+
+  const handleSave = () => {
+    if (!draft) return;
+
+    const { id, ...patch } = draft;
+
+    // ✅ ZENTRAL speichern (inkl. History-Logik aus page.tsx)
+    onSave(id, patch);
+
+    // (optional) falls du trotz Zentralisierung zusätzlich lokal updaten willst:
+    // update(id, patch);
   };
 
   const handleSaveAndClose = () => {
-    onSaveStay(row.id, draft); // Speichern
-    onClose();                 // und schließen
+    handleSave();
+    onClose();
   };
 
-  /* ---- Render ---- */
+  /* ---------- Optionen ---------- */
+
+  const dokumentenarten: Dokumentenart[] = [
+    'Verordnung',
+    'Gesetz',
+    'Norm',
+    'Vorschrift',
+    'Vertrag',
+    'Richtlinie',
+    'Sonstige',
+  ];
+
+  const themenfelderOptions: string[] = [
+    'Sicherheit und Arbeitsschutz',
+    'Daten- und Informationssicherheit',
+    'Umweltschutz',
+    'Energiemanagement',
+    'Zertifizierung',
+  ];
+
+  const vertragsumfelder: Vertragsumfeld[] = ['B2B', 'B2C', 'B2G', 'Intern'];
+
+  const relevanzOptions: Relevanz[] = ['Niedrig', 'Mittel', 'Hoch'];
+  const statusOptions: Status[] = ['offen', 'aktiv', 'obsolet', 'archiviert'];
+
+  /* ---------- Render ---------- */
+
   return (
-    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
-      {/* Overlay */}
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-[1px]"
-        onClick={onClose}
-      />
+    <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/40">
+      <div className="mt-6 mb-10 w-full max-w-5xl rounded-2xl bg-slate-50 shadow-2xl ring-1 ring-slate-200">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3">
+          <h2 className="text-lg font-semibold text-slate-800">
+            {isDe ? 'Datensatz bearbeiten' : 'Edit record'}
+          </h2>
+          <button
+            type="button"
+            className="rounded-full p-1 text-slate-500 hover:bg-slate-100"
+            onClick={onClose}
+          >
+            <X size={18} />
+          </button>
+        </div>
 
-      {/* Card */}
-      <div className="relative mx-auto my-6 flex h-full max-h-[92vh] w-full max-w-6xl items-center justify-center px-4">
-        <div className="relative flex max-h-full w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
-          {/* Header */}
-          <div className="flex items-center justify-between rounded-t-2xl bg-gradient-to-r from-[#14295f] to-[#009A93] px-6 py-4">
-            <h3 className="text-xl font-semibold text-white">
-              Datensatz bearbeiten
-            </h3>
-          </div>
+        <div className="space-y-4 px-5 py-4">
+          {/* ---------- Abschnitt: Allgemein ---------- */}
+          <section>
+            <div className={sectionHeader}>{isDe ? 'Allgemein' : 'General'}</div>
+            <div className={sectionBody}>
+              {/* Dokumentenart (statt Typ) */}
+              <Field
+                label={isDe ? 'Dokumentenart' : 'Document type'}
+                className="md:col-span-3"
+              >
+                <select
+                  className={inputCls}
+                  value={draft.dokumentenart ?? ''}
+                  onChange={(e) =>
+                    setField(
+                      'dokumentenart',
+                      (e.target.value || undefined) as Dokumentenart | undefined,
+                    )
+                  }
+                >
+                  <option value="">
+                    {isDe
+                      ? '— Dokumentenart wählen —'
+                      : '— Select document type —'}
+                  </option>
+                  {dokumentenarten.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </Field>
 
-          {/* Content */}
-          <div className="scrollbar-thin grow overflow-auto px-6 py-6">
-            <div className="grid grid-cols-12 gap-6">
-              {/* ALLGEMEIN */}
-              <section className="col-span-12">
-                <AccordionHeader
-                  title="Allgemein"
-                  isOpen={open.allg}
-                  onToggle={() => toggle('allg')}
+              {/* Kürzel */}
+              <Field label={isDe ? 'Kürzel' : 'Reference'} className="md:col-span-3">
+                <input
+                  className={inputCls}
+                  value={draft.kuerzel}
+                  onChange={(e) => setField('kuerzel', e.target.value)}
                 />
-                {open.allg && (
-                  <div className="mt-3 grid grid-cols-12 gap-3">
-                    <Field label="Typ" className="col-span-12 sm:col-span-3">
-                      <input
-                        className={input}
-                        value={draft.rechtsart ?? ''}
-                        onChange={(e) =>
-                          ch('rechtsart', e.target.value)
-                        }
-                      />
-                    </Field>
-                    <Field
-                      label="Kürzel"
-                      className="col-span-12 sm:col-span-3"
-                    >
-                      <input
-                        className={input}
-                        value={draft.kuerzel ?? ''}
-                        onChange={(e) =>
-                          ch('kuerzel', e.target.value)
-                        }
-                      />
-                    </Field>
-                    <Field
-                      label="Bezeichnung"
-                      className="col-span-12 sm:col-span-3"
-                    >
-                      <input
-                        className={input}
-                        value={draft.bezeichnung ?? ''}
-                        onChange={(e) =>
-                          ch('bezeichnung', e.target.value)
-                        }
-                      />
-                    </Field>
-                    <Field
-                      label="Themenfeld"
-                      className="col-span-12 sm:col-span-3"
-                    >
-                      <input
-                        className={input}
-                        value={draft.themenfeld ?? ''}
-                        onChange={(e) =>
-                          ch('themenfeld', e.target.value)
-                        }
-                      />
-                    </Field>
+              </Field>
 
-                    <Field
-                      label="Erfassung durch"
-                      className="col-span-12 sm:col-span-4"
-                    >
-                      <input
-                        className={input}
-                        value={
-                          [draft.erfasserVorname ?? '', draft.erfasserNachname ?? '']
-                            .filter(Boolean)
-                            .join(' ') +
-                          (draft.erfasserAbteilung
-                            ? (draft.erfasserVorname || draft.erfasserNachname
-                                ? ', '
-                                : '') + draft.erfasserAbteilung
-                            : '')
-                        }
-                        readOnly
-                      />
-                    </Field>
-                    <Field
-                      label="Publiziert am"
-                      className="col-span-12 sm:col-span-4"
-                    >
-                      <input
-                        type="date"
-                        className={input}
-                        value={draft.publiziert ?? ''}
-                        onChange={(e) =>
-                          ch('publiziert', e.target.value)
-                        }
-                      />
-                    </Field>
-                    <Field
-                      label="Gültig ab"
-                      className="col-span-6 sm:col-span-2"
-                    >
-                      <input
-                        type="date"
-                        className={input}
-                        value={draft.gueltigSeit ?? ''}
-                        onChange={(e) =>
-                          ch('gueltigSeit', e.target.value)
-                        }
-                      />
-                    </Field>
-                    <Field
-                      label="Gültig bis"
-                      className="col-span-6 sm:col-span-2"
-                    >
-                      <input
-                        type="date"
-                        className={input}
-                        value={draft.gueltigBis ?? ''}
-                        onChange={(e) =>
-                          ch('gueltigBis', e.target.value)
-                        }
-                      />
-                    </Field>
-                  </div>
-                )}
-              </section>
-
-              {/* ORGANISATION & STATUS */}
-              <section className="col-span-12">
-                <AccordionHeader
-                  title="Organisation & Status"
-                  isOpen={open.org}
-                  onToggle={() => toggle('org')}
+              {/* Bezeichnung */}
+              <Field label={isDe ? 'Bezeichnung' : 'Title'} className="md:col-span-3">
+                <input
+                  className={inputCls}
+                  value={draft.bezeichnung}
+                  onChange={(e) => setField('bezeichnung', e.target.value)}
                 />
-                {open.org && (
-                  <div className="mt-3 grid grid-cols-12 gap-3">
-                    <Field
-                      label="Zuständigkeit (Kürzel/Name)"
-                      className="col-span-12 sm:col-span-4"
-                    >
-                      <input
-                        className={input}
-                        value={draft.zustaendigkeit ?? ''}
-                        onChange={(e) =>
-                          ch('zustaendigkeit', e.target.value)
-                        }
-                      />
-                    </Field>
-                    <Field
-                      label="Herausgeber"
-                      className="col-span-12 sm:col-span-4"
-                    >
-                      <input
-                        className={input}
-                        value={draft.herausgeber ?? ''}
-                        onChange={(e) =>
-                          ch('herausgeber', e.target.value)
-                        }
-                      />
-                    </Field>
-                    <Field
-                      label="Relevanz"
-                      className="col-span-12 sm:col-span-2"
-                    >
-                      <select
-                        className={input}
-                        value={draft.relevanz ?? ''}
-                        onChange={(e) =>
-                          ch('relevanz', e.target.value as Relevanz)
-                        }
-                      >
-                        <option value="">—</option>
-                        <option value="Niedrig">Niedrig</option>
-                        <option value="Mittel">Mittel</option>
-                        <option value="Hoch">Hoch</option>
-                      </select>
-                    </Field>
-                    <Field
-                      label="Status"
-                      className="col-span-12 sm:col-span-2"
-                    >
-                      <select
-                        className={input}
-                        value={draft.status ?? ''}
-                        onChange={(e) =>
-                          ch('status', e.target.value as Status)
-                        }
-                      >
-                        <option value="">—</option>
-                        <option value="offen">offen</option>
-                        <option value="aktiv">aktiv</option>
-                        <option value="obsolet">obsolet</option>
-                        <option value="archiviert">archiviert</option>
-                      </select>
-                    </Field>
-                  </div>
-                )}
-              </section>
+              </Field>
 
-              {/* VERKNÜPFTE DOKUMENTE & QUELLEN */}
-              <section className="col-span-12">
-                <AccordionHeader
-                  title="Verknüpfte Dokumente & Quellen"
-                  isOpen={open.links}
-                  onToggle={() => toggle('links')}
+              {/* Themenfeld – Dropdown */}
+              <Field label={isDe ? 'Themenfeld' : 'Topic area'} className="md:col-span-3">
+                <select
+                  className={inputCls}
+                  value={draft.themenfeld ?? ''}
+                  onChange={(e) => setField('themenfeld', e.target.value || '')}
+                >
+                  <option value="">
+                    {isDe ? '— Themenfeld wählen —' : '— Select topic area —'}
+                  </option>
+                  {themenfelderOptions.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              {/* Vertragsumfeld – neues Feld */}
+              <Field label={isDe ? 'Vertragsumfeld' : 'Contract context'} className="md:col-span-3">
+                <select
+                  className={inputCls}
+                  value={draft.vertragsumfeld ?? ''}
+                  onChange={(e) =>
+                    setField(
+                      'vertragsumfeld',
+                      (e.target.value || undefined) as Vertragsumfeld | undefined,
+                    )
+                  }
+                >
+                  <option value="">
+                    {isDe ? '— Vertragsumfeld wählen —' : '— Select context —'}
+                  </option>
+                  {vertragsumfelder.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-slate-400">
+                  {isDe
+                    ? 'Optional, besonders relevant bei Dokumentenart „Vertrag“.'
+                    : 'Optional, mainly relevant when type is “Contract”.'}
+                </p>
+              </Field>
+
+              {/* Erfassung durch (readonly) */}
+              <Field label={isDe ? 'Erfassung durch' : 'Captured by'} className="md:col-span-3">
+                <input
+                  className={inputCls}
+                  value={
+                    [draft.erfasserVorname ?? '', draft.erfasserNachname ?? '']
+                      .filter(Boolean)
+                      .join(' ') || ''
+                  }
+                  onChange={() => {
+                    /* readOnly */
+                  }}
+                  readOnly
                 />
-                {open.links && (
-                  <div className="mt-3 grid grid-cols-12 gap-3">
-                    <Field
-                      label="Verlinkung Quelle (URL)"
-                      className="col-span-12 sm:col-span-6"
-                    >
-                      <input
-                        className={input}
-                        placeholder="https://…"
-                        value={draft.dokumentUrl ?? draft.quelleUrl ?? ''}
-                        onChange={(e) =>
-                          ch('dokumentUrl', e.target.value)
-                        }
-                      />
-                      {(draft.dokumentUrl ?? draft.quelleUrl) ? (
-                        <a
-                          href={draft.dokumentUrl ?? draft.quelleUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-1 inline-block text-xs text-[#14295f] underline"
-                        >
-                          Quelle öffnen
-                        </a>
-                      ) : null}
-                    </Field>
+              </Field>
 
-                    <Field
-                      label="Dokument (Anzeigename/Link)"
-                      className="col-span-12 sm:col-span-6"
-                    >
-                      <input
-                        className={input}
-                        placeholder="z. B. OJ_L_202501044_DE_TXT.pdf"
-                        value={
-                          draft.dokumentName ?? draft.dokumentFileName ?? ''
-                        }
-                        onChange={(e) =>
-                          ch('dokumentName', e.target.value)
-                        }
-                      />
-                      {draft.dokumentFileHref ? (
-                        <a
-                          href={draft.dokumentFileHref}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-1 inline-block text-xs text-[#14295f] underline"
-                        >
-                          {draft.dokumentFileName ||
-                            'Hochgeladene Datei öffnen'}
-                        </a>
-                      ) : null}
-                    </Field>
-                  </div>
-                )}
-              </section>
-
-              {/* HISTORIE */}
-              <section className="col-span-12">
-                <AccordionHeader
-                  title="Historie"
-                  isOpen={open.hist}
-                  onToggle={() => toggle('hist')}
+              {/* Publiziert am */}
+              <Field label={isDe ? 'Publiziert am' : 'Published'} className="md:col-span-3">
+                <input
+                  type="date"
+                  className={inputCls}
+                  value={draft.publiziert ?? ''}
+                  onChange={(e) => setField('publiziert', e.target.value || '')}
                 />
-                {open.hist && (
-                  <div className="mt-3 rounded-lg border border-slate-200">
-                    {(draft.history ?? []).length === 0 ? (
-                      <div className="px-4 py-3 text-sm text-slate-500">
-                        Noch keine Historie vorhanden.
-                      </div>
-                    ) : (
-                      <ul className="divide-y divide-slate-200">
-                        {(draft.history ?? [])
-                          .slice()
-                          .reverse()
-                          .map((h: any, i: number) => (
-                            <li
-                              key={i}
-                              className="flex items-center justify-between px-4 py-2 text-sm"
-                            >
-                              <div className="whitespace-pre-line text-slate-700">
-                                {h.text}
-                              </div>
-                              <div className="text-slate-500">
-                                {new Date(h.date).toLocaleString('de-DE', {
-                                  year: 'numeric',
-                                  month: '2-digit',
-                                  day: '2-digit',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}{' '}
-                                {h.user ? `· ${h.user}` : ''}
-                              </div>
-                            </li>
-                          ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
-              </section>
+              </Field>
+
+              {/* Gültig ab */}
+              <Field label={isDe ? 'Gültig ab' : 'Valid from'} className="md:col-span-3">
+                <input
+                  type="date"
+                  className={inputCls}
+                  value={draft.gueltigSeit ?? ''}
+                  onChange={(e) => setField('gueltigSeit', e.target.value || '')}
+                />
+              </Field>
+
+              {/* Gültig bis */}
+              <Field label={isDe ? 'Gültig bis' : 'Valid to'} className="md:col-span-3">
+                <input
+                  type="date"
+                  className={inputCls}
+                  value={draft.gueltigBis ?? ''}
+                  onChange={(e) => setField('gueltigBis', e.target.value || '')}
+                />
+              </Field>
             </div>
+          </section>
 
-            {/* Footer-Aktionen */}
-            <div className="sticky bottom-0 -mx-6 mt-6 border-t bg-white px-6 py-3">
-              <div className="flex flex-wrap gap-3">
-                {/* Speichern (bleibt offen) */}
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#14295f] px-4 py-2 text-white hover:brightness-110"
-                  onClick={handleSaveOnly}
-                >
-                  <Check size={16} /> Speichern
-                </button>
-
-                {/* Speichern & Schließen */}
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#009A93] px-4 py-2 text-white hover:brightness-110"
-                  onClick={handleSaveAndClose}
-                >
-                  <Check size={16} /> Speichern &amp; Schließen
-                </button>
-
-                {/* Abbrechen */}
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50"
-                  onClick={onClose}
-                >
-                  <X size={16} /> Abbrechen
-                </button>
-              </div>
+          {/* ---------- Abschnitt: Organisation & Status ---------- */}
+          <section>
+            <div className={sectionHeader}>
+              {isDe ? 'Organisation & Status' : 'Organisation & status'}
             </div>
+            <div className={sectionBody}>
+              <Field
+                label={isDe ? 'Zuständigkeit (Kürzel/Name)' : 'Responsibility'}
+                className="md:col-span-6"
+              >
+                <input
+                  className={inputCls}
+                  value={draft.zustaendigkeit ?? ''}
+                  onChange={(e) => setField('zustaendigkeit', e.target.value || '')}
+                />
+              </Field>
+
+              <Field label={isDe ? 'Herausgeber' : 'Issuing body'} className="md:col-span-6">
+                <input
+                  className={inputCls}
+                  value={draft.herausgeber ?? ''}
+                  onChange={(e) => setField('herausgeber', e.target.value || '')}
+                />
+              </Field>
+
+              <Field label={isDe ? 'Relevanz' : 'Relevance'} className="md:col-span-3">
+                <select
+                  className={inputCls}
+                  value={draft.relevanz ?? ''}
+                  onChange={(e) =>
+                    setField(
+                      'relevanz',
+                      (e.target.value || undefined) as Relevanz | undefined,
+                    )
+                  }
+                >
+                  <option value="">
+                    {isDe ? '— Relevanz wählen —' : '— Select relevance —'}
+                  </option>
+                  {relevanzOptions.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label={isDe ? 'Status' : 'Status'} className="md:col-span-3">
+                <select
+                  className={inputCls}
+                  value={draft.status ?? ''}
+                  onChange={(e) =>
+                    setField('status', (e.target.value || undefined) as Status | undefined)
+                  }
+                >
+                  <option value="">
+                    {isDe ? '— Status wählen —' : '— Select status —'}
+                  </option>
+                  {statusOptions.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+          </section>
+
+          {/* ---------- Abschnitt: Verknüpfte Dokumente & Quellen ---------- */}
+          <section>
+            <div className={sectionHeader}>
+              {isDe ? 'Verknüpfte Dokumente & Quellen' : 'Linked documents & sources'}
+            </div>
+            <div className={sectionBody}>
+              <Field label={isDe ? 'Verlinkung Quelle (URL)' : 'Source URL'} className="md:col-span-6">
+                <input
+                  className={inputCls}
+                  value={draft.dokumentUrl ?? ''}
+                  onChange={(e) => setField('dokumentUrl', e.target.value || '')}
+                />
+              </Field>
+
+              <Field
+                label={isDe ? 'Dokument (Anzeigename/Link)' : 'Document display name'}
+                className="md:col-span-6"
+              >
+                <input
+                  className={inputCls}
+                  value={draft.dokumentName ?? ''}
+                  onChange={(e) => setField('dokumentName', e.target.value || '')}
+                />
+              </Field>
+            </div>
+          </section>
+
+          {/* ---------- Abschnitt: Historie (read-only) ---------- */}
+          <section>
+            <div className={sectionHeader}>{isDe ? 'Historie' : 'History'}</div>
+            <div className="rounded-b-xl border border-t-0 border-slate-200 bg-white px-4 py-2 text-sm">
+              {draft.history && draft.history.length > 0 ? (
+                <ul className="space-y-1 text-xs text-slate-700">
+                  {draft.history
+                    .slice()
+                    .reverse()
+                    .map((h, idx) => (
+                      <li key={idx} className="flex justify-between gap-3">
+                        <span>
+                          {h.text}{' '}
+                          {h.user ? (
+                            <span className="text-slate-400">· {h.user}</span>
+                          ) : null}
+                        </span>
+                        <span className="whitespace-nowrap text-slate-400">{h.date}</span>
+                      </li>
+                    ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-slate-400">
+                  {isDe ? 'Keine Historie vorhanden.' : 'No history entries.'}
+                </p>
+              )}
+            </div>
+          </section>
+        </div>
+
+        {/* Footer Buttons */}
+        <div className="flex items-center justify-between border-t border-slate-200 bg-white px-5 py-3">
+          <button
+            type="button"
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
+            onClick={onClose}
+          >
+            {isDe ? 'Abbrechen' : 'Cancel'}
+          </button>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
+              onClick={handleSave}
+            >
+              {isDe ? 'Speichern' : 'Save'}
+            </button>
+            <button
+              type="button"
+              className="rounded-lg bg-[#009A93] px-3 py-1.5 text-sm font-medium text-white hover:brightness-110"
+              onClick={handleSaveAndClose}
+            >
+              {isDe ? 'Speichern & Schließen' : 'Save & close'}
+            </button>
           </div>
-          {/* /Content */}
         </div>
       </div>
     </div>
