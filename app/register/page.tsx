@@ -106,7 +106,10 @@ function buildHistoryEntries(before: LawRow, after: Partial<LawRow>) {
     label: string;
     type?: 'date' | 'status';
   }[] = [
+    // ✅ Dokumentenart (neu) + Rechtsart (legacy)
+    { key: 'dokumentenart', label: 'Dokumentenart' },
     { key: 'rechtsart', label: 'Typ' },
+
     { key: 'kuerzel', label: 'Kürzel' },
     { key: 'bezeichnung', label: 'Bezeichnung' },
     { key: 'themenfeld', label: 'Themenfeld' },
@@ -240,8 +243,16 @@ export default function Page() {
     const before = rows.find((r) => r.id === id);
     if (!before) return;
 
+    // ✅ Wenn Dokumentenart gesetzt wird, spiegeln wir es in rechtsart (legacy),
+    // damit Register/Print/Alt-UI garantiert etwas anzeigen.
+    const patched: Partial<LawRow> = { ...patch };
+    if (Object.prototype.hasOwnProperty.call(patched, 'dokumentenart')) {
+      const dt = patched.dokumentenart;
+      patched.rechtsart = (dt ?? undefined) as any;
+    }
+
     // history aus patch ignorieren (wir bauen sie hier konsistent neu)
-    const { history, ...restPatch } = patch;
+    const { history, ...restPatch } = patched;
     void history;
 
     const changeEntries = buildHistoryEntries(before, restPatch);
@@ -344,7 +355,8 @@ export default function Page() {
 
     const rowsHtml = rows
       .map((r) => {
-        const rechtsart = r.rechtsart || '—';
+        // ✅ Dokumentenart bevorzugen, sonst legacy rechtsart
+        const rechtsart = (r.dokumentenart ?? r.rechtsart) || '—';
         const kuerzel = r.kuerzel || '—';
         const bezeichnung = r.bezeichnung || '—';
         const themenfeld = r.themenfeld || '—';
@@ -585,7 +597,7 @@ export default function Page() {
                 <div>
                   <div className="font-semibold text-slate-600">Rechtsart</div>
                   <div className="mt-0.5 whitespace-normal break-words text-slate-900">
-                    {blockedRow.rechtsart || '—'}
+                    {(blockedRow.dokumentenart ?? blockedRow.rechtsart) || '—'}
                   </div>
                 </div>
                 <div>
@@ -635,7 +647,7 @@ export default function Page() {
                 <div>
                   <div className="font-semibold text-slate-600">Rechtsart</div>
                   <div className="mt-0.5 whitespace-normal break-words text-slate-900">
-                    {rowToDelete.rechtsart || '—'}
+                    {(rowToDelete.dokumentenart ?? rowToDelete.rechtsart) || '—'}
                   </div>
                 </div>
                 <div>

@@ -193,6 +193,9 @@ export default React.memo(function Eingabeform() {
       dokumentenart,
       vertragsumfeld,
 
+      // ✅ WICHTIG: Dokumentenart auch in das Register-Feld übernehmen (Legacy-Anzeige)
+      rechtsart: dokumentenart,
+
       kuerzel: get('kuerzel'),
       bezeichnung: get('bezeichnung'),
       themenfeld: get('themenfeld'),
