@@ -1,7 +1,7 @@
 // app/matrix/matrix-attachments.tsx
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 type Props = {
   clauseId: string;
@@ -26,30 +26,38 @@ function formatSize(bytes: number): string {
   return `${mb.toFixed(1)} MB`;
 }
 
-export default function MatrixAttachments({
-  clauseId,
-  isDe,
-  onChangeCount,
-}: Props) {
+export default function MatrixAttachments({ clauseId, isDe, onChangeCount }: Props) {
   const [items, setItems] = useState<UploadItem[]>([]);
+
+  // ✅ Lint-safe: Callback in Ref spiegeln, damit effect NICHT von der Funktions-Identität abhängt
+  const onChangeCountRef = useRef<Props['onChangeCount']>(onChangeCount);
+
+  useEffect(() => {
+    onChangeCountRef.current = onChangeCount;
+  }, [onChangeCount]);
 
   // Nur reagieren, wenn sich die Anzahl der Items ändert
   useEffect(() => {
-    if (onChangeCount) {
-      onChangeCount(items.length);
-    }
-  }, [items.length]); // <–– onChangeCount bewusst NICHT in den Dependencies
+    onChangeCountRef.current?.(items.length);
+  }, [items.length]);
+
+  // Optional, aber sauber: ObjectURLs beim Unmount aufräumen
+  useEffect(() => {
+    return () => {
+      items.forEach((it) => URL.revokeObjectURL(it.url));
+    };
+    // bewusst leer: Cleanup nur beim Unmount; URLs werden zusätzlich beim Remove revoked
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     const now = new Date().toISOString();
-    const newItems: UploadItem[] = [];
-
-    Array.from(files).forEach((file) => {
+    const newItems: UploadItem[] = Array.from(files).map((file) => {
       const url = URL.createObjectURL(file);
-      newItems.push({
+      return {
         id: `${clauseId}_${file.name}_${file.lastModified}_${Math.random()
           .toString(36)
           .slice(2, 8)}`,
@@ -58,7 +66,7 @@ export default function MatrixAttachments({
         type: file.type || 'application/octet-stream',
         url,
         uploadedAt: now,
-      });
+      };
     });
 
     setItems((prev) => [...prev, ...newItems]);
@@ -70,17 +78,12 @@ export default function MatrixAttachments({
   const handleRemove = (id: string) => {
     setItems((prev) => {
       const toRemove = prev.find((it) => it.id === id);
-      if (toRemove) {
-        URL.revokeObjectURL(toRemove.url);
-      }
+      if (toRemove) URL.revokeObjectURL(toRemove.url);
       return prev.filter((it) => it.id !== id);
     });
   };
 
-  if (!clauseId) {
-    // Sicherheitsnetz – sollte eigentlich immer gesetzt sein
-    return null;
-  }
+  if (!clauseId) return null;
 
   return (
     <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
@@ -88,15 +91,11 @@ export default function MatrixAttachments({
         <label className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
           {isDe ? 'Dokumente / Anhänge' : 'Documents / attachments'}
         </label>
+
         <label className="inline-flex cursor-pointer items-center rounded-full border border-slate-300 bg-white px-2 py-1 text-[11px] text-slate-700 shadow-sm hover:bg-slate-50">
           <span className="mr-1 text-base leading-none">＋</span>
           {isDe ? 'Datei hinzufügen' : 'Add file'}
-          <input
-            type="file"
-            className="hidden"
-            multiple
-            onChange={handleFileChange}
-          />
+          <input type="file" className="hidden" multiple onChange={handleFileChange} />
         </label>
       </div>
 
@@ -113,20 +112,22 @@ export default function MatrixAttachments({
               key={it.id}
               className="flex items-center justify-between gap-2 rounded-lg bg-white px-2 py-1 shadow-sm"
             >
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="truncate font-medium">{it.name}</div>
                 <div className="text-[10px] text-slate-500">
                   {formatSize(it.size)} · {it.type || 'file'}
                 </div>
               </div>
+
               <div className="flex items-center gap-2">
                 <a
                   href={it.url}
                   download={it.name}
                   className="rounded-full border border-slate-300 px-2 py-0.5 text-[10px] text-slate-700 hover:bg-slate-100"
                 >
-                  {isDe ? 'Download' : 'Download'}
+                  Download
                 </a>
+
                 <button
                   type="button"
                   onClick={() => handleRemove(it.id)}

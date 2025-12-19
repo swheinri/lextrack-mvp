@@ -1,93 +1,97 @@
 // app/components/userpreferences.tsx
 'use client';
 
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  ReactNode,
-} from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-type PrefContext = {
+type UserPreferences = {
   displayName: string;
-  setDisplayName: (value: string) => void;
   personalGreeting: boolean;
-  setPersonalGreeting: (value: boolean) => void;
 };
 
-const UserPreferencesContext = createContext<PrefContext | undefined>(
-  undefined,
-);
-
-const LS_KEY = 'lextrack_user_prefs_v1';
-
-type StoredPrefs = {
-  displayName?: string;
-  personalGreeting?: boolean;
+type Ctx = UserPreferences & {
+  setDisplayName: (name: string) => void;
+  setPersonalGreeting: (enabled: boolean) => void;
+  resetPreferences: () => void;
 };
 
-export function UserPreferencesProvider({ children }: { children: ReactNode }) {
-  const [displayName, setDisplayName] = useState<string>('Swen Heinrich');
-  const [personalGreeting, setPersonalGreeting] = useState<boolean>(true);
+const DEFAULTS: UserPreferences = {
+  displayName: '',
+  personalGreeting: true,
+};
 
-  // Laden aus localStorage
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+const LS_KEY = 'lextrack_userprefs_v1';
 
-    try {
-      const raw = window.localStorage.getItem(LS_KEY);
-      if (!raw) return;
+const UserPreferencesContext = createContext<Ctx>({
+  ...DEFAULTS,
+  setDisplayName: () => {},
+  setPersonalGreeting: () => {},
+  resetPreferences: () => {},
+});
 
-      const parsed: StoredPrefs = JSON.parse(raw);
+function safeReadPrefs(): UserPreferences {
+  if (typeof window === 'undefined') return DEFAULTS;
 
-      if (typeof parsed.displayName === 'string') {
-        setDisplayName(parsed.displayName);
-      }
-      if (typeof parsed.personalGreeting === 'boolean') {
-        setPersonalGreeting(parsed.personalGreeting);
-      }
-    } catch (err) {
-      console.error('Failed to load user preferences', err);
-    }
-  }, []);
+  try {
+    const raw = window.localStorage.getItem(LS_KEY);
+    if (!raw) return DEFAULTS;
 
-  // Speichern in localStorage
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return DEFAULTS;
 
-    const payload: StoredPrefs = {
-      displayName,
-      personalGreeting,
+    const p = parsed as Partial<UserPreferences>;
+
+    return {
+      displayName: typeof p.displayName === 'string' ? p.displayName : DEFAULTS.displayName,
+      personalGreeting:
+        typeof p.personalGreeting === 'boolean' ? p.personalGreeting : DEFAULTS.personalGreeting,
     };
+  } catch {
+    return DEFAULTS;
+  }
+}
 
-    try {
-      window.localStorage.setItem(LS_KEY, JSON.stringify(payload));
-    } catch (err) {
-      console.error('Failed to save user preferences', err);
-    }
+function safeWritePrefs(prefs: UserPreferences) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(LS_KEY, JSON.stringify(prefs));
+  } catch {
+    // ignore
+  }
+}
+
+export function UserPreferencesProvider({ children }: { children: React.ReactNode }) {
+  const initial = useMemo(() => safeReadPrefs(), []);
+  const [displayName, setDisplayNameState] = useState<string>(initial.displayName);
+  const [personalGreeting, setPersonalGreetingState] = useState<boolean>(initial.personalGreeting);
+
+  // Persist (ohne setState im Effect)
+  useEffect(() => {
+    safeWritePrefs({ displayName, personalGreeting });
   }, [displayName, personalGreeting]);
 
-  const value: PrefContext = {
-    displayName,
-    setDisplayName,
-    personalGreeting,
-    setPersonalGreeting,
+  const setDisplayName = (name: string) => setDisplayNameState(name);
+  const setPersonalGreeting = (enabled: boolean) => setPersonalGreetingState(enabled);
+
+  const resetPreferences = () => {
+    setDisplayNameState(DEFAULTS.displayName);
+    setPersonalGreetingState(DEFAULTS.personalGreeting);
   };
 
   return (
-    <UserPreferencesContext.Provider value={value}>
+    <UserPreferencesContext.Provider
+      value={{
+        displayName,
+        personalGreeting,
+        setDisplayName,
+        setPersonalGreeting,
+        resetPreferences,
+      }}
+    >
       {children}
     </UserPreferencesContext.Provider>
   );
 }
 
 export function useUserPreferences() {
-  const ctx = useContext(UserPreferencesContext);
-  if (!ctx) {
-    throw new Error(
-      'useUserPreferences must be used within UserPreferencesProvider',
-    );
-  }
-  return ctx;
+  return useContext(UserPreferencesContext);
 }

@@ -30,13 +30,11 @@ export default function MatrixSummaryBar({
   avgScore,
   onTogglePsoeInfo,
 }: Props) {
-  const totalLabel = isDe
-    ? `${total} Anforderungen`
-    : `${total} requirements`;
+  const totalLabel = isDe ? `${total} Anforderungen` : `${total} requirements`;
 
-  const complLabel = isDe
-    ? `Compliance: ${pct}%`
-    : `Compliance: ${pct}%`;
+  // ✅ Option A: compliant wirklich nutzen
+  const compliantLabel = isDe ? `Erfüllt: ${compliant}` : `Compliant: ${compliant}`;
+  const pctLabel = isDe ? `Compliance: ${pct}%` : `Compliance: ${pct}%`;
 
   const notFulfilledLabel = isDe
     ? `Nicht erfüllt: ${notFulfilled}`
@@ -48,8 +46,8 @@ export default function MatrixSummaryBar({
     avgLevel && avgScore
       ? `${avgLevel} (${avgScore.toFixed(1)})`
       : isDe
-      ? 'noch nicht bewertet'
-      : 'not yet assessed';
+        ? 'noch nicht bewertet'
+        : 'not yet assessed';
 
   const maturityLabel = isDe
     ? `Reifegrad (PSOE): ${maturityText}`
@@ -64,27 +62,23 @@ export default function MatrixSummaryBar({
 
         {/* KPI-Pills */}
         <div className="flex flex-wrap gap-2">
-          <span
-            className={`${pillBase} border-slate-200 bg-slate-50 text-slate-700`}
-          >
+          <span className={`${pillBase} border-slate-200 bg-slate-50 text-slate-700`}>
             {totalLabel}
           </span>
 
-          <span
-            className={`${pillBase} border-emerald-200 bg-emerald-50 text-emerald-700`}
-          >
-            {complLabel}
+          <span className={`${pillBase} border-emerald-200 bg-emerald-50 text-emerald-700`}>
+            {compliantLabel}
           </span>
 
-          <span
-            className={`${pillBase} border-rose-200 bg-rose-50 text-rose-700`}
-          >
+          <span className={`${pillBase} border-emerald-200 bg-emerald-50 text-emerald-700`}>
+            {pctLabel}
+          </span>
+
+          <span className={`${pillBase} border-rose-200 bg-rose-50 text-rose-700`}>
             {notFulfilledLabel}
           </span>
 
-          <span
-            className={`${pillBase} border-slate-200 bg-slate-50 text-slate-700`}
-          >
+          <span className={`${pillBase} border-slate-200 bg-slate-50 text-slate-700`}>
             {naLabel}
           </span>
 

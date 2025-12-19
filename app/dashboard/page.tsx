@@ -6,7 +6,6 @@ import { Info } from 'lucide-react';
 
 import { useRegisterStore } from '../register/registerstore';
 import { useMatrixStore } from '../matrix/matrixstore';
-import { useTheme } from '../components/themecontext';
 import { useLanguage } from '../components/i18n/language';
 import {
   DashboardSettingsDialog,
@@ -138,14 +137,32 @@ const DEFAULT_VISIBLE: VisibleConfig = {
   dueSoon: false,
 };
 
+function readVisibleConfigFromLocalStorage(): VisibleConfig {
+  if (typeof window === 'undefined') return DEFAULT_VISIBLE;
+
+  try {
+    const raw = window.localStorage.getItem(LS_KEY);
+    if (!raw) return DEFAULT_VISIBLE;
+
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return DEFAULT_VISIBLE;
+
+    return { ...DEFAULT_VISIBLE, ...(parsed as Partial<VisibleConfig>) };
+  } catch {
+    return DEFAULT_VISIBLE;
+  }
+}
+
+// Minimal-Types um `any` zu vermeiden:
+type MatrixClauseLike = { status?: string };
+type MatrixDocLike = { clauses?: MatrixClauseLike[] };
+
 export default function DashboardPage() {
   const { rows } = useRegisterStore();
-  const { docs: matrixDocs } = useMatrixStore();
+  const { docs: matrixDocs } = useMatrixStore() as { docs: MatrixDocLike[] };
 
-  const { theme } = useTheme();
   const { language } = useLanguage();
   const t = TEXT[language] ?? TEXT.de;
-  const isDark = theme === 'dark'; // aktuell nicht genutzt, aber ok für spätere Anpassungen
 
   /* ---------- Kennzahlen aus dem Kataster ---------- */
 
@@ -189,36 +206,21 @@ export default function DashboardPage() {
     let clauses = 0;
     let compliant = 0;
 
-    matrixDocs.forEach((doc: any) => {
+    matrixDocs.forEach((doc) => {
       const list = doc.clauses ?? [];
       clauses += list.length;
-      compliant += list.filter((c: any) => c.status === 'compliant').length;
+      compliant += list.filter((c) => c.status === 'compliant').length;
     });
 
     const rate = clauses > 0 ? Math.round((compliant / clauses) * 100) : 0;
-
     return { matrices, clauses, compliant, rate };
   }, [matrixDocs]);
 
   /* ---------- Sichtbare Kacheln (mit localStorage) ---------- */
 
-  const [visibleCards, setVisibleCards] =
-    useState<VisibleConfig>(DEFAULT_VISIBLE);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    try {
-      const raw = window.localStorage.getItem(LS_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Partial<VisibleConfig> | null;
-      if (!parsed || typeof parsed !== 'object') return;
-
-      setVisibleCards((prev) => ({ ...prev, ...parsed }));
-    } catch {
-      // ignore
-    }
-  }, []);
+  const [visibleCards, setVisibleCards] = useState<VisibleConfig>(() =>
+    readVisibleConfigFromLocalStorage()
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -232,7 +234,7 @@ export default function DashboardPage() {
   const visibleKeys = useMemo(
     () =>
       (Object.keys(visibleCards) as DashboardCardKey[]).filter(
-        (k) => visibleCards[k as CardKey],
+        (k) => visibleCards[k as CardKey]
       ),
     [visibleCards]
   );
@@ -275,6 +277,15 @@ export default function DashboardPage() {
               onClick={() => setShowConfig(true)}
             >
               {language === 'de' ? 'Dashboard anpassen' : 'Customize dashboard'}
+            </button>
+
+            <button
+              type="button"
+              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+              onClick={resetConfig}
+              title={t.customizeReset}
+            >
+              {t.customizeReset}
             </button>
 
             <button
@@ -338,18 +349,10 @@ export default function DashboardPage() {
       {/* Kachelbereich (Register-Kennzahlen) */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {visibleCards.all && (
-          <Card
-            title={t.cardAll}
-            value={statusStats.gesamt}
-            subtitle={allSubtitle}
-          />
+          <Card title={t.cardAll} value={statusStats.gesamt} subtitle={allSubtitle} />
         )}
         {visibleCards.active && (
-          <Card
-            title={t.cardActive}
-            value={statusStats.aktiv}
-            subtitle={activeSubtitle}
-          />
+          <Card title={t.cardActive} value={statusStats.aktiv} subtitle={activeSubtitle} />
         )}
         {visibleCards.archived && (
           <Card
@@ -386,9 +389,7 @@ export default function DashboardPage() {
         </div>
 
         {matrixStats.matrices === 0 ? (
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {t.cmEmpty}
-          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{t.cmEmpty}</p>
         ) : (
           <>
             {/* Kacheln */}
@@ -489,9 +490,7 @@ function MatrixStatCard({
           <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-800">
             <div
               className="h-2 rounded-full bg-[#009A93]"
-              style={{
-                width: `${Math.min(Math.max(barValue, 0), 100)}%`,
-              }}
+              style={{ width: `${Math.min(Math.max(barValue, 0), 100)}%` }}
             />
           </div>
         </div>

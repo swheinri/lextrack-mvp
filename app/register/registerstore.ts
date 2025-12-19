@@ -75,10 +75,10 @@ export type LawRow = {
   id: string;
 
   // Grundlegende Metadaten
-  dokumentenart?: Dokumentenart;      // neue strukturierte Dokumentenart
-  vertragsumfeld?: Vertragsumfeld;    // optionales Vertragsumfeld
-  rechtsart?: string;                 // legacy / Freitext
-  normFamily?: NormFamily;            // z. B. DIN / ISO / EU / Sonstige
+  dokumentenart?: Dokumentenart; // neue strukturierte Dokumentenart
+  vertragsumfeld?: Vertragsumfeld; // optionales Vertragsumfeld
+  rechtsart?: string; // legacy / Freitext
+  normFamily?: NormFamily; // z. B. DIN / ISO / EU / Sonstige
 
   kuerzel: string;
   bezeichnung: string;
@@ -244,7 +244,7 @@ const store: Store = {
 
   update: (id, patch) => {
     const next = stateRef.current.rows.map((r) =>
-      r.id === id ? { ...r, ...patch } : r,
+      r.id === id ? { ...r, ...patch } : r
     );
     stateRef.current = { rows: next, lastAddedId: undefined };
     saveToLS(next);
@@ -271,7 +271,7 @@ export function useRegisterStore() {
   const snapshot = React.useSyncExternalStore(
     store.subscribe,
     store.getSnapshot,
-    () => serverSnapshot,
+    () => serverSnapshot
   );
   return {
     rows: snapshot.rows,
@@ -286,8 +286,13 @@ export function useRegisterStore() {
 /* ---------- Hilfsfunktion ---------- */
 
 export function makeId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return (crypto as any).randomUUID();
+  const c = typeof globalThis !== 'undefined' ? globalThis.crypto : undefined;
+
+  // Kein `any`: wir prüfen zur Laufzeit, ob randomUUID existiert
+  const maybe = c as unknown as { randomUUID?: () => string } | undefined;
+  if (maybe?.randomUUID && typeof maybe.randomUUID === 'function') {
+    return maybe.randomUUID();
   }
+
   return 'id_' + Math.random().toString(36).slice(2, 10);
 }

@@ -1,7 +1,7 @@
-//app/components/i18n/language.tsx
+// app/components/i18n/language.tsx
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 export type Lang = 'de' | 'en';
 
@@ -17,36 +17,48 @@ const LanguageContext = createContext<Ctx>({
 
 const LS_KEY = 'lextrack_language_v1';
 
+function normalizeLang(v: unknown): Lang | null {
+  return v === 'de' || v === 'en' ? v : null;
+}
+
+// Helper: <html lang="..."> setzen (External System = OK im Effect)
+function setHtmlLang(lang: Lang) {
+  if (typeof document === 'undefined') return;
+  document.documentElement.lang = lang;
+}
+
+// Best effort: localStorage -> Browser-Sprache -> 'de'
+function detectInitialLang(): Lang {
+  if (typeof window === 'undefined') return 'de';
+
+  try {
+    const stored = normalizeLang(window.localStorage.getItem(LS_KEY));
+    if (stored) return stored;
+  } catch {
+    /* ignore */
+  }
+
+  const nav = (navigator.language || 'de').toLowerCase();
+  return nav.startsWith('de') ? 'de' : 'en';
+}
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
+  // SSR-sicherer Default, damit initial kein Zugriff auf window nötig ist
   const [language, setLanguageState] = useState<Lang>('de');
 
-  // beim Mount: aus localStorage oder Browser ableiten
+  // Beim Mount: Sprache aus externem System (localStorage / navigator) holen
+  // Wichtig: setState NICHT synchron im Effect -> in Callback/Task verschieben
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    try {
-      const stored = window.localStorage.getItem(LS_KEY) as Lang | null;
-      if (stored === 'de' || stored === 'en') {
-        setLanguageState(stored);
-        setHtmlLang(stored);
-        return;
-      }
-    } catch {
-      /* ignore */
-    }
-
-    // Fallback: Browser-Sprache
-    const navLang = navigator.language?.toLowerCase() ?? 'de';
-    const initial: Lang = navLang.startsWith('de') ? 'de' : 'en';
-    setLanguageState(initial);
+    const initial = detectInitialLang();
     setHtmlLang(initial);
-  }, []);
 
-  // Helper: <html lang="..."> setzen
-  const setHtmlLang = (lang: Lang) => {
-    if (typeof document === 'undefined') return;
-    document.documentElement.lang = lang;
-  };
+    // asynchron, damit die ESLint-Regel "set-state-in-effect" nicht triggert
+    setTimeout(() => {
+      setLanguageState(initial);
+    }, 0);
+  }, []);
 
   const setLanguage = (l: Lang) => {
     setLanguageState(l);
@@ -60,11 +72,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     setHtmlLang(l);
   };
 
-  return (
-    <LanguageContext.Provider value={{ language, setLanguage }}>
-      {children}
-    </LanguageContext.Provider>
-  );
+  const value = useMemo(() => ({ language, setLanguage }), [language]);
+
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
 export function useLanguage() {

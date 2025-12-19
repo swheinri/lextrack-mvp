@@ -1,6 +1,6 @@
 // app/users/page.tsx
 'use client';
-import { UserPlus, Shield, Trash2 } from 'lucide-react';
+import { UserPlus, Shield } from 'lucide-react';
 
 export default function UsersSettings() {
   return (

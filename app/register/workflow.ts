@@ -35,20 +35,31 @@ export const allowedTransitions: Record<WorkflowState, WorkflowState[]> = {
 
 // Optionale Guards – hier nur Beispiele/Platzhalter:
 export type GuardCtx = {
-  hasMinimumMeta?: boolean;       // Typ/Bezeichnung/Themenfeld gesetzt?
+  hasMinimumMeta?: boolean; // Typ/Bezeichnung/Themenfeld gesetzt?
   reviewerDifferentFromAuthor?: boolean;
-  projektReady?: boolean;         // Owner + mind. 1 Maßnahme
+  projektReady?: boolean; // Owner + mind. 1 Maßnahme
   bewertungErgebnis?: BewertungErgebnis;
 };
 
-export function canTransition(from: WorkflowState, to: WorkflowState, _ctx?: GuardCtx) {
-  return allowedTransitions[from]?.includes(to);
+export function canTransition(from: WorkflowState, to: WorkflowState, ctx?: GuardCtx) {
+  const allowed = allowedTransitions[from]?.includes(to) ?? false;
+  if (!allowed) return false;
+
+  // Minimal sinnvolle Guard-Beispiele (später erweiterbar):
+  if (to === 'bewertung' && ctx?.hasMinimumMeta === false) return false;
+  if (from === 'review' && to === 'bestaetigt' && ctx?.reviewerDifferentFromAuthor === false)
+    return false;
+
+  return true;
 }
 
-export function describeTransition(to: WorkflowState, extra?: Partial<GuardCtx> & {
-  riskMode?: RiskMode;
-  reason?: string;
-}) {
+export function describeTransition(
+  to: WorkflowState,
+  extra?: Partial<GuardCtx> & {
+    riskMode?: RiskMode;
+    reason?: string;
+  }
+) {
   const parts = [`Status: ${to}`];
   if (extra?.riskMode) parts.push(`Riskengine: ${extra.riskMode}`);
   if (extra?.bewertungErgebnis) parts.push(`Bewertung: ${extra.bewertungErgebnis}`);

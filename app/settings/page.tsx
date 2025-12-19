@@ -42,6 +42,8 @@ type ThemeKey =
   | 'colorblind'
   | 'colorblind-deuter';
 
+type FontSizeKey = 'normal' | 'large' | 'xlarge';
+
 /* ---------- Texte DE / EN ---------- */
 
 const TEXT = {
@@ -457,17 +459,17 @@ export default function SettingsPage() {
               </p>
 
               <div className="mt-2 inline-flex rounded-full border border-slate-300 bg-slate-100 p-1 text-xs">
-                {[
+                {([
                   { id: 'normal', label: t.fontNormal },
                   { id: 'large', label: t.fontLarge },
                   { id: 'xlarge', label: t.fontXLarge },
-                ].map((opt) => {
+                ] as Array<{ id: FontSizeKey; label: string }>).map((opt) => {
                   const isActive = fontSize === opt.id;
                   return (
                     <button
                       key={opt.id}
                       type="button"
-                      onClick={() => setFontSize(opt.id as any)}
+                      onClick={() => setFontSize(opt.id)}
                       className={[
                         'px-3 py-1 rounded-full transition',
                         isActive

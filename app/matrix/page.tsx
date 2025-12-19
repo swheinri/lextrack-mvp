@@ -1,13 +1,13 @@
 // app/matrix/page.tsx
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 
 import MatrixDocSelector from './matrix-doc-selector';
 import MatrixDocList from './matrix-doc-list';
 import MatrixDetail from './matrix-detail';
 
-import { useRegisterStore } from '../register/registerstore';
+import { useRegisterStore, type LawRow } from '../register/registerstore';
 import { useMatrixStore } from './matrixstore';
 import { useLanguage } from '../components/i18n/language';
 import { Info, PlusCircle, X } from 'lucide-react';
@@ -23,18 +23,15 @@ export default function MatrixPage() {
   const [showInfo, setShowInfo] = useState(false);
   const [showDocSelector, setShowDocSelector] = useState(false);
 
-  const selectedDoc = useMemo(
-    () => docs.find((d) => d.id === selectedDocId) ?? null,
-    [docs, selectedDocId]
-  );
-
   function handleCreateFromLaw() {
     if (!selectedLawId) return;
-    const law = rows.find((r) => r.id === selectedLawId);
+
+    const law: LawRow | undefined = rows.find((r) => r.id === selectedLawId);
     if (!law) return;
 
-    const doc = createOrGetDocumentForLaw(law as any);
+    const doc = createOrGetDocumentForLaw(law);
     setSelectedDocId(doc.id);
+
     // Auswahl-Modal schließen, wenn eine Matrix angelegt/gefunden wurde
     setShowDocSelector(false);
   }
@@ -67,9 +64,7 @@ export default function MatrixPage() {
                 className="inline-flex items-center gap-1 rounded-full bg-[#009A93] px-3 py-1.5 text-[11px] font-medium text-white shadow-sm hover:bg-[#007e78]"
               >
                 <PlusCircle className="h-3 w-3" />
-                <span>
-                  {isDe ? 'Regelwerk verbinden' : 'Link regulation'}
-                </span>
+                <span>{isDe ? 'Regelwerk verbinden' : 'Link regulation'}</span>
               </button>
 
               <button

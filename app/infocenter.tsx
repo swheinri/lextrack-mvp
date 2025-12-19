@@ -1,10 +1,10 @@
 // app/infocenter.tsx
-
 'use client';
 
 import React from 'react';
 import { Info, AlertTriangle, Bell } from 'lucide-react';
-import { useInfoCenter, InfoData, InfoCenterProvider } from './infocenter-context';
+import { useInfoCenter } from './infocenter-context';
+import type { InfoData } from './infocenter-context';
 
 type InfoCenterProps = {
   /** Optional: explizite Daten übergeben. Wenn nicht gesetzt, werden Context-Daten genutzt. */
@@ -19,7 +19,6 @@ export const InfoCenter: React.FC<InfoCenterProps> = ({ data: propData }) => {
 
   if (!data) return null;
 
-  // einfache Logik für Icon / Farbcode
   let Icon = Info;
   let badgeClass = 'bg-sky-100 text-sky-700';
   if (data.severity === 'warning') {
@@ -35,14 +34,14 @@ export const InfoCenter: React.FC<InfoCenterProps> = ({ data: propData }) => {
       <button
         type="button"
         className="flex h-9 w-9 items-center justify-center rounded-full border border-white/40 bg-white/10 hover:bg-white/20"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen((o) => !o)}
         title={data.title}
       >
         <Icon size={18} />
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 max-w-sm rounded-xl border border-slate-200 bg-white text-slate-800 shadow-lg z-50">
+        <div className="absolute right-0 z-50 mt-2 w-80 max-w-sm rounded-xl border border-slate-200 bg-white text-slate-800 shadow-lg">
           <div className="flex items-start gap-2 border-b border-slate-100 px-4 py-3">
             <div
               className={[
@@ -52,6 +51,7 @@ export const InfoCenter: React.FC<InfoCenterProps> = ({ data: propData }) => {
             >
               {data.version ? `Version ${data.version}` : 'Info'}
             </div>
+
             <div className="flex-1">
               <div className="text-sm font-semibold">{data.title}</div>
               {data.lastUpdated && (
@@ -78,6 +78,7 @@ export const InfoCenter: React.FC<InfoCenterProps> = ({ data: propData }) => {
   );
 };
 
-// 👉 damit du weiterhin alles aus *einem* Modul importieren kannst:
-export { InfoCenterProvider, useInfoCenter } from './infocenter-context';
+// ✅ Re-Exports ohne “unused import”-Problem
+export { InfoCenterProvider } from './infocenter-context';
+export { useInfoCenter }; // bereits importiert und benutzt
 export type { InfoData } from './infocenter-context';

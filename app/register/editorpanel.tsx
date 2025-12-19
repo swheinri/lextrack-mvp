@@ -5,7 +5,6 @@ import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import {
   LawRow,
-  useRegisterStore,
   Dokumentenart,
   Vertragsumfeld,
   Relevanz,
@@ -52,9 +51,6 @@ type Props = {
 };
 
 export default function EditorPanel({ row, onClose, onSave }: Props) {
-  // update bleibt drin, falls du es noch an anderen Stellen brauchst.
-  // Speichern läuft jetzt aber bewusst über onSave (damit History etc. zentral in page.tsx passiert).
-  const { update } = useRegisterStore();
   const { language } = useLanguage();
   const isDe = language === 'de';
 
@@ -77,9 +73,6 @@ export default function EditorPanel({ row, onClose, onSave }: Props) {
 
     // ✅ ZENTRAL speichern (inkl. History-Logik aus page.tsx)
     onSave(id, patch);
-
-    // (optional) falls du trotz Zentralisierung zusätzlich lokal updaten willst:
-    // update(id, patch);
   };
 
   const handleSaveAndClose = () => {
@@ -147,7 +140,7 @@ export default function EditorPanel({ row, onClose, onSave }: Props) {
                   onChange={(e) =>
                     setField(
                       'dokumentenart',
-                      (e.target.value || undefined) as Dokumentenart | undefined,
+                      (e.target.value || undefined) as Dokumentenart | undefined
                     )
                   }
                 >
@@ -165,7 +158,10 @@ export default function EditorPanel({ row, onClose, onSave }: Props) {
               </Field>
 
               {/* Kürzel */}
-              <Field label={isDe ? 'Kürzel' : 'Reference'} className="md:col-span-3">
+              <Field
+                label={isDe ? 'Kürzel' : 'Reference'}
+                className="md:col-span-3"
+              >
                 <input
                   className={inputCls}
                   value={draft.kuerzel}
@@ -174,7 +170,10 @@ export default function EditorPanel({ row, onClose, onSave }: Props) {
               </Field>
 
               {/* Bezeichnung */}
-              <Field label={isDe ? 'Bezeichnung' : 'Title'} className="md:col-span-3">
+              <Field
+                label={isDe ? 'Bezeichnung' : 'Title'}
+                className="md:col-span-3"
+              >
                 <input
                   className={inputCls}
                   value={draft.bezeichnung}
@@ -183,7 +182,10 @@ export default function EditorPanel({ row, onClose, onSave }: Props) {
               </Field>
 
               {/* Themenfeld – Dropdown */}
-              <Field label={isDe ? 'Themenfeld' : 'Topic area'} className="md:col-span-3">
+              <Field
+                label={isDe ? 'Themenfeld' : 'Topic area'}
+                className="md:col-span-3"
+              >
                 <select
                   className={inputCls}
                   value={draft.themenfeld ?? ''}
@@ -201,14 +203,17 @@ export default function EditorPanel({ row, onClose, onSave }: Props) {
               </Field>
 
               {/* Vertragsumfeld – neues Feld */}
-              <Field label={isDe ? 'Vertragsumfeld' : 'Contract context'} className="md:col-span-3">
+              <Field
+                label={isDe ? 'Vertragsumfeld' : 'Contract context'}
+                className="md:col-span-3"
+              >
                 <select
                   className={inputCls}
                   value={draft.vertragsumfeld ?? ''}
                   onChange={(e) =>
                     setField(
                       'vertragsumfeld',
-                      (e.target.value || undefined) as Vertragsumfeld | undefined,
+                      (e.target.value || undefined) as Vertragsumfeld | undefined
                     )
                   }
                 >
@@ -229,7 +234,10 @@ export default function EditorPanel({ row, onClose, onSave }: Props) {
               </Field>
 
               {/* Erfassung durch (readonly) */}
-              <Field label={isDe ? 'Erfassung durch' : 'Captured by'} className="md:col-span-3">
+              <Field
+                label={isDe ? 'Erfassung durch' : 'Captured by'}
+                className="md:col-span-3"
+              >
                 <input
                   className={inputCls}
                   value={
@@ -245,7 +253,10 @@ export default function EditorPanel({ row, onClose, onSave }: Props) {
               </Field>
 
               {/* Publiziert am */}
-              <Field label={isDe ? 'Publiziert am' : 'Published'} className="md:col-span-3">
+              <Field
+                label={isDe ? 'Publiziert am' : 'Published'}
+                className="md:col-span-3"
+              >
                 <input
                   type="date"
                   className={inputCls}
@@ -255,7 +266,10 @@ export default function EditorPanel({ row, onClose, onSave }: Props) {
               </Field>
 
               {/* Gültig ab */}
-              <Field label={isDe ? 'Gültig ab' : 'Valid from'} className="md:col-span-3">
+              <Field
+                label={isDe ? 'Gültig ab' : 'Valid from'}
+                className="md:col-span-3"
+              >
                 <input
                   type="date"
                   className={inputCls}
@@ -265,7 +279,10 @@ export default function EditorPanel({ row, onClose, onSave }: Props) {
               </Field>
 
               {/* Gültig bis */}
-              <Field label={isDe ? 'Gültig bis' : 'Valid to'} className="md:col-span-3">
+              <Field
+                label={isDe ? 'Gültig bis' : 'Valid to'}
+                className="md:col-span-3"
+              >
                 <input
                   type="date"
                   className={inputCls}
@@ -293,7 +310,10 @@ export default function EditorPanel({ row, onClose, onSave }: Props) {
                 />
               </Field>
 
-              <Field label={isDe ? 'Herausgeber' : 'Issuing body'} className="md:col-span-6">
+              <Field
+                label={isDe ? 'Herausgeber' : 'Issuing body'}
+                className="md:col-span-6"
+              >
                 <input
                   className={inputCls}
                   value={draft.herausgeber ?? ''}
@@ -308,7 +328,7 @@ export default function EditorPanel({ row, onClose, onSave }: Props) {
                   onChange={(e) =>
                     setField(
                       'relevanz',
-                      (e.target.value || undefined) as Relevanz | undefined,
+                      (e.target.value || undefined) as Relevanz | undefined
                     )
                   }
                 >
@@ -350,7 +370,10 @@ export default function EditorPanel({ row, onClose, onSave }: Props) {
               {isDe ? 'Verknüpfte Dokumente & Quellen' : 'Linked documents & sources'}
             </div>
             <div className={sectionBody}>
-              <Field label={isDe ? 'Verlinkung Quelle (URL)' : 'Source URL'} className="md:col-span-6">
+              <Field
+                label={isDe ? 'Verlinkung Quelle (URL)' : 'Source URL'}
+                className="md:col-span-6"
+              >
                 <input
                   className={inputCls}
                   value={draft.dokumentUrl ?? ''}
@@ -384,9 +407,7 @@ export default function EditorPanel({ row, onClose, onSave }: Props) {
                       <li key={idx} className="flex justify-between gap-3">
                         <span>
                           {h.text}{' '}
-                          {h.user ? (
-                            <span className="text-slate-400">· {h.user}</span>
-                          ) : null}
+                          {h.user ? <span className="text-slate-400">· {h.user}</span> : null}
                         </span>
                         <span className="whitespace-nowrap text-slate-400">{h.date}</span>
                       </li>

@@ -1,13 +1,7 @@
 // app/components/themecontext.tsx
 'use client';
 
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  ReactNode,
-} from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 export type ThemeMode =
   | 'light'
@@ -38,6 +32,24 @@ const THEME_LS_KEY = 'lextrack_theme_v1';
 const FONT_LS_KEY = 'lextrack_fontsize_v1';
 const ACCENT_LS_KEY = 'lextrack_accent_v1';
 
+function isThemeMode(v: unknown): v is ThemeMode {
+  return (
+    v === 'light' ||
+    v === 'dark' ||
+    v === 'high-contrast' ||
+    v === 'colorblind' ||
+    v === 'colorblind-deuter'
+  );
+}
+
+function isFontSize(v: unknown): v is FontSize {
+  return v === 'normal' || v === 'large' || v === 'xlarge';
+}
+
+function isAccentColor(v: unknown): v is AccentColor {
+  return v === 'teal' || v === 'blue' || v === 'violet' || v === 'amber';
+}
+
 function applyThemeToDocument(theme: ThemeMode) {
   if (typeof document === 'undefined') return;
   document.documentElement.dataset.theme = theme;
@@ -53,99 +65,55 @@ function applyAccentToDocument(accent: AccentColor) {
   document.documentElement.dataset.accent = accent;
 }
 
+function readLS(key: string): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeLS(key: string, value: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // ignore
+  }
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>('light');
-  const [fontSize, setFontSizeState] = useState<FontSize>('normal');
-  const [accent, setAccentState] = useState<AccentColor>('teal');
+  const [theme, setThemeState] = useState<ThemeMode>(() => {
+    const v = readLS(THEME_LS_KEY);
+    return isThemeMode(v) ? v : 'light';
+  });
 
-  // Initial aus localStorage laden
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+  const [fontSize, setFontSizeState] = useState<FontSize>(() => {
+    const v = readLS(FONT_LS_KEY);
+    return isFontSize(v) ? v : 'normal';
+  });
 
-    try {
-      const storedTheme = window.localStorage.getItem(THEME_LS_KEY) as
-        | ThemeMode
-        | null;
-      const storedFontSize = window.localStorage.getItem(FONT_LS_KEY) as
-        | FontSize
-        | null;
-      const storedAccent = window.localStorage.getItem(ACCENT_LS_KEY) as
-        | AccentColor
-        | null;
-
-      // Theme
-      if (
-        storedTheme === 'light' ||
-        storedTheme === 'dark' ||
-        storedTheme === 'high-contrast' ||
-        storedTheme === 'colorblind' ||
-        storedTheme === 'colorblind-deuter'
-      ) {
-        setThemeState(storedTheme);
-        applyThemeToDocument(storedTheme);
-      } else {
-        applyThemeToDocument('light');
-      }
-
-      // Schriftgröße
-      if (
-        storedFontSize === 'normal' ||
-        storedFontSize === 'large' ||
-        storedFontSize === 'xlarge'
-      ) {
-        setFontSizeState(storedFontSize);
-        applyFontSizeToDocument(storedFontSize);
-      } else {
-        applyFontSizeToDocument('normal');
-      }
-
-      // Accent
-      if (
-        storedAccent === 'teal' ||
-        storedAccent === 'blue' ||
-        storedAccent === 'violet' ||
-        storedAccent === 'amber'
-      ) {
-        setAccentState(storedAccent);
-        applyAccentToDocument(storedAccent);
-      } else {
-        applyAccentToDocument('teal');
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
+  const [accent, setAccentState] = useState<AccentColor>(() => {
+    const v = readLS(ACCENT_LS_KEY);
+    return isAccentColor(v) ? v : 'teal';
+  });
 
   // Theme speichern / anwenden
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      window.localStorage.setItem(THEME_LS_KEY, theme);
-    } catch {
-      // ignore
-    }
+    writeLS(THEME_LS_KEY, theme);
     applyThemeToDocument(theme);
   }, [theme]);
 
   // Schriftgröße speichern / anwenden
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      window.localStorage.setItem(FONT_LS_KEY, fontSize);
-    } catch {
-      // ignore
-    }
+    writeLS(FONT_LS_KEY, fontSize);
     applyFontSizeToDocument(fontSize);
   }, [fontSize]);
 
   // Accent speichern / anwenden
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      window.localStorage.setItem(ACCENT_LS_KEY, accent);
-    } catch {
-      // ignore
-    }
+    writeLS(ACCENT_LS_KEY, accent);
     applyAccentToDocument(accent);
   }, [accent]);
 
@@ -154,9 +122,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setAccent = (acc: AccentColor) => setAccentState(acc);
 
   return (
-    <ThemeContext.Provider
-      value={{ theme, setTheme, fontSize, setFontSize, accent, setAccent }}
-    >
+    <ThemeContext.Provider value={{ theme, setTheme, fontSize, setFontSize, accent, setAccent }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -164,8 +130,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
 export function useTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext);
-  if (!ctx) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
+  if (!ctx) throw new Error('useTheme must be used within a ThemeProvider');
   return ctx;
 }

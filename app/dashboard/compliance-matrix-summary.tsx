@@ -3,39 +3,22 @@
 
 import React, { useMemo } from 'react';
 import { useMatrixStore } from '../matrix/matrixstore';
-import { useLanguage } from '../components/i18n/language';
 
-const TEXT = {
-  de: {
-    matrices: 'Matrizen',
-    clauses: 'Paragrafen gesamt',
-    compliant: 'Compliance',
-    rate: 'Erfüllungsgrad',
-    empty: 'Noch keine Compliance-Matrix angelegt. Lege zunächst Matrizen im Modul „Compliance Matrix“ an.',
-  },
-  en: {
-    matrices: 'Matrices',
-    clauses: 'Clauses in total',
-    compliant: 'Compliant',
-    rate: 'Fulfilment rate',
-    empty: 'No compliance matrix has been created yet. Please create matrices in the “Compliance Matrix” module first.',
-  },
-} as const;
+type MatrixClauseLike = { status?: string };
+type MatrixDocLike = { clauses?: MatrixClauseLike[] };
 
 export default function ComplianceMatrixSummary() {
-  const { docs } = useMatrixStore();
-  const { language } = useLanguage();
-  const t = TEXT[language] ?? TEXT.de;
+  const { docs } = useMatrixStore() as { docs: MatrixDocLike[] };
 
   const stats = useMemo(() => {
     const matrices = docs.length;
     let clauses = 0;
     let compliant = 0;
 
-    docs.forEach((doc: any) => {
+    docs.forEach((doc) => {
       const list = doc.clauses ?? [];
       clauses += list.length;
-      compliant += list.filter((c: any) => c.status === 'compliant').length;
+      compliant += list.filter((c) => c.status === 'compliant').length;
     });
 
     const rate = clauses > 0 ? Math.round((compliant / clauses) * 100) : 0;
@@ -43,56 +26,47 @@ export default function ComplianceMatrixSummary() {
     return { matrices, clauses, compliant, rate };
   }, [docs]);
 
-  if (stats.matrices === 0) {
-    return (
-      <p className="text-xs text-slate-500 dark:text-slate-400">
-        {t.empty}
-      </p>
-    );
-  }
-
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      {/* Matrizen */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs shadow-sm dark:border-slate-700 dark:bg-slate-900">
-        <div className="font-semibold tracking-wide text-slate-600 dark:text-slate-300">
-          {t.matrices.toUpperCase()}
-        </div>
-        <div className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-50">
-          {stats.matrices}
-        </div>
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <div className="text-xs font-semibold tracking-wide text-slate-500 dark:text-slate-400">
+        COMPLIANCE MATRIX
       </div>
 
-      {/* Paragrafen gesamt */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs shadow-sm dark:border-slate-700 dark:bg-slate-900">
-        <div className="font-semibold tracking-wide text-slate-600 dark:text-slate-300">
-          {t.clauses.toUpperCase()}
-        </div>
-        <div className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-50">
-          {stats.clauses}
-        </div>
-        <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-          {t.compliant}: {stats.compliant}
-        </div>
-      </div>
+      {stats.matrices === 0 ? (
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+          No matrices yet.
+        </p>
+      ) : (
+        <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">Matrices</div>
+            <div className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+              {stats.matrices}
+            </div>
+          </div>
 
-      {/* Erfüllungsgrad */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs shadow-sm dark:border-slate-700 dark:bg-slate-900 flex flex-col justify-between">
-        <div>
-          <div className="font-semibold tracking-wide text-slate-600 dark:text-slate-300">
-            {t.rate.toUpperCase()}
+          <div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">Requirements</div>
+            <div className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+              {stats.clauses}
+            </div>
           </div>
-          <div className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-50">
-            {stats.rate}%
+
+          <div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">Compliant</div>
+            <div className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+              {stats.compliant} / {stats.clauses}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">Rate</div>
+            <div className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+              {stats.rate}%
+            </div>
           </div>
         </div>
-        <div className="mt-2 h-2 rounded-full bg-slate-200 dark:bg-slate-800">
-          <div
-            className="h-2 rounded-full bg-[#009A93]"
-            style={{ width: `${stats.rate}%` }}
-          />
-        </div>
-      </div>
+      )}
     </div>
   );
 }

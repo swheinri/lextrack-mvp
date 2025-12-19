@@ -1,6 +1,6 @@
 // app/matrix/utils/matrix-print.ts
 import type { MatrixClause, MatrixStatus, PsoeLevel, RiskLevel } from '../matrixstore';
-import { statusLabel, matrixStatusLabel } from './matrix-status';
+import { matrixStatusLabel, statusLabel } from './matrix-status';
 
 type MatrixClauseWithLevels = MatrixClause & {
   refLevel1?: string;
@@ -15,6 +15,17 @@ export type DocRiskAggregationMode = 'worst_case' | 'index';
 export type DocRiskScope = 'all' | 'non_compliant';
 
 export type RiskBand = 'low' | 'medium' | 'high' | 'critical';
+
+type MatrixPrintDoc = {
+  id: string;
+  status?: MatrixStatus;
+  lawKuerzel?: string;
+  lawBezeichnung?: string;
+  lawRechtsart?: string;
+  lawThemenfeld?: string;
+  // offen für zusätzliche Felder aus deinem Store – ohne `any`
+  [key: string]: unknown;
+};
 
 export function buildRef(c: MatrixClauseWithLevels): string {
   const parts: string[] = [];
@@ -101,22 +112,17 @@ export function processAndFormsLabelForClause(c: MatrixClause): string {
 }
 
 export function printMatrix(opts: {
-  doc: any; // (MatrixDoc) – wir halten es bewusst flexibel wegen law* Feldern
+  doc: MatrixPrintDoc;
   clauses: MatrixClause[];
   isDe: boolean;
   locale: string;
   stats: { total: number; open: number; pct: number; notFulfilled: number; na: number };
   psoeStats: { avgScore: number; avgLevel: PsoeLevel | null };
-  riskStats: {
-    count: number;
-    avgScore: number;
-    worstScore: number;
-    docValue: number | null;
-  };
+  riskStats: { count: number; avgScore: number; worstScore: number; docValue: number | null };
   docRiskMode: DocRiskAggregationMode;
   docRiskScope: DocRiskScope;
   hasEvidence: (c: MatrixClause) => boolean;
-}) {
+}): void {
   const {
     doc,
     clauses,
@@ -156,15 +162,21 @@ export function printMatrix(opts: {
     const worst = riskStats.worstScore;
     const docVal = riskStats.docValue != null ? riskStats.docValue.toFixed(1) : '–';
     const modeLbl =
-      docRiskMode === 'worst_case' ? (isDe ? 'Worst Case' : 'Worst case') : (isDe ? 'Index (Ø)' : 'Index (avg)');
+      docRiskMode === 'worst_case'
+        ? isDe
+          ? 'Worst Case'
+          : 'Worst case'
+        : isDe
+          ? 'Index (Ø)'
+          : 'Index (avg)';
     return isDe
       ? `Dokumentrisiko (${modeLbl}): ${docVal} / 16 · Ø: ${avg} / 16 · Worst: ${worst} / 16`
       : `Document risk (${modeLbl}): ${docVal} / 16 · Avg: ${avg} / 16 · Worst: ${worst} / 16`;
   })();
 
   const metaParts: string[] = [];
-  const lawRechtsart = (doc as any).lawRechtsart as string | undefined;
-  const lawThemenfeld = (doc as any).lawThemenfeld as string | undefined;
+  const lawRechtsart = typeof doc.lawRechtsart === 'string' ? doc.lawRechtsart : undefined;
+  const lawThemenfeld = typeof doc.lawThemenfeld === 'string' ? doc.lawThemenfeld : undefined;
 
   if (lawRechtsart) metaParts.push(`${isDe ? 'Rechtsart' : 'Type'}: ${lawRechtsart}`);
   if (doc.lawKuerzel) metaParts.push(`${isDe ? 'Kürzel' : 'Code'}: ${doc.lawKuerzel}`);
@@ -190,8 +202,11 @@ export function printMatrix(opts: {
 
       const maturity = c.psoeLevel ?? '—';
 
-      const rLbl = riskLabel(c.riskSeverity as any, c.riskProbability as any);
-      const rScore = riskScore(c.riskSeverity as any, c.riskProbability as any);
+      const s = (c.riskSeverity ?? undefined) as RiskLevel | undefined;
+      const p = (c.riskProbability ?? undefined) as RiskLevel | undefined;
+
+      const rLbl = riskLabel(s, p);
+      const rScore = riskScore(s, p);
       const riskOut = rScore ? `${rLbl} (${rScore}/16)` : '—';
 
       const safeRef = escapeHtml(ref);

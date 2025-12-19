@@ -152,8 +152,8 @@ function buildHistoryEntries(before: LawRow, after: Partial<LawRow>) {
     const f = cfg.key;
     if (!Object.prototype.hasOwnProperty.call(after, f)) continue;
 
-    const beforeVal = (before as any)[f];
-    const afterVal = (after as any)[f];
+    const beforeVal = before[f];
+    const afterVal = after[f];
 
     if ((beforeVal ?? '') === (afterVal ?? '')) continue;
 
@@ -185,8 +185,10 @@ function buildHistoryEntries(before: LawRow, after: Partial<LawRow>) {
   return [{ date: now, user, text: messages.join('\n') }];
 }
 
-function ensureCreationEntry(existing: any[] | undefined, before: LawRow) {
-  const history = existing ? [...existing] : [];
+type HistoryEntry = NonNullable<LawRow['history']>[number];
+
+function ensureCreationEntry(existing: LawRow['history'], before: LawRow): HistoryEntry[] {
+  const history: HistoryEntry[] = existing ? [...existing] : [];
   if (history.length === 0) {
     const createdAt = before.createdAt || before.publiziert || new Date().toISOString();
     const creator =
@@ -198,13 +200,26 @@ function ensureCreationEntry(existing: any[] | undefined, before: LawRow) {
   return history;
 }
 
+/* ---- Minimaltypisierung für MatrixDocs (nur was wir hier brauchen) ---- */
+type MatrixDocLite = {
+  lawId?: string | null;
+};
+
+type MatrixStoreLite = {
+  docs?: MatrixDocLite[];
+};
+
 /* ---- Component ---- */
 
 export default function Page() {
   const { rows, remove, update } = useRegisterStore();
-  const { docs = [] } = useMatrixStore() as any;
+
+  // Falls useMatrixStore in deinem Projekt nicht sauber typisiert ist:
+  const matrixStore = useMatrixStore() as unknown as MatrixStoreLite;
+  const docs = matrixStore.docs ?? [];
+
   const { language } = useLanguage();
-  const t = (TEXT as any)[language] ?? TEXT.de;
+  const t = TEXT[language] ?? TEXT.de;
   const isDe = language === 'de';
 
   const role: UiRole = 'admin';
@@ -225,16 +240,18 @@ export default function Page() {
     const before = rows.find((r) => r.id === id);
     if (!before) return;
 
-    const { history: _ignored, ...restPatch } = patch as any;
+    // history aus patch ignorieren (wir bauen sie hier konsistent neu)
+    const { history, ...restPatch } = patch;
+    void history;
 
     const changeEntries = buildHistoryEntries(before, restPatch);
     const baseHistory = ensureCreationEntry(before.history, before);
-    const history =
+    const nextHistory =
       changeEntries.length > 0 ? [...baseHistory, ...changeEntries] : baseHistory;
 
     update(id, {
       ...restPatch,
-      history,
+      history: nextHistory,
     });
   };
 
@@ -242,7 +259,7 @@ export default function Page() {
 
   const computeBlockReasons = (row: LawRow): string[] => {
     const reasons: string[] = [];
-    const hasMatrix = (docs ?? []).some((d: any) => d.lawId === row.id);
+    const hasMatrix = docs.some((d) => d.lawId === row.id);
 
     if (hasMatrix) reasons.push(t.cannotDeleteReasonMatrix);
     if (row.status === 'aktiv') reasons.push(t.cannotDeleteReasonActive);
@@ -289,7 +306,7 @@ export default function Page() {
     const formatDate = (value?: string | null) => {
       if (!value) return '—';
       const d = new Date(value);
-      if (Number.isNaN(d.getTime())) return value as string;
+      if (Number.isNaN(d.getTime())) return value;
       return d.toLocaleDateString(locale);
     };
 
@@ -309,7 +326,7 @@ export default function Page() {
     let archived = 0;
 
     rows.forEach((r) => {
-      switch (mapStatusForStats(r.status)) {
+      switch (mapStatusForStats(r.status ?? null)) {
         case 'open':
           open += 1;
           break;
@@ -331,8 +348,8 @@ export default function Page() {
         const kuerzel = r.kuerzel || '—';
         const bezeichnung = r.bezeichnung || '—';
         const themenfeld = r.themenfeld || '—';
-        const publiziert = formatDate(r.publiziert as any);
-        const frist = formatDate(r.frist as any);
+        const publiziert = formatDate(r.publiziert ?? null);
+        const frist = formatDate(r.frist ?? null);
         const relevanz = r.relevanz || '—';
         const status = r.status || '—';
         const erfasser =

@@ -22,28 +22,28 @@ export type RiskScope = 'all' | 'non_compliant';
 
 export type InternalManualRef = {
   id: string;
-  exposition: string;   // z.B. CAME, OMM, MOE
-  chapter: string;      // Kapitel / Section
-  description: string;  // kurze Beschreibung
+  exposition: string; // z.B. CAME, OMM, MOE
+  chapter: string; // Kapitel / Section
+  description: string; // kurze Beschreibung
 };
 
 export type LegalRef = {
   id: string;
-  regulation: string;   // z.B. (EU) 1321/2014
-  part: string;         // z.B. Part-CAMO, Part-M
-  paragraph: string;    // z.B. M.A.201(a)
+  regulation: string; // z.B. (EU) 1321/2014
+  part: string; // z.B. Part-CAMO, Part-M
+  paragraph: string; // z.B. M.A.201(a)
 };
 
 export type ProcessRef = {
   id: string;
   processNumber: string; // z.B. IQM.123456 oder "Prozess 1234"
-  processTitle: string;  // Titel des Prozesses
+  processTitle: string; // Titel des Prozesses
 };
 
 export type FormRef = {
   id: string;
   formNumber: string; // z.B. VA 1234 / Dok.-Nr.
-  formTitle: string;  // Bezeichnung
+  formTitle: string; // Bezeichnung
 };
 
 export type MatrixClause = {
@@ -111,7 +111,11 @@ type MatrixState = {
   /* Aktionen */
   createOrGetDocumentForLaw: (law: LawRow) => MatrixDocument;
   addClause: (docId: string, parentId?: string) => void;
-  updateClause: (docId: string, clauseId: string, patch: Partial<MatrixClause>) => void;
+  updateClause: (
+    docId: string,
+    clauseId: string,
+    patch: Partial<MatrixClause>
+  ) => void;
   removeClause: (docId: string, clauseId: string) => void;
 
   removeDoc: (docId: string) => void;
@@ -154,6 +158,13 @@ function createDefaultClause(parentId?: string): MatrixClause {
   };
 }
 
+function readOptionalString(obj: unknown, key: string): string | undefined {
+  if (!obj || typeof obj !== 'object') return undefined;
+  const rec = obj as Record<string, unknown>;
+  const v = rec[key];
+  return typeof v === 'string' ? v : undefined;
+}
+
 /* ==================================================================== */
 
 export const useMatrixStore = create<MatrixState>()(
@@ -166,16 +177,16 @@ export const useMatrixStore = create<MatrixState>()(
         const existing = state.docs.find((d) => d.lawId === String(law.id));
         if (existing) return existing;
 
+        // Fallback-Feld (falls irgendwo "name" existiert, aber nicht im Typ LawRow)
+        const fallbackName = readOptionalString(law, 'name');
+
         const newDoc: MatrixDocument = {
           id: createId('doc'),
           lawId: String(law.id),
-          lawKuerzel: (law as any).kuerzel ?? '',
-          lawBezeichnung:
-            (law as any).bezeichnung ??
-            (law as any).name ??
-            String(law.id),
-          lawRechtsart: (law as any).rechtsart ?? '',
-          lawThemenfeld: (law as any).themenfeld ?? '',
+          lawKuerzel: law.kuerzel ?? '',
+          lawBezeichnung: law.bezeichnung ?? fallbackName ?? String(law.id),
+          lawRechtsart: law.rechtsart ?? '',
+          lawThemenfeld: law.themenfeld ?? '',
           clauses: [],
           status: 'draft',
 
@@ -199,7 +210,11 @@ export const useMatrixStore = create<MatrixState>()(
         });
       },
 
-      updateClause: (docId: string, clauseId: string, patch: Partial<MatrixClause>) => {
+      updateClause: (
+        docId: string,
+        clauseId: string,
+        patch: Partial<MatrixClause>
+      ) => {
         set((state) => {
           const docs = state.docs.map((doc) => {
             if (doc.id !== docId) return doc;
@@ -208,13 +223,15 @@ export const useMatrixStore = create<MatrixState>()(
               if (c.id !== clauseId) return c;
 
               // defensive defaults für alte Persist-Daten:
+              const cPartial = c as Partial<MatrixClause>;
+
               const safeCurrent: MatrixClause = {
                 ...c,
                 status: (c.status ?? 'open') as ComplianceStatus,
-                internalRefs: c.internalRefs ?? [],
-                legalRefs: c.legalRefs ?? [],
-                processRefs: (c as any).processRefs ?? [],
-                formRefs: (c as any).formRefs ?? [],
+                internalRefs: cPartial.internalRefs ?? [],
+                legalRefs: cPartial.legalRefs ?? [],
+                processRefs: cPartial.processRefs ?? [],
+                formRefs: cPartial.formRefs ?? [],
               };
 
               const next: MatrixClause = { ...safeCurrent, ...patch };
@@ -270,8 +287,12 @@ export const useMatrixStore = create<MatrixState>()(
             if (doc.id !== docId) return doc;
             return {
               ...doc,
-              riskAggregationMode: patch.riskAggregationMode ?? doc.riskAggregationMode ?? 'worst_case',
-              riskScope: patch.riskScope ?? doc.riskScope ?? 'non_compliant',
+              riskAggregationMode:
+                patch.riskAggregationMode ??
+                doc.riskAggregationMode ??
+                'worst_case',
+              riskScope:
+                patch.riskScope ?? doc.riskScope ?? 'non_compliant',
             };
           });
           return { docs };

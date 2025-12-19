@@ -1,7 +1,7 @@
 // app/register/registerview.tsx
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Info, Filter as FilterIcon, Trash2 } from 'lucide-react';
 import { useRegisterStore, LawRow, Relevanz, Status } from './registerstore';
 import RegisterExportMenu from './register-export-menu';
@@ -18,6 +18,20 @@ type Props = {
   onRemove?: (row: LawRow) => void;
   /** Druckfunktion aus page.tsx (neues Layout) */
   onPrint?: () => void;
+};
+
+type FilterState = {
+  themenfeld: string;
+  erfasser: string;
+  relevanz: string;
+  status: string;
+};
+
+const DEFAULT_FILTERS: FilterState = {
+  themenfeld: 'alle',
+  erfasser: 'alle',
+  relevanz: 'alle',
+  status: 'alle',
 };
 
 const th =
@@ -54,6 +68,34 @@ const RELEVANZ_LABEL: Record<Lang, Record<Relevanz, string>> = {
   },
 };
 
+function readFiltersFromLS(): FilterState {
+  if (typeof window === 'undefined') return DEFAULT_FILTERS;
+  try {
+    const raw = localStorage.getItem(FILTER_LS_KEY);
+    if (!raw) return DEFAULT_FILTERS;
+
+    const parsed = JSON.parse(raw) as Partial<FilterState>;
+    return {
+      themenfeld:
+        typeof parsed.themenfeld === 'string' && parsed.themenfeld
+          ? parsed.themenfeld
+          : 'alle',
+      erfasser:
+        typeof parsed.erfasser === 'string' && parsed.erfasser
+          ? parsed.erfasser
+          : 'alle',
+      relevanz:
+        typeof parsed.relevanz === 'string' && parsed.relevanz
+          ? parsed.relevanz
+          : 'alle',
+      status:
+        typeof parsed.status === 'string' && parsed.status ? parsed.status : 'alle',
+    };
+  } catch {
+    return DEFAULT_FILTERS;
+  }
+}
+
 /* ---------- UI-Helper ---------- */
 
 const chip = (text: string, classes = '') => (
@@ -84,7 +126,7 @@ const statChip = (s: Status | undefined, lang: Lang, isDark: boolean) =>
         STATUS_LABEL[lang]?.[s] ?? s,
         isDark
           ? 'bg-amber-500/25 text-amber-100 ring-amber-400/70'
-          : 'bg-amber-50 text-amber-700 ring-amber-200',
+          : 'bg-amber-50 text-amber-700 ring-amber-200'
       )
     : '—';
 
@@ -100,9 +142,7 @@ function InfoModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold text-slate-800">
-              {isDe
-                ? 'Compliance Kataster – Hilfe'
-                : 'Compliance register – help'}
+              {isDe ? 'Compliance Kataster – Hilfe' : 'Compliance register – help'}
             </h3>
             <p className="mt-1 text-sm text-slate-600">
               {isDe
@@ -129,9 +169,7 @@ function InfoModal({ onClose }: { onClose: () => void }) {
               : 'Shows the lifecycle state of a document – e.g. active, obsolete or archived.'}
           </p>
           <p>
-            <span className="font-semibold">
-              {isDe ? 'Fristen:' : 'Due dates:'}
-            </span>{' '}
+            <span className="font-semibold">{isDe ? 'Fristen:' : 'Due dates:'}</span>{' '}
             {isDe
               ? 'Über die Spalte „Frist“ kannst du wichtige Termine für Aktualisierungen oder Überprüfungen der Dokumente nachhalten.'
               : 'Use the “Due date” column to track important dates for document updates or reviews.'}
@@ -162,12 +200,7 @@ function InfoModal({ onClose }: { onClose: () => void }) {
 
 /* ---------- Hauptkomponente ---------- */
 
-export default function Registerview({
-  role,
-  onOpen,
-  onRemove,
-  onPrint,
-}: Props) {
+export default function Registerview({ role, onOpen, onRemove, onPrint }: Props) {
   const { rows } = useRegisterStore();
   const { language } = useLanguage();
   const uiLang: Lang = language === 'en' ? 'en' : 'de';
@@ -177,84 +210,33 @@ export default function Registerview({
 
   const isAdmin = role === 'admin';
 
-  const renderErfasser = (r: LawRow): string => {
+  // ✅ stabil für useMemo/useEffect deps
+  const renderErfasser = useCallback((r: LawRow): string => {
     const name = [r.erfasserVorname ?? '', r.erfasserNachname ?? '']
       .filter(Boolean)
       .join(' ');
     const abt = r.erfasserAbteilung || '';
     if (!name && !abt) return '—';
     return abt ? `${name}${name ? ', ' : ''}${abt}` : name;
-  };
-
-  /* ---------- Aktive Filter ---------- */
-
-  const [filterThemenfeld, setFilterThemenfeld] = useState<string>('alle');
-  const [filterErfasser, setFilterErfasser] = useState<string>('alle');
-  const [filterRelevanz, setFilterRelevanz] = useState<string>('alle');
-  const [filterStatus, setFilterStatus] = useState<string>('alle');
-
-  /* ---------- Draft-Filter im Panel ---------- */
-
-  const [draftFilterThemenfeld, setDraftFilterThemenfeld] =
-    useState<string>('alle');
-  const [draftFilterErfasser, setDraftFilterErfasser] =
-    useState<string>('alle');
-  const [draftFilterRelevanz, setDraftFilterRelevanz] =
-    useState<string>('alle');
-  const [draftFilterStatus, setDraftFilterStatus] =
-    useState<string>('alle');
-
-  /* ---------- Filter aus localStorage laden ---------- */
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const raw = localStorage.getItem(FILTER_LS_KEY);
-      if (!raw) return;
-
-      const parsed = JSON.parse(raw) as Partial<{
-        themenfeld: string;
-        erfasser: string;
-        relevanz: string;
-        status: string;
-      }>;
-
-      if (parsed.themenfeld) setFilterThemenfeld(parsed.themenfeld);
-      if (parsed.erfasser) setFilterErfasser(parsed.erfasser);
-      if (parsed.relevanz) setFilterRelevanz(parsed.relevanz);
-      if (parsed.status) setFilterStatus(parsed.status);
-    } catch {
-      // ignore
-    }
   }, []);
 
-  /* ---------- Drafts synchronisieren, wenn Panel geöffnet wird ---------- */
+  /* ---------- Filter-State (aktiv + drafts) ---------- */
 
-  useEffect(() => {
-    if (showFilters) {
-      setDraftFilterThemenfeld(filterThemenfeld);
-      setDraftFilterErfasser(filterErfasser);
-      setDraftFilterRelevanz(filterRelevanz);
-      setDraftFilterStatus(filterStatus);
-    }
-  }, [showFilters, filterThemenfeld, filterErfasser, filterRelevanz, filterStatus]);
+  const [filters, setFilters] = useState<FilterState>(() => readFiltersFromLS());
+  const [draftFilters, setDraftFilters] = useState<FilterState>(() =>
+    readFiltersFromLS()
+  );
 
   /* ---------- Aktive Filter in localStorage speichern ---------- */
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const payload = {
-      themenfeld: filterThemenfeld,
-      erfasser: filterErfasser,
-      relevanz: filterRelevanz,
-      status: filterStatus,
-    };
     try {
-      localStorage.setItem(FILTER_LS_KEY, JSON.stringify(payload));
+      localStorage.setItem(FILTER_LS_KEY, JSON.stringify(filters));
     } catch {
       // ignore
     }
-  }, [filterThemenfeld, filterErfasser, filterRelevanz, filterStatus]);
+  }, [filters]);
 
   /* ---------- Optionen dynamisch ableiten ---------- */
 
@@ -288,83 +270,82 @@ export default function Registerview({
       relevanzen: Array.from(rv).sort(),
       statusList: Array.from(st).sort(),
     };
-  }, [rows]);
+  }, [rows, renderErfasser]);
 
   /* ---------- Gefilterte Zeilen ---------- */
 
   const filteredRows: LawRow[] = useMemo(
     () =>
       rows.filter((r) => {
-        if (filterThemenfeld !== 'alle' && r.themenfeld !== filterThemenfeld) {
+        if (filters.themenfeld !== 'alle' && r.themenfeld !== filters.themenfeld)
           return false;
-        }
+
         const erfasst = renderErfasser(r);
-        if (filterErfasser !== 'alle' && erfasst !== filterErfasser) {
+        if (filters.erfasser !== 'alle' && erfasst !== filters.erfasser)
           return false;
-        }
-        if (filterRelevanz !== 'alle' && (r.relevanz ?? '') !== filterRelevanz) {
+
+        if (filters.relevanz !== 'alle' && (r.relevanz ?? '') !== filters.relevanz)
           return false;
-        }
-        if (filterStatus !== 'alle' && (r.status ?? '') !== filterStatus) {
+
+        if (filters.status !== 'alle' && (r.status ?? '') !== filters.status)
           return false;
-        }
+
         return true;
       }),
-    [rows, filterThemenfeld, filterErfasser, filterRelevanz, filterStatus],
+    [rows, filters, renderErfasser]
   );
 
   const hasActiveFilter =
-    filterThemenfeld !== 'alle' ||
-    filterErfasser !== 'alle' ||
-    filterRelevanz !== 'alle' ||
-    filterStatus !== 'alle';
+    filters.themenfeld !== 'alle' ||
+    filters.erfasser !== 'alle' ||
+    filters.relevanz !== 'alle' ||
+    filters.status !== 'alle';
 
   const resetFilters = () => {
-    setFilterThemenfeld('alle');
-    setFilterErfasser('alle');
-    setFilterRelevanz('alle');
-    setFilterStatus('alle');
-
-    setDraftFilterThemenfeld('alle');
-    setDraftFilterErfasser('alle');
-    setDraftFilterRelevanz('alle');
-    setDraftFilterStatus('alle');
+    setFilters(DEFAULT_FILTERS);
+    setDraftFilters(DEFAULT_FILTERS);
   };
 
   const applyFilters = () => {
-    setFilterThemenfeld(draftFilterThemenfeld);
-    setFilterErfasser(draftFilterErfasser);
-    setFilterRelevanz(draftFilterRelevanz);
-    setFilterStatus(draftFilterStatus);
+    setFilters(draftFilters);
+  };
+
+  /* ---------- Panel öffnen/schließen (ohne setState-in-effect) ---------- */
+
+  const toggleFilterPanel = () => {
+    if (!showFilters) {
+      setDraftFilters(filters);
+    }
+    setShowFilters((s) => !s);
   };
 
   /* ---------- Zusammenfassung der aktiven Filter ---------- */
 
   const activeFilterChips: string[] = [];
-  if (filterThemenfeld !== 'alle') {
+  if (filters.themenfeld !== 'alle') {
     activeFilterChips.push(
       uiLang === 'de'
-        ? `Themenfeld: ${filterThemenfeld}`
-        : `Topic: ${filterThemenfeld}`,
+        ? `Themenfeld: ${filters.themenfeld}`
+        : `Topic: ${filters.themenfeld}`
     );
   }
-  if (filterErfasser !== 'alle') {
+  if (filters.erfasser !== 'alle') {
     activeFilterChips.push(
       uiLang === 'de'
-        ? `Erfasst durch: ${filterErfasser}`
-        : `Captured by: ${filterErfasser}`,
+        ? `Erfasst durch: ${filters.erfasser}`
+        : `Captured by: ${filters.erfasser}`
     );
   }
-  if (filterRelevanz !== 'alle') {
+  if (filters.relevanz !== 'alle') {
     activeFilterChips.push(
       uiLang === 'de'
-        ? `Relevanz: ${filterRelevanz}`
-        : `Relevance: ${filterRelevanz}`,
+        ? `Relevanz: ${filters.relevanz}`
+        : `Relevance: ${filters.relevanz}`
     );
   }
-  if (filterStatus !== 'alle') {
+  if (filters.status !== 'alle') {
     activeFilterChips.push(
-      uiLang === 'de' ? `Status: ${filterStatus}` : `Status: ${filterStatus}`,
+      uiLang === 'de' ? `Status: ${filters.status}` : `Status: ${filters.status}`
     );
   }
 
@@ -391,6 +372,7 @@ export default function Registerview({
               ? 'Kataster für gesetzliche, normative und interne Vorgaben.'
               : 'Register for legal, normative and internal requirements.'}
           </p>
+
           {hasActiveFilter && (
             <div className="mt-1 flex flex-wrap gap-1">
               {activeFilterChips.map((txt) => (
@@ -415,12 +397,8 @@ export default function Registerview({
                 ? 'border-[#009A93] text-[#009A93]'
                 : 'border-slate-300 text-slate-700'
             }`}
-            title={
-              uiLang === 'de'
-                ? 'Filter für das Register setzen'
-                : 'Set filters for the register'
-            }
-            onClick={() => setShowFilters((s) => !s)}
+            title={uiLang === 'de' ? 'Filter für das Register setzen' : 'Set filters for the register'}
+            onClick={toggleFilterPanel}
           >
             <FilterIcon size={16} />
             <span>{uiLang === 'de' ? 'Filter' : 'Filter'}</span>
@@ -437,11 +415,7 @@ export default function Registerview({
           <button
             type="button"
             className="inline-flex items-center gap-1 rounded-md bg-[#009A93] px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:brightness-110"
-            title={
-              uiLang === 'de'
-                ? 'Informationen zum Register'
-                : 'Information about the register'
-            }
+            title={uiLang === 'de' ? 'Informationen zum Register' : 'Information about the register'}
             onClick={() => setShowInfo(true)}
           >
             <Info size={14} />
@@ -491,8 +465,10 @@ export default function Registerview({
                         ? 'border-slate-700 bg-slate-900 text-slate-100'
                         : 'border-slate-300 bg-slate-50/80 text-slate-800'
                     }`}
-                    value={draftFilterThemenfeld}
-                    onChange={(e) => setDraftFilterThemenfeld(e.target.value)}
+                    value={draftFilters.themenfeld}
+                    onChange={(e) =>
+                      setDraftFilters((p) => ({ ...p, themenfeld: e.target.value }))
+                    }
                   >
                     <option value="alle">
                       {uiLang === 'de' ? 'Alle Themenfelder' : 'All topics'}
@@ -516,8 +492,10 @@ export default function Registerview({
                         ? 'border-slate-700 bg-slate-900 text-slate-100'
                         : 'border-slate-300 bg-slate-50/80 text-slate-800'
                     }`}
-                    value={draftFilterErfasser}
-                    onChange={(e) => setDraftFilterErfasser(e.target.value)}
+                    value={draftFilters.erfasser}
+                    onChange={(e) =>
+                      setDraftFilters((p) => ({ ...p, erfasser: e.target.value }))
+                    }
                   >
                     <option value="alle">
                       {uiLang === 'de' ? 'Alle Erfasser' : 'All authors'}
@@ -541,13 +519,13 @@ export default function Registerview({
                         ? 'border-slate-700 bg-slate-900 text-slate-100'
                         : 'border-slate-300 bg-slate-50/80 text-slate-800'
                     }`}
-                    value={draftFilterRelevanz}
-                    onChange={(e) => setDraftFilterRelevanz(e.target.value)}
+                    value={draftFilters.relevanz}
+                    onChange={(e) =>
+                      setDraftFilters((p) => ({ ...p, relevanz: e.target.value }))
+                    }
                   >
                     <option value="alle">
-                      {uiLang === 'de'
-                        ? 'Alle Relevanzen'
-                        : 'All relevance levels'}
+                      {uiLang === 'de' ? 'Alle Relevanzen' : 'All relevance levels'}
                     </option>
                     {relevanzen.map((rel) => (
                       <option key={rel} value={rel}>
@@ -560,9 +538,7 @@ export default function Registerview({
                 {/* Dokumentenstatus */}
                 <div className="space-y-1">
                   <label className="block text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                    {uiLang === 'de'
-                      ? 'Dokumentenstatus'
-                      : 'Document status'}
+                    {uiLang === 'de' ? 'Dokumentenstatus' : 'Document status'}
                   </label>
                   <select
                     className={`w-full rounded-md border px-2 py-1.5 text-xs shadow-sm outline-none focus:border-[#009A93] focus:ring-[#009A93]/30 ${
@@ -570,12 +546,12 @@ export default function Registerview({
                         ? 'border-slate-700 bg-slate-900 text-slate-100'
                         : 'border-slate-300 bg-slate-50/80 text-slate-800'
                     }`}
-                    value={draftFilterStatus}
-                    onChange={(e) => setDraftFilterStatus(e.target.value)}
+                    value={draftFilters.status}
+                    onChange={(e) =>
+                      setDraftFilters((p) => ({ ...p, status: e.target.value }))
+                    }
                   >
-                    <option value="alle">
-                      {uiLang === 'de' ? 'Alle Status' : 'All statuses'}
-                    </option>
+                    <option value="alle">{uiLang === 'de' ? 'Alle Status' : 'All statuses'}</option>
                     {statusList.map((st) => (
                       <option key={st} value={st}>
                         {st}
@@ -613,9 +589,7 @@ export default function Registerview({
                     setShowFilters(false);
                   }}
                 >
-                  {uiLang === 'de'
-                    ? 'Suchkriterien speichern'
-                    : 'Save filter criteria'}
+                  {uiLang === 'de' ? 'Suchkriterien speichern' : 'Save filter criteria'}
                 </button>
               </div>
             </div>
@@ -628,38 +602,16 @@ export default function Registerview({
         <table className="min-w-full text-sm">
           <thead>
             <tr className="bg-[#009A93] text-white">
-              <th className={th}>
-                {uiLang === 'de' ? 'Dokumentenart' : 'Document type'}
-              </th>
-              <th className={th}>
-                {uiLang === 'de' ? 'Kürzel' : 'Reference'}
-              </th>
-              <th className={th}>
-                {uiLang === 'de'
-                  ? 'Bezeichnung'
-                  : 'Title / description'}
-              </th>
-              <th className={th}>
-                {uiLang === 'de' ? 'Themenfeld' : 'Topic / area'}
-              </th>
-              <th className={th}>
-                {uiLang === 'de' ? 'Publiziert' : 'Published'}
-              </th>
-              <th className={th}>
-                {uiLang === 'de' ? 'Frist' : 'Due date'}
-              </th>
-              <th className={th}>
-                {uiLang === 'de' ? 'Relevanz' : 'Relevance'}
-              </th>
+              <th className={th}>{uiLang === 'de' ? 'Dokumentenart' : 'Document type'}</th>
+              <th className={th}>{uiLang === 'de' ? 'Kürzel' : 'Reference'}</th>
+              <th className={th}>{uiLang === 'de' ? 'Bezeichnung' : 'Title / description'}</th>
+              <th className={th}>{uiLang === 'de' ? 'Themenfeld' : 'Topic / area'}</th>
+              <th className={th}>{uiLang === 'de' ? 'Publiziert' : 'Published'}</th>
+              <th className={th}>{uiLang === 'de' ? 'Frist' : 'Due date'}</th>
+              <th className={th}>{uiLang === 'de' ? 'Relevanz' : 'Relevance'}</th>
               <th className={th}>{uiLang === 'de' ? 'Status' : 'Status'}</th>
-              <th className={th}>
-                {uiLang === 'de' ? 'Erfassung durch' : 'Captured by'}
-              </th>
-              {isAdmin && (
-                <th className={th}>
-                  {uiLang === 'de' ? 'Aktionen' : 'Actions'}
-                </th>
-              )}
+              <th className={th}>{uiLang === 'de' ? 'Erfassung durch' : 'Captured by'}</th>
+              {isAdmin && <th className={th}>{uiLang === 'de' ? 'Aktionen' : 'Actions'}</th>}
             </tr>
           </thead>
 
@@ -681,7 +633,6 @@ export default function Registerview({
                   key={r.id}
                   className="border-t border-slate-100 hover:bg-slate-50/50 dark:border-slate-700 dark:hover:bg-slate-800"
                 >
-                  {/* Dokumentenart = rechtsart-Feld aus dem Store, UI-Label angepasst */}
                   <td className={td}>{r.rechtsart || '—'}</td>
                   <td className={td}>{r.kuerzel || '—'}</td>
                   <td
@@ -701,11 +652,7 @@ export default function Registerview({
                     <td className={`${td} text-right`}>
                       <button
                         className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
-                        title={
-                          uiLang === 'de'
-                            ? 'Eintrag entfernen'
-                            : 'Remove entry'
-                        }
+                        title={uiLang === 'de' ? 'Eintrag entfernen' : 'Remove entry'}
                         onClick={() => onRemove?.(r)}
                       >
                         <Trash2 size={14} />

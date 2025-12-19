@@ -4,7 +4,11 @@
 import React, { useMemo, useState } from 'react';
 import { useRegisterStore, LawRow } from './register/registerstore';
 import { useLanguage } from './components/i18n/language';
-import { useMatrixStore, type MatrixStatus } from './matrix/matrixstore';
+import {
+  useMatrixStore,
+  type MatrixStatus,
+  type MatrixDocument,
+} from './matrix/matrixstore';
 import {
   LayoutGrid,
   BarChart2,
@@ -58,6 +62,18 @@ function countByRelevance(rows: LawRow[]) {
   return base;
 }
 
+const ALLOWED_MATRIX_STATUS: readonly MatrixStatus[] = [
+  'draft',
+  'in_review',
+  'final',
+] as const;
+
+function normalizeMatrixStatus(raw: unknown): MatrixStatus {
+  return ALLOWED_MATRIX_STATUS.includes(raw as MatrixStatus)
+    ? (raw as MatrixStatus)
+    : 'draft';
+}
+
 /* ---------- Kleine UI-Helfer ---------- */
 
 function StatCard({
@@ -74,14 +90,8 @@ function StatCard({
       <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
         {label}
       </div>
-      <div className="mt-1 text-2xl font-semibold text-slate-900">
-        {value}
-      </div>
-      {hint && (
-        <div className="mt-1 text-xs text-slate-500">
-          {hint}
-        </div>
-      )}
+      <div className="mt-1 text-2xl font-semibold text-slate-900">{value}</div>
+      {hint && <div className="mt-1 text-xs text-slate-500">{hint}</div>}
     </div>
   );
 }
@@ -103,9 +113,7 @@ function HorizontalBarChart({
     <div className="space-y-3 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
       <div className="text-sm font-semibold text-slate-800">{title}</div>
       {items.length === 0 ? (
-        <div className="text-xs text-slate-500">
-          {emptyLabel}
-        </div>
+        <div className="text-xs text-slate-500">{emptyLabel}</div>
       ) : (
         <div className="space-y-2">
           {items.map((it) => (
@@ -157,9 +165,7 @@ function PieChart({
     const start = current;
     const slice = (it.value / total) * 360;
     const end = current + slice;
-    segments.push(
-      `${it.color} ${start.toFixed(1)}deg ${end.toFixed(1)}deg`,
-    );
+    segments.push(`${it.color} ${start.toFixed(1)}deg ${end.toFixed(1)}deg`);
     current = end;
   });
 
@@ -181,9 +187,7 @@ function PieChart({
                 {centerLabel}
               </span>
             )}
-            <span className="text-sm font-semibold text-slate-700">
-              {total}
-            </span>
+            <span className="text-sm font-semibold text-slate-700">{total}</span>
           </div>
         </div>
 
@@ -219,13 +223,10 @@ export default function OverviewPage() {
   // matrix-daten (nur lesend)
   const { docs } = useMatrixStore();
 
-  const [registerView, setRegisterView] =
-    useState<RegisterViewMode>('mixed');
+  const [registerView, setRegisterView] = useState<RegisterViewMode>('mixed');
   const [metricConfigOpen, setMetricConfigOpen] = useState(false);
 
-  const [enabledMetrics, setEnabledMetrics] = useState<
-    Record<MetricKey, boolean>
-  >({
+  const [enabledMetrics, setEnabledMetrics] = useState<Record<MetricKey, boolean>>({
     totalDocs: true,
     activeDocs: true,
     openDocs: true,
@@ -259,21 +260,19 @@ export default function OverviewPage() {
       final: 0,
     };
 
-    docs.forEach((doc: any) => {
-      const clauses = doc.clauses ?? [];
+    docs.forEach((doc) => {
+      // defensiv für alte Persist-Daten:
+      const d = doc as Partial<MatrixDocument>;
+
+      const clausesRaw = d.clauses;
+      const clauses: Array<{ status?: unknown }> = Array.isArray(clausesRaw)
+        ? (clausesRaw as Array<{ status?: unknown }>)
+        : [];
+
       totalClauses += clauses.length;
-      compliantClauses += clauses.filter(
-        (c: any) => c.status === 'compliant',
-      ).length;
+      compliantClauses += clauses.filter((c) => c.status === 'compliant').length;
 
-      const rawStatus: string = doc.status ?? 'draft';
-      const allowed: MatrixStatus[] = ['draft', 'in_review', 'final'];
-      const status: MatrixStatus = allowed.includes(
-        rawStatus as MatrixStatus,
-      )
-        ? (rawStatus as MatrixStatus)
-        : 'draft';
-
+      const status = normalizeMatrixStatus(d.status);
       statusCounts[status] += 1;
     });
 
@@ -384,9 +383,7 @@ export default function OverviewPage() {
                         onChange={() => toggleMetric('totalDocs')}
                         className="h-3 w-3"
                       />
-                      <span>
-                        {isDe ? 'Dokumente gesamt' : 'Documents total'}
-                      </span>
+                      <span>{isDe ? 'Dokumente gesamt' : 'Documents total'}</span>
                     </label>
                     <label className="flex items-center gap-2">
                       <input
@@ -395,9 +392,7 @@ export default function OverviewPage() {
                         onChange={() => toggleMetric('activeDocs')}
                         className="h-3 w-3"
                       />
-                      <span>
-                        {isDe ? 'Aktive Dokumente' : 'Active documents'}
-                      </span>
+                      <span>{isDe ? 'Aktive Dokumente' : 'Active documents'}</span>
                     </label>
                     <label className="flex items-center gap-2">
                       <input
@@ -407,9 +402,7 @@ export default function OverviewPage() {
                         className="h-3 w-3"
                       />
                       <span>
-                        {isDe
-                          ? 'Offene / ohne Status'
-                          : 'Open / without status'}
+                        {isDe ? 'Offene / ohne Status' : 'Open / without status'}
                       </span>
                     </label>
                     <label className="flex items-center gap-2">
@@ -420,9 +413,7 @@ export default function OverviewPage() {
                         className="h-3 w-3"
                       />
                       <span>
-                        {isDe
-                          ? 'Obsolete / archiviert'
-                          : 'Obsolete / archived'}
+                        {isDe ? 'Obsolete / archiviert' : 'Obsolete / archived'}
                       </span>
                     </label>
                     <label className="flex items-center gap-2">
@@ -432,9 +423,7 @@ export default function OverviewPage() {
                         onChange={() => toggleMetric('dueSoon')}
                         className="h-3 w-3"
                       />
-                      <span>
-                        {isDe ? 'Fristen (30 Tage)' : 'Due (30 days)'}
-                      </span>
+                      <span>{isDe ? 'Fristen (30 Tage)' : 'Due (30 days)'}</span>
                     </label>
 
                     <div className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
@@ -444,30 +433,20 @@ export default function OverviewPage() {
                       <input
                         type="checkbox"
                         checked={enabledMetrics.statusDistribution}
-                        onChange={() =>
-                          toggleMetric('statusDistribution')
-                        }
+                        onChange={() => toggleMetric('statusDistribution')}
                         className="h-3 w-3"
                       />
-                      <span>
-                        {isDe
-                          ? 'Status-Verteilung'
-                          : 'Status distribution'}
-                      </span>
+                      <span>{isDe ? 'Status-Verteilung' : 'Status distribution'}</span>
                     </label>
                     <label className="flex items-center gap-2">
                       <input
                         type="checkbox"
                         checked={enabledMetrics.relevanceDistribution}
-                        onChange={() =>
-                          toggleMetric('relevanceDistribution')
-                        }
+                        onChange={() => toggleMetric('relevanceDistribution')}
                         className="h-3 w-3"
                       />
                       <span>
-                        {isDe
-                          ? 'Relevanz-Verteilung'
-                          : 'Relevance distribution'}
+                        {isDe ? 'Relevanz-Verteilung' : 'Relevance distribution'}
                       </span>
                     </label>
                   </div>
@@ -518,9 +497,7 @@ export default function OverviewPage() {
               )}
               {enabledMetrics.openDocs && (
                 <StatCard
-                  label={
-                    isDe ? 'Offene / ohne Status' : 'Open / without status'
-                  }
+                  label={isDe ? 'Offene / ohne Status' : 'Open / without status'}
                   value={offenOhneStatus}
                   hint={
                     isDe
@@ -531,12 +508,8 @@ export default function OverviewPage() {
               )}
               {enabledMetrics.obsoleteDocs && (
                 <StatCard
-                  label={
-                    isDe ? 'Obsolete / archiviert' : 'Obsolete / archived'
-                  }
-                  value={
-                    stats.status.obsolet + stats.status.archiviert
-                  }
+                  label={isDe ? 'Obsolete / archiviert' : 'Obsolete / archived'}
+                  value={stats.status.obsolet + stats.status.archiviert}
                   hint={
                     isDe
                       ? 'Nicht mehr gültige oder nur noch historisch relevante Vorgaben.'
@@ -562,9 +535,7 @@ export default function OverviewPage() {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {enabledMetrics.statusDistribution && (
                 <PieChart
-                  title={
-                    isDe ? 'Status-Verteilung' : 'Status distribution'
-                  }
+                  title={isDe ? 'Status-Verteilung' : 'Status distribution'}
                   centerLabel={isDe ? 'Dokumente' : 'Documents'}
                   items={[
                     {
@@ -594,11 +565,7 @@ export default function OverviewPage() {
 
               {enabledMetrics.relevanceDistribution && (
                 <HorizontalBarChart
-                  title={
-                    isDe
-                      ? 'Verteilung nach Relevanz'
-                      : 'Distribution by relevance'
-                  }
+                  title={isDe ? 'Verteilung nach Relevanz' : 'Distribution by relevance'}
                   items={[
                     {
                       label: isDe ? 'Niedrig' : 'Low',
@@ -641,42 +608,22 @@ export default function OverviewPage() {
                 <StatCard
                   label={isDe ? 'Matrizen' : 'Matrices'}
                   value={matrixStats.matrixCount}
-                  hint={
-                    isDe
-                      ? 'Angelegte Compliance-Matrizen.'
-                      : 'Created compliance matrices.'
-                  }
+                  hint={isDe ? 'Angelegte Compliance-Matrizen.' : 'Created compliance matrices.'}
                 />
                 <StatCard
-                  label={
-                    isDe ? 'Paragraphen gesamt' : 'Clauses in total'
-                  }
+                  label={isDe ? 'Paragraphen gesamt' : 'Clauses in total'}
                   value={matrixStats.totalClauses}
-                  hint={
-                    isDe
-                      ? 'Anforderungen in allen Matrizen.'
-                      : 'Requirements across all matrices.'
-                  }
+                  hint={isDe ? 'Anforderungen in allen Matrizen.' : 'Requirements across all matrices.'}
                 />
                 <StatCard
                   label={isDe ? 'Compliance' : 'Compliant'}
                   value={matrixStats.compliantClauses}
-                  hint={
-                    isDe
-                      ? 'Als „compliant“ bewertete Anforderungen.'
-                      : 'Requirements marked as compliant.'
-                  }
+                  hint={isDe ? 'Als „compliant“ bewertete Anforderungen.' : 'Requirements marked as compliant.'}
                 />
                 <StatCard
-                  label={
-                    isDe ? 'Erfüllungsgrad (%)' : 'Fulfilment rate (%)'
-                  }
+                  label={isDe ? 'Erfüllungsgrad (%)' : 'Fulfilment rate (%)'}
                   value={matrixStats.compliantPct}
-                  hint={
-                    isDe
-                      ? 'Anteil erfüllter Anforderungen in %.'
-                      : 'Share of fulfilled requirements in %.'
-                  }
+                  hint={isDe ? 'Anteil erfüllter Anforderungen in %.' : 'Share of fulfilled requirements in %.'}
                 />
               </div>
 
@@ -684,32 +631,20 @@ export default function OverviewPage() {
                 {isDe ? (
                   <>
                     <span className="font-semibold">Status:&nbsp;</span>
-                    <span>
-                      Angelegt: {matrixStats.statusCounts.draft}
-                    </span>
+                    <span>Angelegt: {matrixStats.statusCounts.draft}</span>
                     {' · '}
-                    <span>
-                      In Bewertung: {matrixStats.statusCounts.in_review}
-                    </span>
+                    <span>In Bewertung: {matrixStats.statusCounts.in_review}</span>
                     {' · '}
-                    <span>
-                      Abgeschlossen: {matrixStats.statusCounts.final}
-                    </span>
+                    <span>Abgeschlossen: {matrixStats.statusCounts.final}</span>
                   </>
                 ) : (
                   <>
                     <span className="font-semibold">Status:&nbsp;</span>
-                    <span>
-                      Draft: {matrixStats.statusCounts.draft}
-                    </span>
+                    <span>Draft: {matrixStats.statusCounts.draft}</span>
                     {' · '}
-                    <span>
-                      In review: {matrixStats.statusCounts.in_review}
-                    </span>
+                    <span>In review: {matrixStats.statusCounts.in_review}</span>
                     {' · '}
-                    <span>
-                      Completed: {matrixStats.statusCounts.final}
-                    </span>
+                    <span>Completed: {matrixStats.statusCounts.final}</span>
                   </>
                 )}
               </p>
@@ -753,9 +688,7 @@ export default function OverviewPage() {
             {isDe ? (
               <>
                 <p>
-                  Die Struktur ist so angelegt, dass später weitere
-                  Detail-KPIs (z. B. pro Norm oder Themenfeld) ergänzt werden
-                  können.
+                  Die Struktur ist so angelegt, dass später weitere Detail-KPIs (z. B. pro Norm oder Themenfeld) ergänzt werden können.
                 </p>
                 <p className="mt-2">Geplant sind z. B.:</p>
                 <ul className="mt-1 list-inside list-disc text-xs text-slate-600">
@@ -767,8 +700,7 @@ export default function OverviewPage() {
             ) : (
               <>
                 <p>
-                  The structure is prepared so that more detailed KPIs (e.g.
-                  per standard or topic area) can be added later.
+                  The structure is prepared so that more detailed KPIs (e.g. per standard or topic area) can be added later.
                 </p>
                 <p className="mt-2">Planned, for example:</p>
                 <ul className="mt-1 list-inside list-disc text-xs text-slate-600">

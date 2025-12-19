@@ -1,6 +1,7 @@
+// matrix/matrix-detail.tsx
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Trash2, Printer, Filter } from 'lucide-react';
 
 import { useLanguage } from '../components/i18n/language';
@@ -13,7 +14,6 @@ import {
   matrixStatusColorClasses,
 } from './utils/matrix-status';
 
-
 import {
   useMatrixStore,
   type MatrixClause,
@@ -25,6 +25,8 @@ import {
   type MatrixStatus,
   type RiskLevel,
 } from './matrixstore';
+
+  const EMPTY_CLAUSES: MatrixClause[] = [];
 
 /* =========================================================
    Hilfstypen
@@ -60,20 +62,6 @@ function buildTitle(c: MatrixClauseWithLevels): string {
   if (c.titleLevel2) parts.push(c.titleLevel2);
   if (c.titleLevel3) parts.push(c.titleLevel3);
   return parts.join(' – ');
-}
-
-/* =========================================================
-   Helper: HTML escaping (Print)
-========================================================= */
-
-function escapeHtml(input: unknown): string {
-  const s = String(input ?? '');
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 /* =========================================================
@@ -171,7 +159,8 @@ function clampNum(n: number, min: number, max: number) {
 }
 
 function psoeNeedlePercent(avgScore: number) {
-  const s = clampNum(avgScore, 1, 4);
+  // bei 0 (keine Ratings) nicht clampen -> Nadel bleibt links, aber wir können sauber mit 1..4 rechnen
+  const s = clampNum(avgScore || 1, 1, 4);
   return ((s - 1) / 3) * 100;
 }
 
@@ -245,7 +234,7 @@ function PsoeGauge({
 
 type RiskBand = 'low' | 'medium' | 'high' | 'critical';
 
-function riskScore(s?: RiskLevel, p?: RiskLevel): number | null {
+function riskScore(s?: RiskLevel | null, p?: RiskLevel | null): number | null {
   if (!s || !p) return null;
   return s * p;
 }
@@ -298,7 +287,7 @@ function riskBandClasses(b: RiskBand): string {
   }
 }
 
-function riskLabel(s?: RiskLevel, p?: RiskLevel): string {
+function riskLabel(s?: RiskLevel | null, p?: RiskLevel | null): string {
   if (!s || !p) return '–';
   return `S${s}/P${p}`;
 }
@@ -359,7 +348,11 @@ export default function MatrixDetail({ selectedDocId }: Props) {
   const [selectedClauseId, setSelectedClauseId] = useState<string | null>(null);
 
   const doc = useMemo(() => docs.find((d) => d.id === selectedDocId) ?? null, [docs, selectedDocId]);
-  const clauses = doc?.clauses ?? [];
+  const clauses = doc?.clauses ?? EMPTY_CLAUSES;
+
+  // lint-safe statt (doc as any)
+  type DocMeta = { lawRechtsart?: string; lawThemenfeld?: string };
+  const docMeta = doc as unknown as DocMeta;
 
   const docRiskMode: DocRiskAggregationMode = (doc?.riskAggregationMode as DocRiskAggregationMode) ?? 'worst_case';
   const docRiskScope: DocRiskScope = (doc?.riskScope as DocRiskScope) ?? 'all';
@@ -368,11 +361,9 @@ export default function MatrixDetail({ selectedDocId }: Props) {
 
   const filteredClauses = useMemo(() => {
     if (!clauses || clauses.length === 0) return [];
-    let list = clauses;
 
-    if (statusFilter !== 'all') {
-      list = clauses.filter((c) => c.status === statusFilter);
-    }
+    let list = clauses;
+    if (statusFilter !== 'all') list = clauses.filter((c) => c.status === statusFilter);
 
     return [...list].sort((a, b) => {
       const aRef = buildRef(a as MatrixClauseWithLevels);
@@ -384,21 +375,33 @@ export default function MatrixDetail({ selectedDocId }: Props) {
       if (!aHasRef && bHasRef) return 1;
       if (!aHasRef && !bHasRef) return 0;
 
-      return aRef.localeCompare(bRef, 'de');
+      return aRef.localeCompare(bRef, locale);
     });
-  }, [clauses, statusFilter]);
+  }, [clauses, statusFilter, locale]);
 
-  const selectedClause =
-    filteredClauses.find((c) => c.id === selectedClauseId) ??
-    clauses.find((c) => c.id === selectedClauseId) ??
-    null;
+  // Auswahl soll bei aktivem Filter NICHT auf einen "unsichtbaren" Clause zeigen
+  const safeSelectedClauseId = useMemo(() => {
+    if (!selectedClauseId) return null;
 
-  /* ---------- Auto-select erste Clause ---------- */
-  useEffect(() => {
-    if (!doc) return;
-    if (selectedClauseId) return;
-    if (filteredClauses.length > 0) setSelectedClauseId(filteredClauses[0].id);
-  }, [doc, selectedClauseId, filteredClauses]);
+    // wenn Filter aktiv ist: nur gültig, wenn in filteredClauses enthalten
+    if (statusFilter !== 'all') {
+      const existsInFiltered = filteredClauses.some((c) => c.id === selectedClauseId);
+      return existsInFiltered ? selectedClauseId : null;
+    }
+
+    const existsInAll = clauses.some((c) => c.id === selectedClauseId);
+    return existsInAll ? selectedClauseId : null;
+  }, [selectedClauseId, clauses, filteredClauses, statusFilter]);
+
+  const effectiveSelectedClauseId = useMemo(() => {
+    return safeSelectedClauseId ?? (filteredClauses[0]?.id ?? null);
+  }, [safeSelectedClauseId, filteredClauses]);
+
+  const selectedClause = useMemo(() => {
+    const id = effectiveSelectedClauseId;
+    if (!id) return null;
+    return filteredClauses.find((c) => c.id === id) ?? clauses.find((c) => c.id === id) ?? null;
+  }, [effectiveSelectedClauseId, filteredClauses, clauses]);
 
   /* ---------- Kennzahlen ---------- */
 
@@ -558,208 +561,256 @@ export default function MatrixDetail({ selectedDocId }: Props) {
 
   /* ---------- Handler: Clause CRUD ---------- */
 
-  function handleAddClause() {
+  const handleAddClause = useCallback(() => {
     if (!doc) return;
     addClause(doc.id);
-  }
+  }, [doc, addClause]);
 
-  function handleStatusChange(clause: MatrixClause, status: ComplianceStatus) {
-    if (!doc) return;
-    updateClause(doc.id, clause.id, { status });
-  }
+  const handleStatusChange = useCallback(
+    (clause: MatrixClause, status: ComplianceStatus) => {
+      if (!doc) return;
+      updateClause(doc.id, clause.id, { status });
+    },
+    [doc, updateClause],
+  );
 
-  function handleClauseChange(clause: MatrixClause, patch: Partial<MatrixClause>) {
-    if (!doc) return;
-    updateClause(doc.id, clause.id, patch);
-  }
+  const handleClauseChange = useCallback(
+    (clause: MatrixClause, patch: Partial<MatrixClause>) => {
+      if (!doc) return;
+      updateClause(doc.id, clause.id, patch);
+    },
+    [doc, updateClause],
+  );
 
-  function requestDeleteClause(clause: MatrixClause) {
+  // lint-safe dynamic field patch (kein any)
+  const patchClauseField = useCallback(
+    <K extends keyof MatrixClauseWithLevels>(clause: MatrixClause, key: K, value: MatrixClauseWithLevels[K]) => {
+      const patch = { [key]: value } as unknown as Partial<MatrixClause>;
+      handleClauseChange(clause, patch);
+    },
+    [handleClauseChange],
+  );
+
+  const requestDeleteClause = useCallback((clause: MatrixClause) => {
     setDeleteClauseModal(clause);
-  }
+  }, []);
 
-  function confirmDeleteClause() {
+  const confirmDeleteClause = useCallback(() => {
     if (!doc || !deleteClauseModal) return;
     removeClause(doc.id, deleteClauseModal.id);
-    if (selectedClauseId === deleteClauseModal.id) setSelectedClauseId(null);
+    if (effectiveSelectedClauseId === deleteClauseModal.id) setSelectedClauseId(null);
     setDeleteClauseModal(null);
-  }
+  }, [doc, deleteClauseModal, removeClause, effectiveSelectedClauseId]);
 
-  function openDeleteModal() {
+  const openDeleteModal = useCallback(() => {
     if (!doc) return;
     setShowDeleteModal(true);
-  }
+  }, [doc]);
 
-  function closeDeleteModal() {
+  const closeDeleteModal = useCallback(() => {
     setShowDeleteModal(false);
-  }
+  }, []);
 
-  function confirmDeleteDoc() {
+  const confirmDeleteDoc = useCallback(() => {
     if (!doc) return;
     removeDoc(doc.id);
     setSelectedClauseId(null);
     setShowDeleteModal(false);
-  }
+  }, [doc, removeDoc]);
 
-  function handleMatrixStatusChange(newStatus: MatrixStatus) {
-    if (!doc) return;
-    updateDocStatus(doc.id, newStatus);
-  }
+  const handleMatrixStatusChange = useCallback(
+    (newStatus: MatrixStatus) => {
+      if (!doc) return;
+      updateDocStatus(doc.id, newStatus);
+    },
+    [doc, updateDocStatus],
+  );
 
   /* ---------- PSOE modal ---------- */
 
-  function openPsoeModal(clause: MatrixClause) {
+  const openPsoeModal = useCallback((clause: MatrixClause) => {
     setPsoeModalClause(clause);
     setPsoeSelection(clause.psoeLevel ?? null);
-  }
+  }, []);
 
-  function closePsoeModal() {
+  const closePsoeModal = useCallback(() => {
     setPsoeModalClause(null);
     setPsoeSelection(null);
-  }
+  }, []);
 
-  function savePsoeLevel() {
+  const savePsoeLevel = useCallback(() => {
     if (!doc || !psoeModalClause || !psoeSelection) return;
     updateClause(doc.id, psoeModalClause.id, { psoeLevel: psoeSelection });
     closePsoeModal();
-  }
+  }, [doc, psoeModalClause, psoeSelection, updateClause, closePsoeModal]);
 
   /* ---------- Risk modal ---------- */
 
-  function openRiskModal(clause: MatrixClause) {
+  const openRiskModal = useCallback((clause: MatrixClause) => {
     setRiskModalClause(clause);
-    setRiskS(clause.riskSeverity ?? null);
-    setRiskP(clause.riskProbability ?? null);
-  }
+    setRiskS((clause.riskSeverity as RiskLevel | undefined) ?? null);
+    setRiskP((clause.riskProbability as RiskLevel | undefined) ?? null);
+  }, []);
 
-  function closeRiskModal() {
+  const closeRiskModal = useCallback(() => {
     setRiskModalClause(null);
     setRiskS(null);
     setRiskP(null);
-  }
+  }, []);
 
-  function saveRisk() {
+  const saveRisk = useCallback(() => {
     if (!doc || !riskModalClause || !riskS || !riskP) return;
     updateClause(doc.id, riskModalClause.id, { riskSeverity: riskS, riskProbability: riskP });
     closeRiskModal();
-  }
+  }, [doc, riskModalClause, riskS, riskP, updateClause, closeRiskModal]);
 
   /* ---------- Strukturierte Referenzen ---------- */
 
-  function addInternalRef(clause: MatrixClause) {
-    if (!doc) return;
-    const current = clause.internalRefs ?? [];
-    const next: InternalManualRef[] = [
-      ...current,
-      { id: createLocalId('iref'), exposition: '', chapter: '', description: '' },
-    ];
-    updateClause(doc.id, clause.id, { internalRefs: next });
-  }
+  const addInternalRef = useCallback(
+    (clause: MatrixClause) => {
+      if (!doc) return;
+      const current = clause.internalRefs ?? [];
+      const next: InternalManualRef[] = [
+        ...current,
+        { id: createLocalId('iref'), exposition: '', chapter: '', description: '' },
+      ];
+      updateClause(doc.id, clause.id, { internalRefs: next });
+    },
+    [doc, updateClause],
+  );
 
-  function updateInternalRef(clause: MatrixClause, refId: string, patch: Partial<InternalManualRef>) {
-    if (!doc) return;
-    const current = clause.internalRefs ?? [];
-    const next = current.map((r) => (r.id === refId ? { ...r, ...patch } : r));
-    updateClause(doc.id, clause.id, { internalRefs: next });
-  }
+  const updateInternalRef = useCallback(
+    (clause: MatrixClause, refId: string, patch: Partial<InternalManualRef>) => {
+      if (!doc) return;
+      const current = clause.internalRefs ?? [];
+      const next = current.map((r) => (r.id === refId ? { ...r, ...patch } : r));
+      updateClause(doc.id, clause.id, { internalRefs: next });
+    },
+    [doc, updateClause],
+  );
 
-  function removeInternalRef(clause: MatrixClause, refId: string) {
-    if (!doc) return;
-    const current = clause.internalRefs ?? [];
-    const next = current.filter((r) => r.id !== refId);
-    updateClause(doc.id, clause.id, { internalRefs: next });
-  }
+  const removeInternalRef = useCallback(
+    (clause: MatrixClause, refId: string) => {
+      if (!doc) return;
+      const current = clause.internalRefs ?? [];
+      const next = current.filter((r) => r.id !== refId);
+      updateClause(doc.id, clause.id, { internalRefs: next });
+    },
+    [doc, updateClause],
+  );
 
-  function addProcessRef(clause: MatrixClause) {
-    if (!doc) return;
-    const current = clause.processRefs ?? [];
-    const next: ProcessRef[] = [...current, { id: createLocalId('pref'), processNumber: '', processTitle: '' }];
-    updateClause(doc.id, clause.id, { processRefs: next });
-  }
+  const addProcessRef = useCallback(
+    (clause: MatrixClause) => {
+      if (!doc) return;
+      const current = clause.processRefs ?? [];
+      const next: ProcessRef[] = [...current, { id: createLocalId('pref'), processNumber: '', processTitle: '' }];
+      updateClause(doc.id, clause.id, { processRefs: next });
+    },
+    [doc, updateClause],
+  );
 
-  function updateProcessRef(clause: MatrixClause, refId: string, patch: Partial<ProcessRef>) {
-    if (!doc) return;
-    const current = clause.processRefs ?? [];
-    const next = current.map((r) => (r.id === refId ? { ...r, ...patch } : r));
-    updateClause(doc.id, clause.id, { processRefs: next });
-  }
+  const updateProcessRef = useCallback(
+    (clause: MatrixClause, refId: string, patch: Partial<ProcessRef>) => {
+      if (!doc) return;
+      const current = clause.processRefs ?? [];
+      const next = current.map((r) => (r.id === refId ? { ...r, ...patch } : r));
+      updateClause(doc.id, clause.id, { processRefs: next });
+    },
+    [doc, updateClause],
+  );
 
-  function removeProcessRef(clause: MatrixClause, refId: string) {
-    if (!doc) return;
-    const current = clause.processRefs ?? [];
-    const next = current.filter((r) => r.id !== refId);
-    updateClause(doc.id, clause.id, { processRefs: next });
-  }
+  const removeProcessRef = useCallback(
+    (clause: MatrixClause, refId: string) => {
+      if (!doc) return;
+      const current = clause.processRefs ?? [];
+      const next = current.filter((r) => r.id !== refId);
+      updateClause(doc.id, clause.id, { processRefs: next });
+    },
+    [doc, updateClause],
+  );
 
-  function addFormRef(clause: MatrixClause) {
-    if (!doc) return;
-    const current = clause.formRefs ?? [];
-    const next: FormRef[] = [...current, { id: createLocalId('fref'), formNumber: '', formTitle: '' }];
-    updateClause(doc.id, clause.id, { formRefs: next });
-  }
+  const addFormRef = useCallback(
+    (clause: MatrixClause) => {
+      if (!doc) return;
+      const current = clause.formRefs ?? [];
+      const next: FormRef[] = [...current, { id: createLocalId('fref'), formNumber: '', formTitle: '' }];
+      updateClause(doc.id, clause.id, { formRefs: next });
+    },
+    [doc, updateClause],
+  );
 
-  function updateFormRef(clause: MatrixClause, refId: string, patch: Partial<FormRef>) {
-    if (!doc) return;
-    const current = clause.formRefs ?? [];
-    const next = current.map((r) => (r.id === refId ? { ...r, ...patch } : r));
-    updateClause(doc.id, clause.id, { formRefs: next });
-  }
+  const updateFormRef = useCallback(
+    (clause: MatrixClause, refId: string, patch: Partial<FormRef>) => {
+      if (!doc) return;
+      const current = clause.formRefs ?? [];
+      const next = current.map((r) => (r.id === refId ? { ...r, ...patch } : r));
+      updateClause(doc.id, clause.id, { formRefs: next });
+    },
+    [doc, updateClause],
+  );
 
-  function removeFormRef(clause: MatrixClause, refId: string) {
-    if (!doc) return;
-    const current = clause.formRefs ?? [];
-    const next = current.filter((r) => r.id !== refId);
-    updateClause(doc.id, clause.id, { formRefs: next });
-  }
+  const removeFormRef = useCallback(
+    (clause: MatrixClause, refId: string) => {
+      if (!doc) return;
+      const current = clause.formRefs ?? [];
+      const next = current.filter((r) => r.id !== refId);
+      updateClause(doc.id, clause.id, { formRefs: next });
+    },
+    [doc, updateClause],
+  );
 
   /* ---------- Evidence vorhanden? ---------- */
 
-  function hasEvidence(c: MatrixClause): boolean {
-    const fileCount = attachmentCounts[c.id] ?? 0;
+  const hasEvidence = useCallback(
+    (c: MatrixClause): boolean => {
+      const fileCount = attachmentCounts[c.id] ?? 0;
 
-    const hasEvidenceText = !!c.evidenceNote?.trim();
-    const hasComment = !!c.comment?.trim();
+      const hasEvidenceText = !!c.evidenceNote?.trim();
+      const hasComment = !!c.comment?.trim();
 
-    const hasManualRef = (c.internalRefs ?? []).some(
-      (r) =>
-        (r.exposition && r.exposition.trim() !== '') ||
-        (r.chapter && r.chapter.trim() !== '') ||
-        (r.description && r.description.trim() !== ''),
-    );
+      const hasManualRef = (c.internalRefs ?? []).some(
+        (r) =>
+          (r.exposition && r.exposition.trim() !== '') ||
+          (r.chapter && r.chapter.trim() !== '') ||
+          (r.description && r.description.trim() !== ''),
+      );
 
-    const hasProcessRefAny = (c.processRefs ?? []).some(
-      (r) => (r.processNumber && r.processNumber.trim() !== '') || (r.processTitle && r.processTitle.trim() !== ''),
-    );
+      const hasProcessRefAny = (c.processRefs ?? []).some(
+        (r) => (r.processNumber && r.processNumber.trim() !== '') || (r.processTitle && r.processTitle.trim() !== ''),
+      );
 
-    const hasFormRefAny = (c.formRefs ?? []).some(
-      (r) => (r.formNumber && r.formNumber.trim() !== '') || (r.formTitle && r.formTitle.trim() !== ''),
-    );
+      const hasFormRefAny = (c.formRefs ?? []).some(
+        (r) => (r.formNumber && r.formNumber.trim() !== '') || (r.formTitle && r.formTitle.trim() !== ''),
+      );
 
-    const hasFiles = fileCount > 0;
+      const hasFiles = fileCount > 0;
 
-    return hasEvidenceText || hasComment || hasManualRef || hasProcessRefAny || hasFormRefAny || hasFiles;
-  }
-
-function handlePrint() {
-  if (!doc) return;
-
-  printMatrix({
-    doc,
-    clauses,
-    isDe,
-    locale,
-    stats,
-    psoeStats,
-    riskStats: {
-      count: riskStats.count,
-      avgScore: riskStats.avgScore,
-      worstScore: riskStats.worstScore,
-      docValue: riskStats.docValue,
+      return hasEvidenceText || hasComment || hasManualRef || hasProcessRefAny || hasFormRefAny || hasFiles;
     },
-    docRiskMode,
-    docRiskScope,
-    hasEvidence,
-  });
-}
+    [attachmentCounts],
+  );
+
+  const handlePrint = useCallback(() => {
+    if (!doc) return;
+
+    printMatrix({
+      doc,
+      clauses,
+      isDe,
+      locale,
+      stats,
+      psoeStats,
+      riskStats: {
+        count: riskStats.count,
+        avgScore: riskStats.avgScore,
+        worstScore: riskStats.worstScore,
+        docValue: riskStats.docValue,
+      },
+      docRiskMode,
+      docRiskScope,
+      hasEvidence,
+    });
+  }, [doc, clauses, isDe, locale, stats, psoeStats, riskStats, docRiskMode, docRiskScope, hasEvidence]);
 
   /* =========================================================
      Render: No doc selected
@@ -809,7 +860,9 @@ function handlePrint() {
           </div>
 
           <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px]">
-            <span className={['inline-flex items-center rounded-full border px-2 py-0.5 font-medium', matrixStatusColorClasses(matrixStatus)].join(' ')}>
+            <span
+              className={['inline-flex items-center rounded-full border px-2 py-0.5 font-medium', matrixStatusColorClasses(matrixStatus)].join(' ')}
+            >
               {isDe ? 'Status:' : 'Status:'} {matrixStatusLabel(matrixStatus, isDe)}
             </span>
 
@@ -898,13 +951,13 @@ function handlePrint() {
                       ? isDe
                         ? 'Alle'
                         : 'All'
-                      : statusLabel(s as ComplianceStatus, isDe);
+                      : statusLabel(s, isDe);
 
                   return (
                     <button
                       key={s}
                       type="button"
-                      onClick={() => setPendingStatusFilter(s as any)}
+                      onClick={() => setPendingStatusFilter(s)}
                       className={[
                         'rounded-full border px-2.5 py-1 text-[11px]',
                         active
@@ -1219,7 +1272,7 @@ function handlePrint() {
                   filteredClauses.map((c) => {
                     const ref = buildRef(c as MatrixClauseWithLevels) || '–';
                     const title = buildTitle(c as MatrixClauseWithLevels) || '–';
-                    const isSelected = c.id === selectedClauseId;
+                    const isSelected = c.id === effectiveSelectedClauseId;
 
                     const manualsLabel = manualsLabelForClause(c);
                     const procFormsLabel = processAndFormsLabelForClause(c);
@@ -1227,8 +1280,8 @@ function handlePrint() {
                     const evid = hasEvidence(c);
                     const evidenceLabel = evid ? (isDe ? 'vorhanden' : 'available') : isDe ? 'fehlt' : 'missing';
 
-                    const rScore = riskScore(c.riskSeverity, c.riskProbability);
-                    const rLbl = riskLabel(c.riskSeverity, c.riskProbability);
+                    const rScore = riskScore(c.riskSeverity as RiskLevel | null, c.riskProbability as RiskLevel | null);
+                    const rLbl = riskLabel(c.riskSeverity as RiskLevel | null, c.riskProbability as RiskLevel | null);
                     const rBand = rScore ? riskBand(rScore) : null;
 
                     return (
@@ -1352,9 +1405,27 @@ function handlePrint() {
 
             {/* Referenzebenen */}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              {[1, 2, 3].map((lvl) => {
-                const refKey = `refLevel${lvl}` as keyof MatrixClause;
-                const titleKey = `titleLevel${lvl}` as keyof MatrixClause;
+              {(
+                [
+                  { lvl: 1, refKey: 'refLevel1', titleKey: 'titleLevel1' },
+                  { lvl: 2, refKey: 'refLevel2', titleKey: 'titleLevel2' },
+                  { lvl: 3, refKey: 'refLevel3', titleKey: 'titleLevel3' },
+                ] as const
+              ).map(({ lvl, refKey, titleKey }) => {
+                const clauseWithLevels = selectedClause as MatrixClauseWithLevels;
+
+                const refPlaceholder =
+                  lvl === 1
+                    ? isDe
+                      ? 'z.B. 4.1'
+                      : 'e.g. 4.1'
+                    : lvl === 2
+                      ? isDe
+                        ? 'z.B. (a)'
+                        : 'e.g. (a)'
+                      : isDe
+                        ? 'z.B. (1)'
+                        : 'e.g. (1)';
 
                 return (
                   <div key={lvl} className="space-y-1.5">
@@ -1363,16 +1434,14 @@ function handlePrint() {
                     </div>
                     <input
                       className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs"
-                      value={(selectedClause[refKey] as string) || ''}
-                      onChange={(e) => handleClauseChange(selectedClause, { [refKey]: e.target.value } as any)}
-                      placeholder={
-                        lvl === 1 ? (isDe ? 'z.B. 4.1' : 'e.g. 4.1') : lvl === 2 ? (isDe ? 'z.B. (a)' : 'e.g. (a)') : (isDe ? 'z.B. (1)' : 'e.g. (1)')
-                      }
+                      value={(clauseWithLevels[refKey] as string) || ''}
+                      onChange={(e) => patchClauseField(selectedClause, refKey, e.target.value)}
+                      placeholder={refPlaceholder}
                     />
                     <input
                       className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs"
-                      value={(selectedClause[titleKey] as string) || ''}
-                      onChange={(e) => handleClauseChange(selectedClause, { [titleKey]: e.target.value } as any)}
+                      value={(clauseWithLevels[titleKey] as string) || ''}
+                      onChange={(e) => patchClauseField(selectedClause, titleKey, e.target.value)}
                       placeholder={isDe ? 'Titel / Überschrift' : 'Title / heading'}
                     />
                   </div>
@@ -1390,7 +1459,11 @@ function handlePrint() {
                 rows={3}
                 value={selectedClause.requirementText || ''}
                 onChange={(e) => handleClauseChange(selectedClause, { requirementText: e.target.value })}
-                placeholder={isDe ? 'Hier den relevanten Gesetzes-/Normtext oder die Anforderung einfügen…' : 'Paste the relevant regulation/standard text or requirement here…'}
+                placeholder={
+                  isDe
+                    ? 'Hier den relevanten Gesetzes-/Normtext oder die Anforderung einfügen…'
+                    : 'Paste the relevant regulation/standard text or requirement here…'
+                }
               />
             </div>
 
@@ -1635,10 +1708,10 @@ function handlePrint() {
                 <span>{isDe ? 'Themenfeld' : 'Topic'}</span>
               </div>
               <div className="grid grid-cols-4 gap-2">
-                <span>{(doc as any).lawRechtsart || '–'}</span>
+                <span>{docMeta.lawRechtsart || '–'}</span>
                 <span>{doc.lawKuerzel || '–'}</span>
                 <span>{doc.lawBezeichnung || '–'}</span>
-                <span>{(doc as any).lawThemenfeld || '–'}</span>
+                <span>{docMeta.lawThemenfeld || '–'}</span>
               </div>
             </div>
 
@@ -1832,7 +1905,7 @@ function handlePrint() {
 
             <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
               {(() => {
-                const sc = riskScore(riskS ?? undefined, riskP ?? undefined);
+                const sc = riskScore(riskS, riskP);
                 if (!sc) {
                   return <div className="text-[11px] text-slate-600">{isDe ? 'Bitte S und P auswählen.' : 'Please select S and P.'}</div>;
                 }
@@ -1841,7 +1914,7 @@ function handlePrint() {
                   <div className="flex items-center justify-between">
                     <div className="text-[11px] text-slate-700">
                       <span className="font-semibold">{isDe ? 'Auswahl:' : 'Selection:'}</span>{' '}
-                      {riskLabel(riskS ?? undefined, riskP ?? undefined)}
+                      {riskLabel(riskS, riskP)}
                       <span className="mx-2 text-slate-400">·</span>
                       <span className="font-semibold">{isDe ? 'Score:' : 'Score:'}</span> {sc}/16
                     </div>
