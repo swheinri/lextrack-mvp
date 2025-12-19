@@ -9,7 +9,7 @@ const PUBLIC_PATHS = new Set<string>([
   '/api/login',
 ]);
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Next.js-Assets & Bilder immer durchlassen
