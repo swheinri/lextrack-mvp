@@ -1,7 +1,7 @@
 // app/login/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 
 export default function LoginPage() {
@@ -10,6 +10,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // ✅ Link optional mit vorbefüllter E-Mail
+  const forgotHref = useMemo(() => {
+    const v = email.trim().toLowerCase();
+    return v ? `/forgot-password?email=${encodeURIComponent(v)}` : '/forgot-password';
+  }, [email]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,8 +53,8 @@ export default function LoginPage() {
         style={{ backgroundImage: "url('/images/login-mountains.jpg')" }}
       />
 
-      {/* Overlay für besseren Kontrast */}
-      <div className="absolute inset-0 bg-slate-950/55" />
+      {/* Overlay für besseren Kontrast (✅ darf keine Klicks blocken) */}
+      <div className="pointer-events-none absolute inset-0 bg-slate-950/55" />
 
       {/* Center-Layout */}
       <div className="relative flex min-h-screen items-center justify-center px-4 py-10">
@@ -122,12 +128,14 @@ export default function LoginPage() {
                   >
                     Passwort
                   </label>
-                  <button
-                    type="button"
+
+                  {/* ✅ echtes Link-Element (statt Button), damit es sicher klickbar ist */}
+                  <Link
+                    href={forgotHref}
                     className="text-[11px] font-medium text-teal-700 hover:text-teal-800"
                   >
                     Passwort vergessen?
-                  </button>
+                  </Link>
                 </div>
                 <input
                   id="password"
