@@ -1,0 +1,60 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AuthTokenType {
+  INVITE
+  RESET
+  ACTIVATE
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  isSystem    Boolean  @default(false)
+
+  users       User[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String?
+  isActive     Boolean   @default(true)
+
+  roleId       String
+  role         Role      @relation(fields: [roleId], references: [id])
+
+  tokens       AuthToken[]
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model AuthToken {
+  token      String        @id
+  type       AuthTokenType
+  expiresAt  DateTime
+  usedAt     DateTime?
+
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime      @default(now())
+
+  @@index([userId, type])
+}
