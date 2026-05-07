@@ -1,16 +1,10 @@
-//app/components/shell/sidebar
+// app/components/shell/sidebar.tsx
 'use client';
 
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Home,
-  FileText,
-  Grid3X3,
-  BarChart3,
-  Settings,
-} from 'lucide-react';
+import { Home, FileText, Grid3X3, BarChart3, Settings } from 'lucide-react';
 import { useLanguage } from '../i18n/language';
 
 type NavItem = {
@@ -20,15 +14,15 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/',          key: 'home',    icon: Home },
-  { href: '/register',  key: 'register',icon: FileText },
-  { href: '/matrix',    key: 'matrix',  icon: Grid3X3 },
-  { href: '/reports',   key: 'reports', icon: BarChart3 },
-  { href: '/settings',  key: 'settings',icon: Settings },
+  { href: '/',         key: 'home',     icon: Home },
+  { href: '/register', key: 'register', icon: FileText },
+  { href: '/matrix',   key: 'matrix',   icon: Grid3X3 },
+  { href: '/reports',  key: 'reports',  icon: BarChart3 },
+  { href: '/settings', key: 'settings', icon: Settings },
 ];
 
 export default function Sidebar() {
-  const pathname = usePathname();
+  const pathname = usePathname() || '/';
   const { language } = useLanguage();
 
   const labels = {
@@ -51,9 +45,7 @@ export default function Sidebar() {
   const t = labels[language] ?? labels.de;
 
   return (
-    // ✅ an Shell-Höhe koppeln: h-full statt h-screen
     <aside className="flex h-full w-64 flex-col bg-[#021633] text-slate-100">
-      {/* Logo-Bereich – ✅ Unterlinie entfernt */}
       <div className="px-4 py-4">
         <div className="text-sm font-semibold tracking-wide">LexTrack</div>
         <div className="text-[11px] text-slate-400">
@@ -61,10 +53,10 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 space-y-1 px-2 py-4">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
+
           const isActive =
             pathname === item.href ||
             (item.href !== '/' && pathname.startsWith(item.href));
