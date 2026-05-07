@@ -1,7 +1,7 @@
 // app/components/shell/header.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLanguage } from '../i18n/language';
 import { useUserPreferences } from '../userpreferences';
@@ -11,30 +11,29 @@ import { LogOut } from 'lucide-react';
 function getTimeGreeting(lang: 'de' | 'en') {
   const hour = new Date().getHours();
 
-  if (hour >= 5 && hour < 11) {
-    return lang === 'de' ? 'Guten Morgen' : 'Good morning';
-  }
-  if (hour >= 11 && hour < 17) {
-    return lang === 'de' ? 'Guten Tag' : 'Good afternoon';
-  }
-  if (hour >= 17 && hour < 22) {
-    return lang === 'de' ? 'Guten Abend' : 'Good evening';
-  }
+  if (hour >= 5 && hour < 11) return lang === 'de' ? 'Guten Morgen' : 'Good morning';
+  if (hour >= 11 && hour < 17) return lang === 'de' ? 'Guten Tag' : 'Good afternoon';
+  if (hour >= 17 && hour < 22) return lang === 'de' ? 'Guten Abend' : 'Good evening';
   return lang === 'de' ? 'Guten Abend' : 'Good evening';
 }
 
 export default function Header() {
-  const pathname = usePathname();
+  const pathname = usePathname() || '/';
   const router = useRouter();
   const { language } = useLanguage();
   const { displayName, personalGreeting } = useUserPreferences();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // ✅ verhindert Hydration mismatch (Server kennt localStorage/Prefs nicht)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const isDe = language === 'de';
 
   const titles = {
     de: {
       '/': 'Übersicht',
+      '/dashboard': 'Übersicht',
       '/register': 'Kataster',
       '/matrix': 'Compliance Matrix',
       '/reports': 'Berichte',
@@ -42,6 +41,7 @@ export default function Header() {
     },
     en: {
       '/': 'Home',
+      '/dashboard': 'Home',
       '/register': 'Register',
       '/matrix': 'Compliance Matrix',
       '/reports': 'Reports',
@@ -51,20 +51,21 @@ export default function Header() {
 
   const t = titles[language] ?? titles.de;
 
-  // einfachen Match auf Basis-Pfad machen
-  const basePath = ('/' + pathname.split('/')[1]) as keyof typeof t;
-  const pageTitle = t[basePath] ?? t['/'];
+  const baseSeg = pathname.split('/')[1] || '';
+  const basePath = ('/' + baseSeg) as keyof typeof t;
 
-  // Text für die Begrüßung im Header
-  const timeGreeting = getTimeGreeting(isDe ? 'de' : 'en');
+  const pageTitle = (t as any)[basePath] ?? t['/'];
+
+  // Greeting erst nach Mount berechnen/anzeigen (sonst SSR != Client)
+  const timeGreeting = mounted ? getTimeGreeting(isDe ? 'de' : 'en') : '';
   const name =
-    displayName && displayName.trim().length > 0
+    mounted && displayName && displayName.trim().length > 0
       ? displayName.trim()
       : isDe
       ? 'LexTrack-Nutzer:in'
       : 'LexTrack user';
 
-  const greetingText = `${timeGreeting}, ${name}.`;
+  const greetingText = mounted ? `${timeGreeting}, ${name}.` : '';
 
   // Logout-Handler
   const handleLogout = async () => {
@@ -77,7 +78,7 @@ export default function Header() {
       console.error('Logout fehlgeschlagen:', error);
     } finally {
       setIsLoggingOut(false);
-      router.push('/login');
+      router.replace('/login');
     }
   };
 
@@ -86,16 +87,21 @@ export default function Header() {
       {/* links: Produkt + Seitentitel */}
       <div className="min-w-[180px] flex flex-col">
         <span className="text-sm font-semibold">LexTrack Compliance Suite</span>
-        <span className="text-xs text-white/80">{pageTitle}</span>
+        <span className="text-xs text-white/80" suppressHydrationWarning>
+          {pageTitle}
+        </span>
       </div>
 
       {/* Mitte: persönliche Begrüßung (optional) */}
       <div className="flex flex-1 justify-center">
-        {personalGreeting && (
-          <p className="text-center text-xs font-medium text-white sm:text-sm">
+        {personalGreeting && mounted ? (
+          <p
+            className="text-center text-xs font-medium text-white sm:text-sm"
+            suppressHydrationWarning
+          >
             {greetingText}
           </p>
-        )}
+        ) : null}
       </div>
 
       {/* rechts: Abmelden-Button */}
