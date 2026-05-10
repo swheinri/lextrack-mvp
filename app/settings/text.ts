@@ -1,0 +1,1 @@
+export { TEXT } from './settings-text';
