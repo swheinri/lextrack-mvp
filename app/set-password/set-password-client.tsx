@@ -5,55 +5,64 @@ import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 
-const PASSWORD_POLICY = {
+const POLICY = {
   minLen: 10,
-  minSpecial: 1,
   minDigits: 1,
+  minSpecial: 1,
 };
 
-function countSpecialChars(pw: string) {
-  const m = pw.match(/[^A-Za-z0-9]/g);
+function countMatches(value: string, re: RegExp): number {
+  const m = value.match(re);
   return m ? m.length : 0;
 }
 
 function analyzePassword(pw: string) {
   const s = String(pw ?? '');
-  const lengthOk = s.length >= PASSWORD_POLICY.minLen;
-  const hasLower = /[a-z]/.test(s);
-  const hasUpper = /[A-Z]/.test(s);
-  const digitCount = (s.match(/\d/g) || []).length;
-  const digitsOk = digitCount >= PASSWORD_POLICY.minDigits;
-  const specialCount = countSpecialChars(s);
-  const specialOk = specialCount >= PASSWORD_POLICY.minSpecial;
 
-  const errors: string[] = [];
-  if (!lengthOk) errors.push(`Mindestens ${PASSWORD_POLICY.minLen} Zeichen`);
-  if (!hasUpper) errors.push('Mindestens 1 Großbuchstabe (A-Z)');
-  if (!hasLower) errors.push('Mindestens 1 Kleinbuchstabe (a-z)');
-  if (!digitsOk) errors.push(`Mindestens ${PASSWORD_POLICY.minDigits} Zahl (0-9)`);
-  if (!specialOk)
-    errors.push(`Mindestens ${PASSWORD_POLICY.minSpecial} Sonderzeichen (z. B. ! ? # @ _)`);
+  const lengthOk = s.length >= POLICY.minLen;
+  const upperOk = /[A-Z]/.test(s);
+  const lowerOk = /[a-z]/.test(s);
+  const digitCount = countMatches(s, /\d/g);
+  const digitsOk = digitCount >= POLICY.minDigits;
+  const specialCount = countMatches(s, /[^A-Za-z0-9]/g);
+  const specialOk = specialCount >= POLICY.minSpecial;
+
+  const ok = lengthOk && upperOk && lowerOk && digitsOk && specialOk;
 
   return {
+    ok,
     lengthOk,
-    hasLower,
-    hasUpper,
+    upperOk,
+    lowerOk,
     digitCount,
     digitsOk,
     specialCount,
     specialOk,
-    isValid: errors.length === 0,
-    errors,
   };
+}
+
+function RuleRow({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <li className="flex items-center gap-2">
+      <span
+        className={[
+          'inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold',
+          ok ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500',
+        ].join(' ')}
+        aria-hidden
+      >
+        {ok ? '✓' : '•'}
+      </span>
+      <span className={ok ? 'text-emerald-700' : 'text-slate-600'}>{label}</span>
+    </li>
+  );
 }
 
 export default function SetPasswordClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const token = useMemo(() => {
-    return (searchParams?.get('token') ?? '').trim();
-  }, [searchParams]);
+  const token = useMemo(() => (searchParams?.get('token') ?? '').trim(), [searchParams]);
 
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
@@ -61,7 +70,10 @@ export default function SetPasswordClient() {
   const [done, setDone] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const pwCheck = useMemo(() => analyzePassword(password), [password]);
+  const pw = useMemo(() => analyzePassword(password), [password]);
+  const matchOk = password.length > 0 && password === password2;
+
+  const canSubmit = !!token && pw.ok && matchOk && !loading;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -71,14 +83,11 @@ export default function SetPasswordClient() {
       setMsg('Token fehlt. Bitte nutze den Link aus der E-Mail erneut.');
       return;
     }
-
-    const check = analyzePassword(password);
-    if (!check.isValid) {
-      setMsg(`Passwort-Regeln nicht erfüllt: ${check.errors.join(' · ')}`);
+    if (!pw.ok) {
+      setMsg('Passwort erfüllt die Anforderungen noch nicht.');
       return;
     }
-
-    if (password !== password2) {
+    if (!matchOk) {
       setMsg('Passwörter stimmen nicht überein.');
       return;
     }
@@ -93,10 +102,9 @@ export default function SetPasswordClient() {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) {
-        throw new Error(
-          data?.message ??
-            (data?.details ? String(data.details.join(' · ')) : 'Passwort konnte nicht gesetzt werden.')
-        );
+        // falls Server details liefert, zeigen wir sie
+        const details = Array.isArray(data?.details) ? data.details.join(' · ') : null;
+        throw new Error(details || data?.message || 'Passwort konnte nicht gesetzt werden.');
       }
 
       setDone(true);
@@ -108,31 +116,12 @@ export default function SetPasswordClient() {
     }
   }
 
-  function Rule({ ok, text }: { ok: boolean; text: string }) {
-    return (
-      <li className={ok ? 'text-emerald-700' : 'text-slate-600'}>
-        {ok ? '✓' : '•'} {text}
-      </li>
-    );
-  }
-
   return (
     <>
       <h1 className="text-lg font-semibold">Neues Passwort setzen</h1>
       <p className="mt-1 text-xs text-slate-600">
-        Vergib ein neues Passwort nach den folgenden Regeln:
+        Bitte wähle ein Passwort, das alle Anforderungen erfüllt.
       </p>
-
-      <ul className="mt-2 space-y-1 text-xs">
-        <Rule ok={pwCheck.lengthOk} text={`Mindestens ${PASSWORD_POLICY.minLen} Zeichen`} />
-        <Rule ok={pwCheck.hasUpper} text="Mindestens 1 Großbuchstabe (A–Z)" />
-        <Rule ok={pwCheck.hasLower} text="Mindestens 1 Kleinbuchstabe (a–z)" />
-        <Rule ok={pwCheck.digitsOk} text={`Mindestens ${PASSWORD_POLICY.minDigits} Zahl (0–9)`} />
-        <Rule
-          ok={pwCheck.specialOk}
-          text={`Mindestens ${PASSWORD_POLICY.minSpecial} Sonderzeichen (z. B. ! ? # @ _)`}
-        />
-      </ul>
 
       {!token && (
         <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-900">
@@ -150,10 +139,23 @@ export default function SetPasswordClient() {
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
             type="password"
             autoComplete="new-password"
-            placeholder={`Mind. ${PASSWORD_POLICY.minLen} Zeichen, Groß/Klein, Zahl, Sonderzeichen`}
+            placeholder="Neues Passwort"
             value={password}
             onChange={(ev) => setPassword(ev.target.value)}
           />
+
+          {/* Dynamische Checkliste */}
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
+            <div className="mb-2 font-semibold text-slate-700">Passwort-Anforderungen</div>
+            <ul className="space-y-1">
+              <RuleRow ok={pw.lengthOk} label={`Mindestens ${POLICY.minLen} Zeichen`} />
+              <RuleRow ok={pw.upperOk} label="Mindestens 1 Großbuchstabe (A–Z)" />
+              <RuleRow ok={pw.lowerOk} label="Mindestens 1 Kleinbuchstabe (a–z)" />
+              <RuleRow ok={pw.digitsOk} label={`Mindestens ${POLICY.minDigits} Zahl (0–9)`} />
+              <RuleRow ok={pw.specialOk} label={`Mindestens ${POLICY.minSpecial} Sonderzeichen (z. B. ! ? # @ _)`} />
+            </ul>
+          </div>
+
           <input
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
             type="password"
@@ -163,6 +165,17 @@ export default function SetPasswordClient() {
             onChange={(ev) => setPassword2(ev.target.value)}
           />
 
+          {/* Optional: Match-Check */}
+          {password2.length > 0 && (
+            <div className="text-xs">
+              {matchOk ? (
+                <span className="text-emerald-700">✓ Passwörter stimmen überein</span>
+              ) : (
+                <span className="text-slate-600">• Passwörter stimmen noch nicht überein</span>
+              )}
+            </div>
+          )}
+
           {msg && (
             <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-900">
               {msg}
@@ -170,7 +183,7 @@ export default function SetPasswordClient() {
           )}
 
           <button
-            disabled={loading || !token}
+            disabled={!canSubmit}
             className="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-500 disabled:opacity-60"
           >
             {loading ? 'Bitte warten…' : 'Passwort festlegen'}
