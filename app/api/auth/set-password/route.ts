@@ -1,7 +1,7 @@
-// app/api/auth/set-password/route.ts
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { hashToken } from '@/app/lib/token-hash';
 
 export const runtime = 'nodejs';
 
@@ -23,7 +23,6 @@ function countDigits(pw: string) {
 
 function validatePassword(pw: string) {
   const p = String(pw ?? '');
-
   const lengthOk = p.length >= POLICY.minLen;
   const hasUpper = /[A-Z]/.test(p);
   const hasLower = /[a-z]/.test(p);
@@ -37,41 +36,38 @@ function validatePassword(pw: string) {
   if (!hasUpper) errors.push('Mindestens 1 Großbuchstabe (A-Z)');
   if (!hasLower) errors.push('Mindestens 1 Kleinbuchstabe (a-z)');
   if (!digitsOk) errors.push(`Mindestens ${POLICY.minDigits} Zahl (0-9)`);
-  if (!specialOk)
-    errors.push(`Mindestens ${POLICY.minSpecial} Sonderzeichen (z. B. ! ? # @ _)`);
+  if (!specialOk) errors.push(`Mindestens ${POLICY.minSpecial} Sonderzeichen`);
 
   return { ok: errors.length === 0, errors };
 }
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
-  const token = String(body?.token ?? '').trim();
+  const plainToken = String(body?.token ?? '').trim();
   const password = String(body?.password ?? '');
 
-  if (!token) {
+  if (!plainToken) {
     return NextResponse.json({ success: false, message: 'Token fehlt.' }, { status: 400 });
   }
 
   const pwCheck = validatePassword(password);
   if (!pwCheck.ok) {
     return NextResponse.json(
-      {
-        success: false,
-        message: 'Passwort erfüllt die Anforderungen nicht.',
-        details: pwCheck.errors,
-      },
+      { success: false, message: 'Passwort erfüllt die Anforderungen nicht.', details: pwCheck.errors },
       { status: 400 }
     );
   }
 
   const now = new Date();
+  const tokenHash = hashToken(plainToken);
 
+  // ✅ erst Hash suchen, dann Fallback auf "plain" (für alte Tokens, Übergangsphase)
   const authToken = await prisma.authToken.findFirst({
     where: {
-      token,
       type: 'RESET',
       usedAt: null,
       expiresAt: { gt: now },
+      OR: [{ token: tokenHash }, { token: plainToken }],
     },
     include: { user: { select: { id: true, isActive: true } } },
   });
@@ -95,7 +91,7 @@ export async function POST(req: Request) {
       data: { usedAt: now },
     }),
     prisma.authToken.deleteMany({
-      where: { userId: authToken.userId, type: 'RESET', usedAt: null },
+      where: { userId: authToken.userId, type: 'RESET', usedAt: null, token: { not: authToken.token } },
     }),
   ]);
 

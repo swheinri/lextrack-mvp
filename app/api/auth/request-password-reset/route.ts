@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { prisma } from '@/app/lib/prisma';
 import { sendPasswordResetEmail } from '@/app/lib/mailer';
+import { hashToken } from '@/app/lib/token-hash';
 
 export const runtime = 'nodejs';
 
@@ -20,6 +21,7 @@ function isValidEmail(email: string) {
 }
 
 export async function POST(req: Request) {
+  // Generische Antwort (kein User-Enumeration)
   const okResponse = NextResponse.json({
     success: true,
     message: 'Wenn ein Account existiert, wurde der Reset-Prozess gestartet.',
@@ -37,18 +39,21 @@ export async function POST(req: Request) {
 
     if (!user || !user.isActive) return okResponse;
 
+    // alte, offene RESET-Tokens löschen
     await prisma.authToken.deleteMany({
-      where: { userId: user.id, type: 'RESET' },
+      where: { userId: user.id, type: 'RESET', usedAt: null },
     });
 
-    const token = randomBytes(32).toString('base64url');
+    // ✅ Token erzeugen (plain) + nur Hash speichern
+    const plainToken = randomBytes(32).toString('base64url');
+    const tokenHash = hashToken(plainToken);
     const expiresAt = new Date(Date.now() + EXPIRES_MINUTES * 60 * 1000);
 
     await prisma.authToken.create({
-      data: { token, type: 'RESET', expiresAt, userId: user.id },
+      data: { token: tokenHash, type: 'RESET', expiresAt, userId: user.id },
     });
 
-    const resetUrl = `${baseUrl()}/set-password?token=${encodeURIComponent(token)}`;
+    const resetUrl = `${baseUrl()}/set-password?token=${encodeURIComponent(plainToken)}`;
 
     await sendPasswordResetEmail({
       to: user.email,

@@ -6,6 +6,12 @@ const MAIL_FROM = process.env.MAIL_FROM || process.env.EMAIL_FROM || '';
 
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
+// ✅ Niemals Token/URLs loggen
+function safeMailLog(event: string, data: Record<string, unknown>) {
+  if (process.env.NODE_ENV === 'production') return;
+  console.log(`[mail] ${event}`, data);
+}
+
 export async function sendPasswordResetEmail(opts: {
   to: string;
   resetUrl: string;
@@ -13,15 +19,13 @@ export async function sendPasswordResetEmail(opts: {
 }) {
   const { to, resetUrl, expiresInMinutes } = opts;
 
-  // Dev/Local: wenn Key/From fehlt, nur loggen
+  // Dev/Local: wenn Key/From fehlt, nur loggen (ohne resetUrl!)
   if (!resend || !MAIL_FROM) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[mail] skipped (missing RESEND_API_KEY or MAIL_FROM)', {
-        to,
-        resetUrl,
-        expiresInMinutes,
-      });
-    }
+    safeMailLog('skipped (missing RESEND_API_KEY or MAIL_FROM)', {
+      to,
+      expiresInMinutes,
+      resetUrl: '[redacted]',
+    });
     return;
   }
 
@@ -50,11 +54,24 @@ export async function sendPasswordResetEmail(opts: {
     `${resetUrl}\n\n` +
     `Wenn du das nicht warst, ignoriere diese E-Mail.`;
 
-  await resend.emails.send({
-    from: MAIL_FROM, // z.B. "LexTrack <no-reply@lextrack.de>"
-    to,
-    subject,
-    html,
-    text,
-  });
+  try {
+    await resend.emails.send({
+      from: MAIL_FROM, // z.B. "LexTrack <no-reply@lextrack.de>"
+      to,
+      subject,
+      html,
+      text,
+    });
+
+    // optionales Dev-Log (ohne URL)
+    safeMailLog('sent', { to, expiresInMinutes });
+  } catch (err: any) {
+    // Fehler loggen, aber niemals resetUrl/token
+    safeMailLog('send failed', {
+      to,
+      expiresInMinutes,
+      error: err?.message ?? String(err),
+    });
+    throw err;
+  }
 }
