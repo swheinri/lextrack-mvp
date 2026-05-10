@@ -1,7 +1,7 @@
 // app/set-password/set-password-client.tsx
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 
@@ -58,11 +58,15 @@ function RuleRow({ ok, label }: { ok: boolean; label: string }) {
   );
 }
 
+type TokenState = 'checking' | 'valid' | 'invalid';
+
 export default function SetPasswordClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const token = useMemo(() => (searchParams?.get('token') ?? '').trim(), [searchParams]);
+
+  const [tokenState, setTokenState] = useState<TokenState>('checking');
 
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
@@ -73,7 +77,38 @@ export default function SetPasswordClient() {
   const pw = useMemo(() => analyzePassword(password), [password]);
   const matchOk = password.length > 0 && password === password2;
 
-  const canSubmit = !!token && pw.ok && matchOk && !loading;
+  // ✅ Token sofort serverseitig prüfen: abgelaufen/benutzt => Formular sperren
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      if (!token) {
+        setTokenState('invalid');
+        return;
+      }
+
+      setTokenState('checking');
+      try {
+        const res = await fetch(
+          `/api/auth/validate-reset-token?token=${encodeURIComponent(token)}`,
+          { method: 'GET', cache: 'no-store' }
+        );
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return;
+
+        setTokenState(data?.valid ? 'valid' : 'invalid');
+      } catch {
+        if (!cancelled) setTokenState('invalid');
+      }
+    }
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  const canSubmit = tokenState === 'valid' && pw.ok && matchOk && !loading;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -81,6 +116,10 @@ export default function SetPasswordClient() {
 
     if (!token) {
       setMsg('Token fehlt. Bitte nutze den Link aus der E-Mail erneut.');
+      return;
+    }
+    if (tokenState !== 'valid') {
+      setMsg('Dieser Reset-Link ist ungültig, abgelaufen oder wurde bereits benutzt.');
       return;
     }
     if (!pw.ok) {
@@ -102,7 +141,6 @@ export default function SetPasswordClient() {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) {
-        // falls Server details liefert, zeigen wir sie
         const details = Array.isArray(data?.details) ? data.details.join(' · ') : null;
         throw new Error(details || data?.message || 'Passwort konnte nicht gesetzt werden.');
       }
@@ -111,10 +149,27 @@ export default function SetPasswordClient() {
       setTimeout(() => router.push('/login'), 1500);
     } catch (err: any) {
       setMsg(err?.message ?? 'Unbekannter Fehler.');
+      // ✅ Token könnte inzwischen "verbraucht" sein
+      setTokenState('invalid');
     } finally {
       setLoading(false);
     }
   }
+
+  const tokenBanner =
+    !token ? (
+      <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-900">
+        Token fehlt. Bitte öffne den Reset-Link aus der E-Mail erneut.
+      </div>
+    ) : tokenState === 'checking' ? (
+      <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+        Prüfe Reset-Link…
+      </div>
+    ) : tokenState === 'invalid' ? (
+      <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-900">
+        Dieser Reset-Link ist ungültig, abgelaufen oder wurde bereits benutzt. Bitte fordere einen neuen Link an.
+      </div>
+    ) : null;
 
   return (
     <>
@@ -123,11 +178,7 @@ export default function SetPasswordClient() {
         Bitte wähle ein Passwort, das alle Anforderungen erfüllt.
       </p>
 
-      {!token && (
-        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-900">
-          Token fehlt. Bitte öffne den Reset-Link aus der E-Mail erneut.
-        </div>
-      )}
+      {tokenBanner}
 
       {done ? (
         <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
@@ -142,9 +193,9 @@ export default function SetPasswordClient() {
             placeholder="Neues Passwort"
             value={password}
             onChange={(ev) => setPassword(ev.target.value)}
+            disabled={tokenState !== 'valid' || loading}
           />
 
-          {/* Dynamische Checkliste */}
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
             <div className="mb-2 font-semibold text-slate-700">Passwort-Anforderungen</div>
             <ul className="space-y-1">
@@ -152,7 +203,10 @@ export default function SetPasswordClient() {
               <RuleRow ok={pw.upperOk} label="Mindestens 1 Großbuchstabe (A–Z)" />
               <RuleRow ok={pw.lowerOk} label="Mindestens 1 Kleinbuchstabe (a–z)" />
               <RuleRow ok={pw.digitsOk} label={`Mindestens ${POLICY.minDigits} Zahl (0–9)`} />
-              <RuleRow ok={pw.specialOk} label={`Mindestens ${POLICY.minSpecial} Sonderzeichen (z. B. ! ? # @ _)`} />
+              <RuleRow
+                ok={pw.specialOk}
+                label={`Mindestens ${POLICY.minSpecial} Sonderzeichen (z. B. ! ? # @ _)`}
+              />
             </ul>
           </div>
 
@@ -163,9 +217,9 @@ export default function SetPasswordClient() {
             placeholder="Neues Passwort wiederholen"
             value={password2}
             onChange={(ev) => setPassword2(ev.target.value)}
+            disabled={tokenState !== 'valid' || loading}
           />
 
-          {/* Optional: Match-Check */}
           {password2.length > 0 && (
             <div className="text-xs">
               {matchOk ? (
