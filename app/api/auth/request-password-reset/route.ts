@@ -1,3 +1,4 @@
+// app/api/auth/request-password-reset/route.ts
 import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { prisma } from '@/app/lib/prisma';
@@ -7,6 +8,12 @@ import { hashToken } from '@/app/lib/token-hash';
 export const runtime = 'nodejs';
 
 const EXPIRES_MINUTES = 60;
+
+// ✅ Anti-Spam / Anti-Bruteforce
+const WINDOW_MINUTES = 60;
+const MAX_PER_WINDOW = 5;
+// optionaler Mini-Cooldown (hilft gegen “Spam-Klickerei”)
+const COOLDOWN_SECONDS = 120; // 2 Minuten
 
 function baseUrl(): string {
   const url =
@@ -39,15 +46,38 @@ export async function POST(req: Request) {
 
     if (!user || !user.isActive) return okResponse;
 
-    // alte, offene RESET-Tokens löschen
-    await prisma.authToken.deleteMany({
-      where: { userId: user.id, type: 'RESET', usedAt: null },
+    const now = new Date();
+
+    // 1) Cooldown (optional)
+    const last = await prisma.authToken.findFirst({
+      where: { userId: user.id, type: 'RESET' },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
     });
 
-    // ✅ Token erzeugen (plain) + nur Hash speichern
+    if (last) {
+      const diffMs = now.getTime() - last.createdAt.getTime();
+      if (diffMs < COOLDOWN_SECONDS * 1000) return okResponse;
+    }
+
+    // 2) Rate Limit: max 5 / 60min
+    const windowStart = new Date(now.getTime() - WINDOW_MINUTES * 60 * 1000);
+    const count = await prisma.authToken.count({
+      where: { userId: user.id, type: 'RESET', createdAt: { gte: windowStart } },
+    });
+
+    if (count >= MAX_PER_WINDOW) return okResponse;
+
+    // 3) Vorherige ungenutzte Reset-Tokens invalidieren (aber NICHT löschen, sonst klappt RateLimit nicht)
+    await prisma.authToken.updateMany({
+      where: { userId: user.id, type: 'RESET', usedAt: null },
+      data: { usedAt: now },
+    });
+
+    // 4) Token erzeugen (plain) + nur Hash speichern
     const plainToken = randomBytes(32).toString('base64url');
     const tokenHash = hashToken(plainToken);
-    const expiresAt = new Date(Date.now() + EXPIRES_MINUTES * 60 * 1000);
+    const expiresAt = new Date(now.getTime() + EXPIRES_MINUTES * 60 * 1000);
 
     await prisma.authToken.create({
       data: { token: tokenHash, type: 'RESET', expiresAt, userId: user.id },
