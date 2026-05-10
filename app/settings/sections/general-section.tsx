@@ -2,7 +2,17 @@
 'use client';
 
 import React from 'react';
-import { SunMedium, Moon, Contrast, Eye, Zap, Type as TypeIcon, Monitor, Filter, Volume2 } from 'lucide-react';
+import {
+  SunMedium,
+  Moon,
+  Contrast,
+  Eye,
+  Zap,
+  Type as TypeIcon,
+  Monitor,
+  Filter,
+  Volume2,
+} from 'lucide-react';
 
 type ThemeKey =
   | 'light'
@@ -43,7 +53,18 @@ export default function GeneralSection(props: {
   setLanguage: (l: 'de' | 'en') => void;
   applyInstantMode: () => void;
 }) {
-  const { t, theme, setTheme, fontSize, setFontSize, language, setLanguage, applyInstantMode } = props;
+  const {
+    t,
+    theme,
+    setTheme,
+    fontSize,
+    setFontSize,
+    language,
+    setLanguage,
+    applyInstantMode,
+  } = props;
+
+  const isDe = language === 'de';
 
   const themeOptions: { id: ThemeKey; label: string; icon: React.ReactNode }[] = [
     { id: 'light', label: t.themeLight, icon: <SunMedium className="h-3 w-3" /> },
@@ -52,6 +73,46 @@ export default function GeneralSection(props: {
     { id: 'colorblind', label: t.themeColorblind, icon: <Eye className="h-3 w-3" /> },
     { id: 'colorblind-deuter', label: t.themeDeuter, icon: <Eye className="h-3 w-3" /> },
   ];
+
+  type Preset = {
+    id: string;
+    labelDe: string;
+    labelEn: string;
+    theme: ThemeKey;
+    fontSize: FontSizeKey;
+  };
+
+  const presets: Preset[] = [
+    {
+      id: 'reading',
+      labelDe: 'Lesemodus (Empfohlen)',
+      labelEn: 'Reading (Recommended)',
+      theme: 'colorblind',
+      fontSize: 'xlarge',
+    },
+    {
+      id: 'dark-focus',
+      labelDe: 'Dunkel Fokus',
+      labelEn: 'Dark focus',
+      theme: 'dark',
+      fontSize: 'large',
+    },
+    {
+      id: 'audit',
+      labelDe: 'Audit / Kontrast',
+      labelEn: 'Audit / contrast',
+      theme: 'high-contrast',
+      fontSize: 'normal',
+    },
+  ];
+
+  const activePreset =
+    presets.find((p) => p.theme === theme && p.fontSize === fontSize) ?? null;
+
+  const applyPreset = (p: Preset) => {
+    setTheme(p.theme);
+    setFontSize(p.fontSize);
+  };
 
   return (
     <div className="space-y-6">
@@ -93,8 +154,8 @@ export default function GeneralSection(props: {
           <p className="mt-1 text-[11px] text-slate-500">
             {t.currentThemePrefix}{' '}
             <span className="font-semibold text-slate-700">
-  {themeOptions.find((x) => x.id === theme)?.label ?? theme}
-</span>
+              {themeOptions.find((x) => x.id === theme)?.label ?? theme}
+            </span>
           </p>
         </section>
 
@@ -119,7 +180,9 @@ export default function GeneralSection(props: {
                   onClick={() => setLanguage(opt.id)}
                   className={[
                     'px-3 py-1 rounded-full transition',
-                    isActive ? 'bg-white shadow-sm text-slate-900' : 'bg-transparent text-slate-600 hover:text-slate-900',
+                    isActive
+                      ? 'bg-white shadow-sm text-slate-900'
+                      : 'bg-transparent text-slate-600 hover:text-slate-900',
                   ].join(' ')}
                 >
                   {opt.label}
@@ -151,7 +214,9 @@ export default function GeneralSection(props: {
                   onClick={() => setFontSize(opt.id)}
                   className={[
                     'px-3 py-1 rounded-full transition',
-                    isActive ? 'bg-white shadow-sm text-slate-900' : 'bg-transparent text-slate-600 hover:text-slate-900',
+                    isActive
+                      ? 'bg-white shadow-sm text-slate-900'
+                      : 'bg-transparent text-slate-600 hover:text-slate-900',
                   ].join(' ')}
                 >
                   {opt.label}
@@ -161,7 +226,7 @@ export default function GeneralSection(props: {
           </div>
         </section>
 
-        {/* Instant mode */}
+        {/* Lesemodus / Presets */}
         <section className="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm space-y-2">
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-slate-400" />
@@ -169,22 +234,65 @@ export default function GeneralSection(props: {
           </div>
           <p className="text-xs text-slate-500 max-w-2xl">{t.instantHelp}</p>
 
+          <div className="mt-2 flex flex-wrap gap-2">
+            {presets.map((p) => {
+              const isActive = activePreset?.id === p.id;
+              const label = isDe ? p.labelDe : p.labelEn;
+
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => applyPreset(p)}
+                  className={[
+                    'inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition',
+                    isActive
+                      ? 'border-[#009A93] bg-[#009A93]/10 text-[#009A93]'
+                      : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50',
+                  ].join(' ')}
+                  title={
+                    isDe
+                      ? `Theme: ${p.theme} · Schrift: ${p.fontSize}`
+                      : `Theme: ${p.theme} · Font: ${p.fontSize}`
+                  }
+                >
+                  <span>{label}</span>
+                </button>
+              );
+            })}
+          </div>
+
           <button
             type="button"
             onClick={applyInstantMode}
             className="mt-2 inline-flex items-center gap-2 rounded-lg bg-[#009A93] px-4 py-2 text-xs font-medium text-white shadow-sm hover:brightness-110"
+            title={isDe ? 'Wendet das empfohlene Preset an' : 'Applies the recommended preset'}
           >
             <Zap className="h-4 w-4" />
-            <span>{t.instantButton}</span>
+            <span>{isDe ? 'Empfohlenes Preset anwenden' : 'Apply recommended preset'}</span>
           </button>
+
+          <p className="mt-1 text-[11px] text-slate-500">
+            {isDe ? 'Aktiv:' : 'Active:'}{' '}
+            <span className="font-semibold text-slate-700">
+              {activePreset ? (isDe ? activePreset.labelDe : activePreset.labelEn) : `${theme} · ${fontSize}`}
+            </span>
+          </p>
         </section>
       </div>
 
-      {/* Upcoming row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <UpcomingCard title={t.readAloudTitle} subtitle={t.readAloudSub} icon={<Volume2 className="h-4 w-4 text-slate-400" />} />
-        <UpcomingCard title={t.instantPresetTitle} subtitle={t.instantPresetSub} icon={<Zap className="h-4 w-4 text-slate-400" />} />
-        <UpcomingCard title={t.blueFilterTitle} subtitle={t.blueFilterSub} icon={<Filter className="h-4 w-4 text-slate-400" />} />
+      {/* Upcoming row (ohne "Lesemodus-Presets", weil jetzt umgesetzt) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <UpcomingCard
+          title={t.readAloudTitle}
+          subtitle={t.readAloudSub}
+          icon={<Volume2 className="h-4 w-4 text-slate-400" />}
+        />
+        <UpcomingCard
+          title={t.blueFilterTitle}
+          subtitle={t.blueFilterSub}
+          icon={<Filter className="h-4 w-4 text-slate-400" />}
+        />
       </div>
     </div>
   );
