@@ -1,4 +1,4 @@
-// app/settings/sections/users-roles-section.tsx
+﻿// app/settings/sections/users-roles-section.tsx
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -100,7 +100,7 @@ const ROLE_OPTIONS = [
     id: 'compliance_manager',
     labelDe: 'Compliance Manager',
     labelEn: 'Compliance Manager',
-    descriptionDe: 'Verantwortlich für Compliance-Bewertung und Freigaben.',
+    descriptionDe: 'Verantwortlich fÃ¼r Compliance-Bewertung und Freigaben.',
     descriptionEn: 'Responsible for compliance assessment and approvals.',
   },
   {
@@ -114,7 +114,7 @@ const ROLE_OPTIONS = [
     id: 'auditor',
     labelDe: 'Auditor',
     labelEn: 'Auditor',
-    descriptionDe: 'Prüft Anforderungen, Nachweise und Umsetzung nachvollziehbar.',
+    descriptionDe: 'PrÃ¼ft Anforderungen, Nachweise und Umsetzung nachvollziehbar.',
     descriptionEn: 'Reviews requirements, evidence and implementation.',
   },
   {
@@ -128,7 +128,7 @@ const ROLE_OPTIONS = [
     id: 'external',
     labelDe: 'Externer Nutzer',
     labelEn: 'External user',
-    descriptionDe: 'Eingeschränkter Zugriff für externe Partner oder Lieferanten.',
+    descriptionDe: 'EingeschrÃ¤nkter Zugriff fÃ¼r externe Partner oder Lieferanten.',
     descriptionEn: 'Restricted access for external partners or suppliers.',
   },
 ] as const;
@@ -353,6 +353,7 @@ export default function UsersRolesSection({ isDe = true }: { isDe?: boolean }) {
   const [locKuerzel, setLocKuerzel] = useState('');
   const [depName, setDepName] = useState('');
   const [depKuerzel, setDepKuerzel] = useState('');
+  const [depLocationId, setDepLocationId] = useState('');
 
   const [userStatusFilter, setUserStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
@@ -372,6 +373,8 @@ export default function UsersRolesSection({ isDe = true }: { isDe?: boolean }) {
   const [editRoleCode, setEditRoleCode] = useState('VIEWER');
   const [isSavingUser, setIsSavingUser] = useState(false);
   const [editLocationId, setEditLocationId] = useState('');
+  const [assignUserId, setAssignUserId] = useState('');
+  const [isAssigningUser, setIsAssigningUser] = useState(false);
 
   const [uiError, setUiError] = useState<string | null>(null);
   const [uiMessage, setUiMessage] = useState<string | null>(null);
@@ -574,6 +577,22 @@ useEffect(() => {
     });
   }, [peopleInContext, userStatusFilter]);
 
+  const usersAssignedToSelectedDepartment = useMemo(() => {
+  if (!selectedDepartmentId) return [];
+
+  return adminUsers.filter(
+    (user) => user.person?.department?.id === selectedDepartmentId
+  );
+}, [adminUsers, selectedDepartmentId]);
+
+const usersAssignableToSelectedDepartment = useMemo(() => {
+  if (!selectedDepartmentId) return [];
+
+  return adminUsers.filter(
+    (user) => user.person?.department?.id !== selectedDepartmentId
+  );
+}, [adminUsers, selectedDepartmentId]);
+
   const activePeopleCount = userRowsForTable.filter(
     (person) => String(person.status ?? '').toUpperCase() === 'ACTIVE'
   ).length;
@@ -584,6 +603,7 @@ useEffect(() => {
 
   const kpiDepartmentCount = selectedLocationId ? departmentOptions.length : visibleDepartments.length;
   const effectiveInviteDepartmentId = inviteDepartmentId || selectedDepartmentId || '';
+  const effectiveDepartmentLocationId = depLocationId || selectedLocationId || '';
 
   const tabs: {
     id: AdminTab;
@@ -605,7 +625,7 @@ useEffect(() => {
       id: 'users',
       labelDe: 'Benutzer',
       labelEn: 'Users',
-      descriptionDe: 'Benutzerübersicht, Rollen und Status.',
+      descriptionDe: 'BenutzerÃ¼bersicht, Rollen und Status.',
       descriptionEn: 'Overview of users, roles and status.',
       icon: <Users className="h-5 w-5" />,
     },
@@ -680,7 +700,7 @@ useEffect(() => {
   const deleteAdminUser = async (user: AdminUserRow) => {
     const confirmed = confirm(
       isDe
-        ? `Benutzer ${user.email} wirklich löschen? Die E-Mail-Adresse wird danach wieder für Einladungen frei.`
+        ? `Benutzer ${user.email} wirklich lÃ¶schen? Die E-Mail-Adresse wird danach wieder fÃ¼r Einladungen frei.`
         : `Delete user ${user.email}? The email address will be available for invitations again.`
     );
 
@@ -773,12 +793,92 @@ const saveUserAssignment = async () => {
   }
 };
 
+const assignUserToSelectedDepartment = async () => {
+  if (!selectedDepartmentId) {
+    setUiError(
+      isDe
+        ? 'Bitte zuerst eine Abteilung auswÃ¤hlen.'
+        : 'Please select a department first.'
+    );
+    return;
+  }
+
+  if (!assignUserId) {
+    setUiError(
+      isDe
+        ? 'Bitte einen Benutzer auswÃ¤hlen.'
+        : 'Please select a user.'
+    );
+    return;
+  }
+
+  const user = adminUsers.find((item) => item.id === assignUserId);
+
+  if (!user) {
+    setUiError(
+      isDe
+        ? 'Benutzer wurde nicht gefunden.'
+        : 'User was not found.'
+    );
+    return;
+  }
+
+  setUiError(null);
+  setUiMessage(null);
+  setIsAssigningUser(true);
+
+  try {
+    const response = await fetch('/api/admin/users/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: user.id,
+        roleCode: user.role?.code ?? 'VIEWER',
+        departmentId: selectedDepartmentId,
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || data?.success === false) {
+      throw new Error(
+        data?.message ??
+          (isDe
+            ? 'Benutzer konnte der Abteilung nicht zugeordnet werden.'
+            : 'User could not be assigned to the department.')
+      );
+    }
+
+    setAssignUserId('');
+
+    setUiMessage(
+      isDe
+        ? 'Benutzer wurde der Abteilung zugeordnet.'
+        : 'User has been assigned to the department.'
+    );
+
+    await loadAdminUsers();
+  } catch (error) {
+    setUiError(
+      error instanceof Error
+        ? error.message
+        : isDe
+          ? 'Benutzer konnte der Abteilung nicht zugeordnet werden.'
+          : 'User could not be assigned to the department.'
+    );
+  } finally {
+    setIsAssigningUser(false);
+  }
+};
+
+
+
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok || data?.success === false) {
         throw new Error(
           data?.message ??
-            (isDe ? 'Benutzer konnte nicht gelöscht werden.' : 'User could not be deleted.')
+            (isDe ? 'Benutzer konnte nicht gelÃ¶scht werden.' : 'User could not be deleted.')
         );
       }
 
@@ -791,7 +891,7 @@ const saveUserAssignment = async () => {
       setUiMessage(
         data?.message ??
           (isDe
-            ? 'Benutzer wurde gelöscht. Die E-Mail-Adresse ist wieder frei.'
+            ? 'Benutzer wurde gelÃ¶scht. Die E-Mail-Adresse ist wieder frei.'
             : 'User has been deleted. The email address is available again.')
       );
 
@@ -801,7 +901,7 @@ const saveUserAssignment = async () => {
         error instanceof Error
           ? error.message
           : isDe
-            ? 'Benutzer konnte nicht gelöscht werden.'
+            ? 'Benutzer konnte nicht gelÃ¶scht werden.'
             : 'User could not be deleted.'
       );
     } finally {
@@ -837,7 +937,7 @@ const saveUserAssignment = async () => {
   if (editLocationId && !editDepartmentId) {
     setUiError(
       isDe
-        ? 'Bitte eine Abteilung für den ausgewählten Standort auswählen. Der Standort wird über die Abteilung gespeichert.'
+        ? 'Bitte eine Abteilung fÃ¼r den ausgewÃ¤hlten Standort auswÃ¤hlen. Der Standort wird Ã¼ber die Abteilung gespeichert.'
         : 'Please select a department for the selected location. The location is stored via the department.'
     );
     return;
@@ -892,7 +992,7 @@ const saveUserAssignment = async () => {
     setUiMessage(null);
 
     if (isBlank(locName)) {
-      setUiError(isDe ? 'Bitte Standortname ausfüllen.' : 'Please enter a location name.');
+      setUiError(isDe ? 'Bitte Standortname ausfÃ¼llen.' : 'Please enter a location name.');
       return;
     }
 
@@ -908,30 +1008,47 @@ const saveUserAssignment = async () => {
   };
 
   const onAddDepartment = () => {
-    setUiError(null);
-    setUiMessage(null);
+  setUiError(null);
+  setUiMessage(null);
 
-    if (!selectedLocationId) {
-      setUiError(isDe ? 'Bitte zuerst einen Standort auswählen.' : 'Please select a location first.');
-      return;
-    }
+  if (!effectiveDepartmentLocationId) {
+    setUiError(
+      isDe
+        ? 'Bitte einen Standort fÃ¼r die Abteilung auswÃ¤hlen.'
+        : 'Please select a location for the department.'
+    );
+    return;
+  }
 
-    if (isBlank(depName)) {
-      setUiError(isDe ? 'Bitte Abteilungsname ausfüllen.' : 'Please enter a department name.');
-      return;
-    }
+  if (isBlank(depName)) {
+    setUiError(
+      isDe
+        ? 'Bitte Abteilungsname ausfÃ¼llen.'
+        : 'Please enter a department name.'
+    );
+    return;
+  }
 
-    addDepartment({
-      name: depName.trim(),
-      kuerzel: depKuerzel.trim() || undefined,
-      locationId: selectedLocationId,
-    });
+  addDepartment({
+    name: depName.trim(),
+    kuerzel: depKuerzel.trim() || undefined,
+    locationId: effectiveDepartmentLocationId,
+  });
 
-    setDepName('');
-    setDepKuerzel('');
-    setShowAddDepartment(false);
-    setUiMessage(isDe ? 'Abteilung wurde angelegt.' : 'Department has been created.');
-  };
+  setSelectedLocationId(effectiveDepartmentLocationId);
+  setSelectedDepartmentId(null);
+
+  setDepName('');
+  setDepKuerzel('');
+  setDepLocationId('');
+  setShowAddDepartment(false);
+
+  setUiMessage(
+    isDe
+      ? 'Abteilung wurde angelegt und dem Standort zugeordnet.'
+      : 'Department has been created and assigned to the location.'
+  );
+};
 
   const onDeleteSelectedLocation = () => {
     setUiError(null);
@@ -942,13 +1059,13 @@ const saveUserAssignment = async () => {
     if (selectedLocationDepartmentCount > 0) {
       setUiError(
         isDe
-          ? 'Der Standort kann nicht gelöscht werden, solange ihm noch Abteilungen zugeordnet sind. Bitte zuerst die Abteilungen löschen oder verschieben.'
+          ? 'Der Standort kann nicht gelÃ¶scht werden, solange ihm noch Abteilungen zugeordnet sind. Bitte zuerst die Abteilungen lÃ¶schen oder verschieben.'
           : 'The location cannot be deleted while departments are still assigned to it. Please delete or move the departments first.'
       );
       return;
     }
 
-    if (confirm(isDe ? 'Standort wirklich löschen?' : 'Delete location?')) {
+    if (confirm(isDe ? 'Standort wirklich lÃ¶schen?' : 'Delete location?')) {
       removeLocation(selectedLocation.id);
       setSelectedLocationId(null);
       setSelectedDepartmentId(null);
@@ -963,22 +1080,22 @@ const saveUserAssignment = async () => {
     const email = inviteEmail.trim();
 
     if (!email) {
-      setUiError(isDe ? 'Bitte E-Mail-Adresse ausfüllen.' : 'Please enter an email address.');
+      setUiError(isDe ? 'Bitte E-Mail-Adresse ausfÃ¼llen.' : 'Please enter an email address.');
       return;
     }
 
     if (!email.includes('@')) {
-      setUiError(isDe ? 'E-Mail-Adresse wirkt ungültig.' : 'Email address looks invalid.');
+      setUiError(isDe ? 'E-Mail-Adresse wirkt ungÃ¼ltig.' : 'Email address looks invalid.');
       return;
     }
 
     if (!inviteRoleId) {
-      setUiError(isDe ? 'Bitte Rolle auswählen.' : 'Please select a role.');
+      setUiError(isDe ? 'Bitte Rolle auswÃ¤hlen.' : 'Please select a role.');
       return;
     }
 
     if (!effectiveInviteDepartmentId) {
-      setUiError(isDe ? 'Bitte Abteilung auswählen.' : 'Please select a department.');
+      setUiError(isDe ? 'Bitte Abteilung auswÃ¤hlen.' : 'Please select a department.');
       return;
     }
 
@@ -1051,7 +1168,7 @@ const saveUserAssignment = async () => {
   };
 
   const userDisplayName = (person: UserTableRow) => {
-    return [person.firstName, person.lastName].filter(Boolean).join(' ') || person.email || '—';
+    return [person.firstName, person.lastName].filter(Boolean).join(' ') || person.email || 'â€”';
   };
 
   const departmentDisplayName = (departmentId: string | null | undefined) => {
@@ -1060,7 +1177,7 @@ const saveUserAssignment = async () => {
     const department = departmentById.get(departmentId);
     if (!department) return isDe ? 'Unbekannte Abteilung' : 'Unknown department';
 
-    return department.kuerzel ? `${department.kuerzel} — ${department.name}` : department.name;
+    return department.kuerzel ? `${department.kuerzel} â€” ${department.name}` : department.name;
   };
 
   const locationDisplayName = (departmentId: string | null | undefined) => {
@@ -1072,7 +1189,7 @@ const saveUserAssignment = async () => {
   const location = locationById.get(department.locationId);
   if (!location) return isDe ? 'Unbekannter Standort' : 'Unknown location';
 
-  return location.kuerzel ? `${location.kuerzel} — ${location.name}` : location.name;
+  return location.kuerzel ? `${location.kuerzel} â€” ${location.name}` : location.name;
 };
 
   const statusFilterLabel = () => {
@@ -1138,7 +1255,7 @@ const saveUserAssignment = async () => {
     if (!printWindow) {
       setUiError(
         isDe
-          ? 'Druckfenster konnte nicht geöffnet werden. Bitte Popup-Blocker prüfen.'
+          ? 'Druckfenster konnte nicht geÃ¶ffnet werden. Bitte Popup-Blocker prÃ¼fen.'
           : 'Print window could not be opened. Please check your popup blocker.'
       );
       return;
@@ -1237,7 +1354,7 @@ const saveUserAssignment = async () => {
           <option value="">{isDe ? 'Alle Standorte' : 'All locations'}</option>
           {locationOptions.map((location) => (
             <option key={location.id} value={location.id}>
-              {location.kuerzel ? `${location.kuerzel} — ${location.name}` : location.name}
+              {location.kuerzel ? `${location.kuerzel} â€” ${location.name}` : location.name}
             </option>
           ))}
         </select>
@@ -1257,7 +1374,7 @@ const saveUserAssignment = async () => {
           <option value="">{isDe ? 'Alle Abteilungen' : 'All departments'}</option>
           {departmentOptions.map((department) => (
             <option key={department.id} value={department.id}>
-              {department.kuerzel ? `${department.kuerzel} — ${department.name}` : department.name}
+              {department.kuerzel ? `${department.kuerzel} â€” ${department.name}` : department.name}
             </option>
           ))}
         </select>
@@ -1365,10 +1482,10 @@ const saveUserAssignment = async () => {
               setInviteDepartmentId('');
             }}
           >
-            <option value="">{isDe ? 'Standort auswählen' : 'Select location'}</option>
+            <option value="">{isDe ? 'Standort auswÃ¤hlen' : 'Select location'}</option>
             {locationOptions.map((location) => (
               <option key={location.id} value={location.id}>
-                {location.kuerzel ? `${location.kuerzel} — ${location.name}` : location.name}
+                {location.kuerzel ? `${location.kuerzel} â€” ${location.name}` : location.name}
               </option>
             ))}
           </select>
@@ -1392,14 +1509,14 @@ const saveUserAssignment = async () => {
                 title={
                   selectedLocationDepartmentCount > 0
                     ? isDe
-                      ? 'Standort enthält noch Abteilungen'
+                      ? 'Standort enthÃ¤lt noch Abteilungen'
                       : 'Location still contains departments'
                     : isDe
-                      ? 'Standort löschen'
+                      ? 'Standort lÃ¶schen'
                       : 'Delete location'
                 }
               >
-                {isDe ? 'Löschen' : 'Delete'}
+                {isDe ? 'LÃ¶schen' : 'Delete'}
               </button>
             </div>
           )}
@@ -1410,7 +1527,7 @@ const saveUserAssignment = async () => {
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
             <Plus className="h-4 w-4" />
-            {isDe ? 'Standort hinzufügen' : 'Add location'}
+            {isDe ? 'Standort hinzufÃ¼gen' : 'Add location'}
           </button>
 
           {showAddLocation && (
@@ -1426,7 +1543,7 @@ const saveUserAssignment = async () => {
               </div>
 
               <div className="space-y-1">
-                <div className={labelCls}>{isDe ? 'Kürzel' : 'Code'}</div>
+                <div className={labelCls}>{isDe ? 'KÃ¼rzel' : 'Code'}</div>
                 <input
                   className={inputCls}
                   value={locKuerzel}
@@ -1462,10 +1579,10 @@ const saveUserAssignment = async () => {
               <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-sm text-slate-500">
                 {selectedLocation
                   ? isDe
-                    ? 'Für diesen Standort sind noch keine Abteilungen angelegt.'
+                    ? 'FÃ¼r diesen Standort sind noch keine Abteilungen angelegt.'
                     : 'No departments have been created for this location yet.'
                   : isDe
-                    ? 'Bitte zuerst einen Standort auswählen.'
+                    ? 'Bitte zuerst einen Standort auswÃ¤hlen.'
                     : 'Please select a location first.'}
               </div>
             )}
@@ -1496,7 +1613,7 @@ const saveUserAssignment = async () => {
                     <span className="min-w-0">
                       <span className="block truncate font-medium">
                         {department.kuerzel
-                          ? `${department.kuerzel} — ${department.name}`
+                          ? `${department.kuerzel} â€” ${department.name}`
                           : department.name}
                       </span>
                     </span>
@@ -1506,7 +1623,7 @@ const saveUserAssignment = async () => {
                     onClick={(event) => {
                       event.stopPropagation();
 
-                      if (confirm(isDe ? 'Abteilung wirklich löschen?' : 'Delete department?')) {
+                      if (confirm(isDe ? 'Abteilung wirklich lÃ¶schen?' : 'Delete department?')) {
                         removeDepartment(department.id);
 
                         if (selectedDepartmentId === department.id) {
@@ -1519,7 +1636,7 @@ const saveUserAssignment = async () => {
                       }
                     }}
                     className="rounded-md p-1 text-slate-400 hover:bg-white hover:text-rose-700"
-                    title={isDe ? 'Abteilung löschen' : 'Delete department'}
+                    title={isDe ? 'Abteilung lÃ¶schen' : 'Delete department'}
                   >
                     <Trash2 className="h-4 w-4" />
                   </span>
@@ -1529,18 +1646,46 @@ const saveUserAssignment = async () => {
           </div>
 
           <button
-            type="button"
-            onClick={() => setShowAddDepartment((value) => !value)}
-            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            disabled={!selectedLocationId}
-            title={!selectedLocationId ? (isDe ? 'Bitte Standort auswählen' : 'Please select a location') : ''}
-          >
+  type="button"
+  onClick={() => {
+    setDepLocationId(selectedLocationId ?? '');
+    setShowAddDepartment((value) => !value);
+  }}
+  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+  disabled={locationOptions.length === 0}
+  title={
+    locationOptions.length === 0
+      ? isDe
+        ? 'Bitte zuerst einen Standort anlegen'
+        : 'Please create a location first'
+      : ''
+  }
+>
             <Plus className="h-4 w-4" />
-            {isDe ? 'Abteilung hinzufügen' : 'Add department'}
+            {isDe ? 'Abteilung hinzufÃ¼gen' : 'Add department'}
           </button>
 
           {showAddDepartment && (
             <div className="mt-3 space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+<div className="space-y-1">
+  <div className={labelCls}>{isDe ? 'Standort' : 'Location'}</div>
+  <select
+    className={inputCls}
+    value={effectiveDepartmentLocationId}
+    onChange={(event) => setDepLocationId(event.target.value)}
+  >
+    <option value="">
+      {isDe ? 'Standort auswÃ¤hlen' : 'Select location'}
+    </option>
+
+    {locationOptions.map((location) => (
+      <option key={location.id} value={location.id}>
+        {location.kuerzel ? `${location.kuerzel} â€” ${location.name}` : location.name}
+      </option>
+    ))}
+  </select>
+</div>
+
               <div className="space-y-1">
                 <div className={labelCls}>{isDe ? 'Abteilungsname' : 'Department name'}</div>
                 <input
@@ -1552,7 +1697,7 @@ const saveUserAssignment = async () => {
               </div>
 
               <div className="space-y-1">
-                <div className={labelCls}>{isDe ? 'Kürzel' : 'Code'}</div>
+                <div className={labelCls}>{isDe ? 'KÃ¼rzel' : 'Code'}</div>
                 <input
                   className={inputCls}
                   value={depKuerzel}
@@ -1566,7 +1711,7 @@ const saveUserAssignment = async () => {
                 onClick={onAddDepartment}
                 className="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
               >
-                {isDe ? 'Abteilung anlegen' : 'Create department'}
+                {isDe ? 'Abteilung anlegen und zuordnen' : 'Create and assign department'}
               </button>
             </div>
           )}
@@ -1574,6 +1719,194 @@ const saveUserAssignment = async () => {
       </div>
     </aside>
   );
+
+const renderDepartmentAssignmentPanel = () => {
+  if (!selectedDepartment) return null;
+
+  const handleAssignUserToSelectedDepartment = async () => {
+    if (!selectedDepartmentId) {
+      setUiError(
+        isDe
+          ? 'Bitte zuerst eine Abteilung auswaehlen.'
+          : 'Please select a department first.'
+      );
+      return;
+    }
+
+    if (!assignUserId) {
+      setUiError(
+        isDe
+          ? 'Bitte einen Benutzer auswaehlen.'
+          : 'Please select a user.'
+      );
+      return;
+    }
+
+    const user = adminUsers.find((item) => item.id === assignUserId);
+
+    if (!user) {
+      setUiError(
+        isDe
+          ? 'Benutzer wurde nicht gefunden.'
+          : 'User was not found.'
+      );
+      return;
+    }
+
+    setUiError(null);
+    setUiMessage(null);
+    setIsAssigningUser(true);
+
+    try {
+      const response = await fetch('/api/admin/users/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: user.id,
+          roleCode: user.role?.code ?? 'VIEWER',
+          departmentId: selectedDepartmentId,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || data?.success === false) {
+        throw new Error(
+          data?.message ??
+            (isDe
+              ? 'Benutzer konnte der Abteilung nicht zugeordnet werden.'
+              : 'User could not be assigned to the department.')
+        );
+      }
+
+      setAssignUserId('');
+
+      setUiMessage(
+        isDe
+          ? 'Benutzer wurde der Abteilung zugeordnet.'
+          : 'User has been assigned to the department.'
+      );
+
+      await loadAdminUsers();
+    } catch (error) {
+      setUiError(
+        error instanceof Error
+          ? error.message
+          : isDe
+            ? 'Benutzer konnte der Abteilung nicht zugeordnet werden.'
+            : 'User could not be assigned to the department.'
+      );
+    } finally {
+      setIsAssigningUser(false);
+    }
+  };
+
+  return (
+    <section className={`${panelCls} overflow-hidden`}>
+      <div className="border-b border-slate-200 px-5 py-4">
+        <div className="flex flex-col gap-1">
+          <h3 className="text-lg font-semibold text-slate-900">
+            {isDe ? 'Benutzer zuordnen' : 'Assign users'}
+          </h3>
+
+          <p className="text-xs text-slate-500">
+            {isDe
+              ? `Ordne bestehende Benutzer der Abteilung ${selectedDepartment.name} zu.`
+              : `Assign existing users to the department ${selectedDepartment.name}.`}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 px-5 py-5 lg:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="space-y-1">
+          <div className={labelCls}>{isDe ? 'Benutzer' : 'User'}</div>
+
+          <select
+            className={inputCls}
+            value={assignUserId}
+            onChange={(event) => setAssignUserId(event.target.value)}
+          >
+            <option value="">
+              {isDe ? 'Benutzer auswÃ¤hlen' : 'Select user'}
+            </option>
+
+            {usersAssignableToSelectedDepartment.map((user) => {
+              const currentDepartment = user.person?.department;
+              const currentLabel = currentDepartment
+                ? currentDepartment.kuerzel
+                  ? `${currentDepartment.kuerzel} â€” ${currentDepartment.name}`
+                  : currentDepartment.name
+                : isDe
+                  ? 'Keine Abteilung'
+                  : 'No department';
+
+              return (
+                <option key={user.id} value={user.id}>
+                  {user.name || user.email} Â· {user.email} Â· {currentLabel}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        <div className="flex items-end">
+          <button
+            type="button"
+            onClick={handleAssignUserToSelectedDepartment}
+            disabled={isAssigningUser || !assignUserId}
+            className={[
+              'inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm lg:w-auto',
+              isAssigningUser || !assignUserId
+                ? 'cursor-not-allowed bg-slate-400'
+                : 'bg-[#00559F] hover:brightness-110',
+            ].join(' ')}
+          >
+            {isAssigningUser
+              ? isDe
+                ? 'Zuordnung lÃ¤uft ...'
+                : 'Assigning ...'
+              : isDe
+                ? 'Der Abteilung zuordnen'
+                : 'Assign to department'}
+          </button>
+        </div>
+      </div>
+
+      <div className="border-t border-slate-100 px-5 py-4">
+        <div className="mb-3 text-sm font-semibold text-slate-900">
+          {isDe ? 'Bereits zugeordnet' : 'Already assigned'}
+        </div>
+
+        {usersAssignedToSelectedDepartment.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-500">
+            {isDe
+              ? 'Dieser Abteilung sind noch keine Benutzer zugeordnet.'
+              : 'No users are assigned to this department yet.'}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+            {usersAssignedToSelectedDepartment.map((user) => (
+              <div
+                key={user.id}
+                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
+              >
+                <div className="font-semibold text-slate-900">
+                  {user.name || user.email}
+                </div>
+                <div className="mt-1 text-xs text-slate-500">
+                  {user.email}
+                </div>
+                <div className="mt-2 text-xs font-medium text-slate-700">
+                  {normalizeRoleLabel(user.role?.code, isDe)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
 
   const renderUsersTable = () => (
     <section className={`${panelCls} overflow-hidden`}>
@@ -1592,7 +1925,7 @@ const saveUserAssignment = async () => {
                   ? `Gefiltert nach Standort: ${selectedLocation.name}`
                   : `Filtered by location: ${selectedLocation.name}`
                 : isDe
-                  ? 'Alle Benutzer anzeigen oder über die Kontextzeile filtern.'
+                  ? 'Alle Benutzer anzeigen oder Ã¼ber die Kontextzeile filtern.'
                   : 'Show all users or filter via the context line.'}
           </p>
         </div>
@@ -1644,7 +1977,7 @@ const saveUserAssignment = async () => {
                           {userDisplayName(person)}
                         </div>
                         <div className="truncate text-xs text-slate-500">
-                          {person.email ?? '—'}
+                          {person.email ?? 'â€”'}
                         </div>
                       </div>
                     </div>
@@ -1697,7 +2030,7 @@ const saveUserAssignment = async () => {
                             return;
                           }
 
-                          if (confirm(isDe ? 'Benutzer wirklich löschen?' : 'Delete user?')) {
+                          if (confirm(isDe ? 'Benutzer wirklich lÃ¶schen?' : 'Delete user?')) {
                             removePerson(person.id);
                           }
                         }}
@@ -1711,10 +2044,10 @@ const saveUserAssignment = async () => {
                         title={
                           isDeletingUserId === person.id
                             ? isDe
-                              ? 'Benutzer wird gelöscht ...'
+                              ? 'Benutzer wird gelÃ¶scht ...'
                               : 'Deleting user ...'
                             : isDe
-                              ? 'Benutzer löschen'
+                              ? 'Benutzer lÃ¶schen'
                               : 'Delete user'
                         }
                       >
@@ -1754,7 +2087,7 @@ const saveUserAssignment = async () => {
         </div>
 
         <div className="space-y-1">
-          <div className={labelCls}>{isDe ? 'Rolle auswählen' : 'Select role'}</div>
+          <div className={labelCls}>{isDe ? 'Rolle auswÃ¤hlen' : 'Select role'}</div>
           <select
             className={inputCls}
             value={inviteRoleId}
@@ -1769,16 +2102,16 @@ const saveUserAssignment = async () => {
         </div>
 
         <div className="space-y-1">
-          <div className={labelCls}>{isDe ? 'Abteilung auswählen' : 'Select department'}</div>
+          <div className={labelCls}>{isDe ? 'Abteilung auswÃ¤hlen' : 'Select department'}</div>
           <select
             className={inputCls}
             value={effectiveInviteDepartmentId}
             onChange={(event) => setInviteDepartmentId(event.target.value)}
           >
-            <option value="">{isDe ? 'Abteilung auswählen' : 'Select department'}</option>
+            <option value="">{isDe ? 'Abteilung auswÃ¤hlen' : 'Select department'}</option>
             {allDepartmentOptions.map((department) => (
               <option key={department.id} value={department.id}>
-                {department.kuerzel ? `${department.kuerzel} — ${department.name}` : department.name}
+                {department.kuerzel ? `${department.kuerzel} â€” ${department.name}` : department.name}
               </option>
             ))}
           </select>
@@ -1886,10 +2219,10 @@ const saveUserAssignment = async () => {
                         onClick={() => onDeleteInvite(invite.id)}
                         className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-rose-50 hover:text-rose-700"
                       >
-                        {isDe ? 'Löschen' : 'Delete'}
+                        {isDe ? 'LÃ¶schen' : 'Delete'}
                       </button>
                     ) : (
-                      <span className="text-xs text-slate-400">—</span>
+                      <span className="text-xs text-slate-400">â€”</span>
                     )}
                   </div>
                 </td>
@@ -1912,7 +2245,7 @@ const saveUserAssignment = async () => {
             </h3>
             <p className="mt-1 text-xs text-slate-500">
               {isDe
-                ? 'Vorbereitete Rollenprofile für den späteren Berechtigungsaufbau.'
+                ? 'Vorbereitete Rollenprofile fÃ¼r den spÃ¤teren Berechtigungsaufbau.'
                 : 'Prepared role profiles for the later permission model.'}
             </p>
           </div>
@@ -1944,17 +2277,17 @@ const saveUserAssignment = async () => {
     const locationName = selectedLocation
       ? selectedLocation.name
       : isDe
-        ? 'Kein Standort ausgewählt'
+        ? 'Kein Standort ausgewÃ¤hlt'
         : 'No location selected';
 
     const departmentName = selectedDepartment
       ? selectedDepartment.name
       : isDe
-        ? 'Keine Abteilung ausgewählt'
+        ? 'Keine Abteilung ausgewÃ¤hlt'
         : 'No department selected';
 
     const contextPath = selectedDepartment
-      ? `${locationName} → ${departmentName}`
+      ? `${locationName} â†’ ${departmentName}`
       : locationName;
 
     const contextByTab: Record<
@@ -1964,7 +2297,7 @@ const saveUserAssignment = async () => {
       organization: {
         titleDe: 'Organisationskontext',
         titleEn: 'Organisation context',
-        descriptionDe: 'Der ausgewählte Standort steuert, welche Abteilungen und Benutzer angezeigt werden.',
+        descriptionDe: 'Der ausgewÃ¤hlte Standort steuert, welche Abteilungen und Benutzer angezeigt werden.',
         descriptionEn: 'The selected location controls which departments and users are shown.',
         metricDe: `${selectedLocationDepartmentCount} Abteilungen`,
         metricEn: `${selectedLocationDepartmentCount} departments`,
@@ -1972,7 +2305,7 @@ const saveUserAssignment = async () => {
       users: {
         titleDe: 'Benutzerkontext',
         titleEn: 'User context',
-        descriptionDe: 'Die Benutzerliste wird anhand des ausgewählten Standorts und der ausgewählten Abteilung gefiltert.',
+        descriptionDe: 'Die Benutzerliste wird anhand des ausgewÃ¤hlten Standorts und der ausgewÃ¤hlten Abteilung gefiltert.',
         descriptionEn: 'The user list is filtered by the selected location and department.',
         metricDe: `${filteredPeople.length} Benutzer im Filter`,
         metricEn: `${filteredPeople.length} users in filter`,
@@ -1988,7 +2321,7 @@ const saveUserAssignment = async () => {
       roles: {
         titleDe: 'Rollen- und Rechtekontext',
         titleEn: 'Roles and permissions context',
-        descriptionDe: 'Rollenprofile sind systemweit vorbereitet und werden später mit konkreten Berechtigungen verknüpft.',
+        descriptionDe: 'Rollenprofile sind systemweit vorbereitet und werden spÃ¤ter mit konkreten Berechtigungen verknÃ¼pft.',
         descriptionEn: 'Role profiles are prepared system-wide and will later be linked to concrete permissions.',
         metricDe: `${ROLE_OPTIONS.length} Rollenprofile`,
         metricEn: `${ROLE_OPTIONS.length} role profiles`,
@@ -2007,7 +2340,7 @@ const saveUserAssignment = async () => {
 
             <div className="mt-1 text-xs text-slate-500">
               <span className="font-medium text-slate-700">{contextPath}</span>
-              <span className="mx-2 text-slate-300">·</span>
+              <span className="mx-2 text-slate-300">Â·</span>
               <span>{isDe ? context.descriptionDe : context.descriptionEn}</span>
             </div>
           </div>
@@ -2075,7 +2408,7 @@ const renderEditUserModal = () => {
 
     {locationOptions.map((location) => (
       <option key={location.id} value={location.id}>
-        {location.kuerzel ? `${location.kuerzel} — ${location.name}` : location.name}
+        {location.kuerzel ? `${location.kuerzel} â€” ${location.name}` : location.name}
       </option>
     ))}
   </select>
@@ -2091,7 +2424,7 @@ const renderEditUserModal = () => {
     <option value="">
   {editLocationId
     ? isDe
-      ? 'Abteilung auswählen'
+      ? 'Abteilung auswÃ¤hlen'
       : 'Select department'
     : isDe
       ? 'Keine Abteilung'
@@ -2101,7 +2434,7 @@ const renderEditUserModal = () => {
     {editDepartmentOptions.map((department) => (
       <option key={department.id} value={department.id}>
         {department.kuerzel
-          ? `${department.kuerzel} — ${department.name}`
+          ? `${department.kuerzel} â€” ${department.name}`
           : department.name}
       </option>
     ))}
@@ -2187,7 +2520,7 @@ const renderEditUserModal = () => {
 
           <p className="mt-1 text-xs text-white/80">
             {isDe
-              ? 'Verwalte Organisationsstruktur, Benutzerzugänge und Rollenprofile.'
+              ? 'Verwalte Organisationsstruktur, BenutzerzugÃ¤nge und Rollenprofile.'
               : 'Manage organisation structure, user access and role profiles.'}
           </p>
         </div>
