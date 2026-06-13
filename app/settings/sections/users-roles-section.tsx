@@ -21,7 +21,13 @@ import {
   type PersonStatus,
 } from '../users/directory-store';
 
+type OrgFunction = 'MEMBER' | 'LEAD' | 'DEPUTY';
+
 type AdminTab = 'organization' | 'users' | 'invites' | 'roles';
+
+type StructureCreateMode = 'location' | 'department' | 'team' | 'user' | null;
+
+type OrganisationViewMode = 'structure' | 'chart';
 
 type PendingInviteStatus = 'pending' | 'expired' | 'accepted';
 
@@ -53,6 +59,12 @@ type AdminUserRow = {
     invitedAt: string | null;
     acceptedAt: string | null;
     lastInvitedAt: string | null;
+    team: {
+      id: string;
+      name: string;
+      kuerzel: string | null;
+      departmentId: string;
+    } | null;
     department: {
       id: string;
       name: string;
@@ -68,12 +80,21 @@ type AdminUserRow = {
 
 type UserTableRow = {
   id: string;
+  orgFunction?: OrgFunction | null;
   firstName: string;
   lastName: string | null;
   email: string;
   status: string;
   departmentId: string | null;
+  teamId: string | null;
   roleId: string | null;
+};
+
+type LeadPerson = {
+  id: string;
+  firstName: string;
+  lastName: string | null;
+  email: string | null;
 };
 
 type InvitationTableRow = {
@@ -100,7 +121,7 @@ const ROLE_OPTIONS = [
     id: 'compliance_manager',
     labelDe: 'Compliance Manager',
     labelEn: 'Compliance Manager',
-    descriptionDe: 'Verantwortlich fÃ¼r Compliance-Bewertung und Freigaben.',
+    descriptionDe: 'Verantwortlich für Compliance-Bewertung und Freigaben.',
     descriptionEn: 'Responsible for compliance assessment and approvals.',
   },
   {
@@ -114,7 +135,7 @@ const ROLE_OPTIONS = [
     id: 'auditor',
     labelDe: 'Auditor',
     labelEn: 'Auditor',
-    descriptionDe: 'PrÃ¼ft Anforderungen, Nachweise und Umsetzung nachvollziehbar.',
+    descriptionDe: 'Prüft Anforderungen, Nachweise und Umsetzung nachvollziehbar.',
     descriptionEn: 'Reviews requirements, evidence and implementation.',
   },
   {
@@ -128,7 +149,7 @@ const ROLE_OPTIONS = [
     id: 'external',
     labelDe: 'Externer Nutzer',
     labelEn: 'External user',
-    descriptionDe: 'EingeschrÃ¤nkter Zugriff fÃ¼r externe Partner oder Lieferanten.',
+    descriptionDe: 'Eingeschränkter Zugriff für externe Partner oder Lieferanten.',
     descriptionEn: 'Restricted access for external partners or suppliers.',
   },
 ] as const;
@@ -324,19 +345,34 @@ export default function UsersRolesSection({ isDe = true }: { isDe?: boolean }) {
   const {
     locations,
     visibleDepartments,
+    visibleTeams,
     visiblePeople,
     selectedLocationId: storeSelectedLocationId,
     selectedDepartmentId: storeSelectedDepartmentId,
+    selectedTeamId: storeSelectedTeamId,
     addLocation,
     removeLocation,
     addDepartment,
     removeDepartment,
+    addTeam,
+    removeTeam,
     removePerson,
     locationById,
     departmentById,
+    teamById,
+    teamsByDepartmentId,
   } = useDirectoryStore();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('organization');
+  const [organisationViewMode, setOrganisationViewMode] = useState<OrganisationViewMode>('structure');
+  const [createMode, setCreateMode] = useState<StructureCreateMode>(null);
+  const [departmentLeadById, setDepartmentLeadById] = useState<Record<string, LeadPerson | null>>({});
+  const [isDepartmentLeadOpen, setIsDepartmentLeadOpen] = useState(false);
+  const [departmentLeadPersonId, setDepartmentLeadPersonId] = useState('');
+  const [isSavingDepartmentLead, setIsSavingDepartmentLead] = useState(false);
+  const [isTeamLeadOpen, setIsTeamLeadOpen] = useState(false);
+  const [teamLeadPersonId, setTeamLeadPersonId] = useState('');
+  const [isSavingTeamLead, setIsSavingTeamLead] = useState(false);
 
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
     storeSelectedLocationId ?? null
@@ -346,14 +382,22 @@ export default function UsersRolesSection({ isDe = true }: { isDe?: boolean }) {
     storeSelectedDepartmentId ?? null
   );
 
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(
+    storeSelectedTeamId ?? null
+  );
+
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [showAddDepartment, setShowAddDepartment] = useState(false);
+  const [showAddTeam, setShowAddTeam] = useState(false);
 
   const [locName, setLocName] = useState('');
   const [locKuerzel, setLocKuerzel] = useState('');
   const [depName, setDepName] = useState('');
   const [depKuerzel, setDepKuerzel] = useState('');
   const [depLocationId, setDepLocationId] = useState('');
+  const [teamName, setTeamName] = useState('');
+  const [teamKuerzel, setTeamKuerzel] = useState('');
+  const [teamDepartmentId, setTeamDepartmentId] = useState('');
 
   const [userStatusFilter, setUserStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
@@ -370,6 +414,8 @@ export default function UsersRolesSection({ isDe = true }: { isDe?: boolean }) {
 
   const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null);
   const [editDepartmentId, setEditDepartmentId] = useState('');
+  const [editTeamId, setEditTeamId] = useState('');
+  const [editOrgFunction, setEditOrgFunction] = useState<OrgFunction>('MEMBER');
   const [editRoleCode, setEditRoleCode] = useState('VIEWER');
   const [isSavingUser, setIsSavingUser] = useState(false);
   const [editLocationId, setEditLocationId] = useState('');
@@ -385,6 +431,10 @@ export default function UsersRolesSection({ isDe = true }: { isDe?: boolean }) {
 
   const selectedDepartment = selectedDepartmentId
     ? departmentById.get(selectedDepartmentId) ?? null
+    : null;
+
+  const selectedTeam = selectedTeamId
+    ? teamById.get(selectedTeamId) ?? null
     : null;
 
   const selectedLocationDepartmentCount = selectedLocationId
@@ -412,6 +462,27 @@ export default function UsersRolesSection({ isDe = true }: { isDe?: boolean }) {
     return list;
   }, [visibleDepartments]);
 
+  const selectedDepartmentTeams = useMemo(() => {
+    if (!selectedDepartmentId) return [];
+    return teamsByDepartmentId.get(selectedDepartmentId) ?? [];
+  }, [selectedDepartmentId, teamsByDepartmentId]);
+
+  const teamFilterOptions = useMemo(() => {
+    let list = visibleTeams.slice();
+
+    if (selectedDepartmentId) {
+      list = list.filter((team) => team.departmentId === selectedDepartmentId);
+    } else if (selectedLocationId) {
+      list = list.filter((team) => {
+        const department = departmentById.get(team.departmentId);
+        return department?.locationId === selectedLocationId;
+      });
+    }
+
+    list.sort((a, b) => a.name.localeCompare(b.name));
+    return list;
+  }, [visibleTeams, selectedDepartmentId, selectedLocationId, departmentById]);
+
   const effectiveEditLocationId = useMemo(() => {
   if (editLocationId) return editLocationId;
 
@@ -431,6 +502,25 @@ const editDepartmentOptions = useMemo(() => {
   list.sort((a, b) => a.name.localeCompare(b.name));
   return list;
 }, [allDepartmentOptions, editLocationId]);
+
+const editTeamOptions = useMemo(() => {
+  const list = editDepartmentId
+    ? (teamsByDepartmentId.get(editDepartmentId) ?? []).slice()
+    : [];
+
+  list.sort((a, b) => a.name.localeCompare(b.name));
+  return list;
+}, [editDepartmentId, teamsByDepartmentId]);
+
+useEffect(() => {
+  if (!editTeamId) return;
+
+  const team = teamById.get(editTeamId);
+
+  if (!team || team.departmentId !== editDepartmentId) {
+    setEditTeamId('');
+  }
+}, [editTeamId, editDepartmentId, teamById]);
 
 useEffect(() => {
   if (!editingUser) return;
@@ -526,6 +616,7 @@ useEffect(() => {
         email: user.email,
         status: user.person?.status ?? (user.isActive ? 'ACTIVE' : 'INACTIVE'),
         departmentId: user.person?.department?.id ?? null,
+        teamId: user.person?.team?.id ?? null,
         roleId: user.role?.code ?? null,
       }));
     }
@@ -537,6 +628,7 @@ useEffect(() => {
       email: person.email ?? '',
       status: String(person.status ?? 'INACTIVE'),
       departmentId: person.departmentId ?? null,
+      teamId: (person as { teamId?: string | null }).teamId ?? null,
       roleId: person.roleId ?? null,
     }));
   }, [adminUsers, visiblePeople]);
@@ -557,6 +649,10 @@ useEffect(() => {
       people = people.filter((person) => person.departmentId === selectedDepartmentId);
     }
 
+    if (selectedTeamId) {
+      people = people.filter((person) => person.teamId === selectedTeamId);
+    }
+
     people.sort((a, b) => {
       const aName = [a.firstName, a.lastName, a.email].filter(Boolean).join(' ');
       const bName = [b.firstName, b.lastName, b.email].filter(Boolean).join(' ');
@@ -564,7 +660,7 @@ useEffect(() => {
     });
 
     return people;
-  }, [userRowsForTable, selectedLocationId, selectedDepartmentId, departmentById]);
+  }, [userRowsForTable, selectedLocationId, selectedDepartmentId, selectedTeamId, departmentById]);
 
   const filteredPeople = useMemo<UserTableRow[]>(() => {
     return peopleInContext.filter((person) => {
@@ -604,6 +700,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
   const kpiDepartmentCount = selectedLocationId ? departmentOptions.length : visibleDepartments.length;
   const effectiveInviteDepartmentId = inviteDepartmentId || selectedDepartmentId || '';
   const effectiveDepartmentLocationId = depLocationId || selectedLocationId || '';
+  const effectiveTeamDepartmentId = teamDepartmentId || selectedDepartmentId || '';
 
   const tabs: {
     id: AdminTab;
@@ -617,15 +714,15 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
       id: 'organization',
       labelDe: 'Organisation',
       labelEn: 'Organisation',
-      descriptionDe: 'Standorte und Abteilungen verwalten.',
-      descriptionEn: 'Manage locations and departments.',
+      descriptionDe: 'Standorte, Abteilungen und Teams verwalten.',
+      descriptionEn: 'Manage locations, departments and teams.',
       icon: <Building2 className="h-5 w-5" />,
     },
     {
       id: 'users',
       labelDe: 'Benutzer',
       labelEn: 'Users',
-      descriptionDe: 'BenutzerÃ¼bersicht, Rollen und Status.',
+      descriptionDe: 'Benutzerübersicht, Rollen und Status.',
       descriptionEn: 'Overview of users, roles and status.',
       icon: <Users className="h-5 w-5" />,
     },
@@ -700,7 +797,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
   const deleteAdminUser = async (user: AdminUserRow) => {
     const confirmed = confirm(
       isDe
-        ? `Benutzer ${user.email} wirklich lÃ¶schen? Die E-Mail-Adresse wird danach wieder fÃ¼r Einladungen frei.`
+        ? `Benutzer ${user.email} wirklich löschen? Die E-Mail-Adresse wird danach wieder für Einladungen frei.`
         : `Delete user ${user.email}? The email address will be available for invitations again.`
     );
 
@@ -717,168 +814,12 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
         body: JSON.stringify({ id: user.id }),
       });
 
-const openEditUser = (person: UserTableRow) => {
-  const adminUser = adminUserById.get(person.id);
-
-  if (!adminUser) {
-    setUiError(
-      isDe
-        ? 'Dieser Eintrag ist kein Login-Benutzer und kann hier nicht bearbeitet werden.'
-        : 'This entry is not a login user and cannot be edited here.'
-    );
-    return;
-  }
-
-  const currentDepartmentId = person.departmentId ?? '';
-  const currentDepartment = currentDepartmentId
-    ? departmentById.get(currentDepartmentId)
-    : null;
-
-  const currentLocationId = currentDepartment?.locationId ?? '';
-
-  setUiError(null);
-  setUiMessage(null);
-  setEditingUser(adminUser);
-  setEditDepartmentId(currentDepartmentId);
-  setEditLocationId(currentLocationId);
-  setEditRoleCode(adminUser.role?.code ?? person.roleId ?? 'VIEWER');
-};
-
-const saveUserAssignment = async () => {
-  if (!editingUser) return;
-
-  setUiError(null);
-  setUiMessage(null);
-  setIsSavingUser(true);
-
-  try {
-    const response = await fetch('/api/admin/users/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: editingUser.id,
-        roleCode: editRoleCode,
-        departmentId: editDepartmentId || null,
-      }),
-    });
-
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok || data?.success === false) {
-      throw new Error(
-        data?.message ??
-          (isDe
-            ? 'Benutzer konnte nicht aktualisiert werden.'
-            : 'User could not be updated.')
-      );
-    }
-
-    setUiMessage(
-      data?.message ??
-        (isDe ? 'Benutzer wurde aktualisiert.' : 'User has been updated.')
-    );
-
-    setEditingUser(null);
-    await loadAdminUsers();
-  } catch (error) {
-    setUiError(
-      error instanceof Error
-        ? error.message
-        : isDe
-          ? 'Benutzer konnte nicht aktualisiert werden.'
-          : 'User could not be updated.'
-    );
-  } finally {
-    setIsSavingUser(false);
-  }
-};
-
-const assignUserToSelectedDepartment = async () => {
-  if (!selectedDepartmentId) {
-    setUiError(
-      isDe
-        ? 'Bitte zuerst eine Abteilung auswÃ¤hlen.'
-        : 'Please select a department first.'
-    );
-    return;
-  }
-
-  if (!assignUserId) {
-    setUiError(
-      isDe
-        ? 'Bitte einen Benutzer auswÃ¤hlen.'
-        : 'Please select a user.'
-    );
-    return;
-  }
-
-  const user = adminUsers.find((item) => item.id === assignUserId);
-
-  if (!user) {
-    setUiError(
-      isDe
-        ? 'Benutzer wurde nicht gefunden.'
-        : 'User was not found.'
-    );
-    return;
-  }
-
-  setUiError(null);
-  setUiMessage(null);
-  setIsAssigningUser(true);
-
-  try {
-    const response = await fetch('/api/admin/users/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: user.id,
-        roleCode: user.role?.code ?? 'VIEWER',
-        departmentId: selectedDepartmentId,
-      }),
-    });
-
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok || data?.success === false) {
-      throw new Error(
-        data?.message ??
-          (isDe
-            ? 'Benutzer konnte der Abteilung nicht zugeordnet werden.'
-            : 'User could not be assigned to the department.')
-      );
-    }
-
-    setAssignUserId('');
-
-    setUiMessage(
-      isDe
-        ? 'Benutzer wurde der Abteilung zugeordnet.'
-        : 'User has been assigned to the department.'
-    );
-
-    await loadAdminUsers();
-  } catch (error) {
-    setUiError(
-      error instanceof Error
-        ? error.message
-        : isDe
-          ? 'Benutzer konnte der Abteilung nicht zugeordnet werden.'
-          : 'User could not be assigned to the department.'
-    );
-  } finally {
-    setIsAssigningUser(false);
-  }
-};
-
-
-
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok || data?.success === false) {
         throw new Error(
           data?.message ??
-            (isDe ? 'Benutzer konnte nicht gelÃ¶scht werden.' : 'User could not be deleted.')
+            (isDe ? 'Benutzer konnte nicht gelöscht werden.' : 'User could not be deleted.')
         );
       }
 
@@ -891,7 +832,7 @@ const assignUserToSelectedDepartment = async () => {
       setUiMessage(
         data?.message ??
           (isDe
-            ? 'Benutzer wurde gelÃ¶scht. Die E-Mail-Adresse ist wieder frei.'
+            ? 'Benutzer wurde gelöscht. Die E-Mail-Adresse ist wieder frei.'
             : 'User has been deleted. The email address is available again.')
       );
 
@@ -901,7 +842,7 @@ const assignUserToSelectedDepartment = async () => {
         error instanceof Error
           ? error.message
           : isDe
-            ? 'Benutzer konnte nicht gelÃ¶scht werden.'
+            ? 'Benutzer konnte nicht gelöscht werden.'
             : 'User could not be deleted.'
       );
     } finally {
@@ -924,7 +865,9 @@ const openEditUser = (person: UserTableRow) => {
   setUiError(null);
   setUiMessage(null);
   setEditingUser(adminUser);
-  setEditDepartmentId(adminUser.person?.department?.id ?? '');
+  setEditLocationId(adminUser.person?.department?.location?.id ?? selectedLocationId ?? '');
+  setEditDepartmentId(adminUser.person?.team?.departmentId ?? adminUser.person?.department?.id ?? selectedDepartmentId ?? '');
+  setEditTeamId(adminUser.person?.team?.id ?? selectedTeamId ?? '');
   setEditRoleCode(adminUser.role?.code ?? 'VIEWER');
 };
 
@@ -937,7 +880,7 @@ const saveUserAssignment = async () => {
   if (editLocationId && !editDepartmentId) {
     setUiError(
       isDe
-        ? 'Bitte eine Abteilung fÃ¼r den ausgewÃ¤hlten Standort auswÃ¤hlen. Der Standort wird Ã¼ber die Abteilung gespeichert.'
+        ? 'Bitte eine Abteilung für den ausgewählten Standort auswählen. Der Standort wird über die Abteilung gespeichert.'
         : 'Please select a department for the selected location. The location is stored via the department.'
     );
     return;
@@ -953,6 +896,8 @@ const saveUserAssignment = async () => {
         id: editingUser.id,
         roleCode: editRoleCode,
         departmentId: editDepartmentId || null,
+        teamId: editTeamId || null,
+        orgFunction: editOrgFunction,
       }),
     });
 
@@ -992,7 +937,7 @@ const saveUserAssignment = async () => {
     setUiMessage(null);
 
     if (isBlank(locName)) {
-      setUiError(isDe ? 'Bitte Standortname ausfÃ¼llen.' : 'Please enter a location name.');
+      setUiError(isDe ? 'Bitte Standortname ausfüllen.' : 'Please enter a location name.');
       return;
     }
 
@@ -1004,6 +949,7 @@ const saveUserAssignment = async () => {
     setLocName('');
     setLocKuerzel('');
     setShowAddLocation(false);
+    setCreateMode(null);
     setUiMessage(isDe ? 'Standort wurde angelegt.' : 'Location has been created.');
   };
 
@@ -1014,7 +960,7 @@ const saveUserAssignment = async () => {
   if (!effectiveDepartmentLocationId) {
     setUiError(
       isDe
-        ? 'Bitte einen Standort fÃ¼r die Abteilung auswÃ¤hlen.'
+        ? 'Bitte einen Standort für die Abteilung auswählen.'
         : 'Please select a location for the department.'
     );
     return;
@@ -1023,7 +969,7 @@ const saveUserAssignment = async () => {
   if (isBlank(depName)) {
     setUiError(
       isDe
-        ? 'Bitte Abteilungsname ausfÃ¼llen.'
+        ? 'Bitte Abteilungsname ausfüllen.'
         : 'Please enter a department name.'
     );
     return;
@@ -1042,6 +988,7 @@ const saveUserAssignment = async () => {
   setDepKuerzel('');
   setDepLocationId('');
   setShowAddDepartment(false);
+  setCreateMode(null);
 
   setUiMessage(
     isDe
@@ -1049,6 +996,50 @@ const saveUserAssignment = async () => {
       : 'Department has been created and assigned to the location.'
   );
 };
+
+  const onAddTeam = () => {
+    setUiError(null);
+    setUiMessage(null);
+
+    if (!effectiveTeamDepartmentId) {
+      setUiError(
+        isDe
+          ? 'Bitte zuerst eine Abteilung ausw\u00e4hlen.'
+          : 'Please select a department first.'
+      );
+      return;
+    }
+
+    if (isBlank(teamName)) {
+      setUiError(
+        isDe
+          ? 'Bitte Teamnamen ausf\u00fcllen.'
+          : 'Please enter a team name.'
+      );
+      return;
+    }
+
+    addTeam({
+      name: teamName.trim(),
+      kuerzel: teamKuerzel.trim() || undefined,
+      departmentId: effectiveTeamDepartmentId,
+    });
+
+    setSelectedDepartmentId(effectiveTeamDepartmentId);
+    setSelectedTeamId(null);
+
+    setTeamName('');
+    setTeamKuerzel('');
+    setTeamDepartmentId('');
+    setShowAddTeam(false);
+    setCreateMode(null);
+
+    setUiMessage(
+      isDe
+        ? 'Team wurde angelegt und der Abteilung zugeordnet.'
+        : 'Team has been created and assigned to the department.'
+    );
+  };
 
   const onDeleteSelectedLocation = () => {
     setUiError(null);
@@ -1059,16 +1050,17 @@ const saveUserAssignment = async () => {
     if (selectedLocationDepartmentCount > 0) {
       setUiError(
         isDe
-          ? 'Der Standort kann nicht gelÃ¶scht werden, solange ihm noch Abteilungen zugeordnet sind. Bitte zuerst die Abteilungen lÃ¶schen oder verschieben.'
+          ? 'Der Standort kann nicht gelöscht werden, solange ihm noch Abteilungen zugeordnet sind. Bitte zuerst die Abteilungen löschen oder verschieben.'
           : 'The location cannot be deleted while departments are still assigned to it. Please delete or move the departments first.'
       );
       return;
     }
 
-    if (confirm(isDe ? 'Standort wirklich lÃ¶schen?' : 'Delete location?')) {
+    if (confirm(isDe ? 'Standort wirklich löschen?' : 'Delete location?')) {
       removeLocation(selectedLocation.id);
       setSelectedLocationId(null);
       setSelectedDepartmentId(null);
+      setSelectedTeamId(null);
       setInviteDepartmentId('');
     }
   };
@@ -1080,22 +1072,22 @@ const saveUserAssignment = async () => {
     const email = inviteEmail.trim();
 
     if (!email) {
-      setUiError(isDe ? 'Bitte E-Mail-Adresse ausfÃ¼llen.' : 'Please enter an email address.');
+      setUiError(isDe ? 'Bitte E-Mail-Adresse ausfüllen.' : 'Please enter an email address.');
       return;
     }
 
     if (!email.includes('@')) {
-      setUiError(isDe ? 'E-Mail-Adresse wirkt ungÃ¼ltig.' : 'Email address looks invalid.');
+      setUiError(isDe ? 'E-Mail-Adresse wirkt ungültig.' : 'Email address looks invalid.');
       return;
     }
 
     if (!inviteRoleId) {
-      setUiError(isDe ? 'Bitte Rolle auswÃ¤hlen.' : 'Please select a role.');
+      setUiError(isDe ? 'Bitte Rolle auswählen.' : 'Please select a role.');
       return;
     }
 
     if (!effectiveInviteDepartmentId) {
-      setUiError(isDe ? 'Bitte Abteilung auswÃ¤hlen.' : 'Please select a department.');
+      setUiError(isDe ? 'Bitte Abteilung auswählen.' : 'Please select a department.');
       return;
     }
 
@@ -1168,7 +1160,64 @@ const saveUserAssignment = async () => {
   };
 
   const userDisplayName = (person: UserTableRow) => {
-    return [person.firstName, person.lastName].filter(Boolean).join(' ') || person.email || 'â€”';
+    return [person.firstName, person.lastName].filter(Boolean).join(' ') || person.email || '—';
+  };
+
+  const orgLeadUserDisplayName = (user: any) => {
+    if (!user) return isDe ? 'Noch nicht zugewiesen' : 'Not assigned yet';
+
+    const person = user.person ?? {};
+
+    const isEmailLike = (value: unknown) => {
+      return String(value ?? '').includes('@');
+    };
+
+    const clean = (value: unknown) => {
+      const textValue = String(value ?? '').trim();
+      return textValue && !isEmailLike(textValue) ? textValue : '';
+    };
+
+    const personName = [person.firstName, person.lastName]
+      .map(clean)
+      .filter(Boolean)
+      .join(' ');
+
+    const userName = [user.firstName, user.lastName]
+      .map(clean)
+      .filter(Boolean)
+      .join(' ');
+
+    const displayName = clean(user.name);
+
+    const email = String(person.email ?? user.email ?? '').trim();
+
+    const nameFromEmail = email
+      ? email
+          .split('@')[0]
+          .split(/[._-]+/)
+          .filter(Boolean)
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+          .join(' ')
+      : '';
+
+    return personName || userName || displayName || nameFromEmail || '?';
+  };
+
+  const findOrgLeadUser = (
+    departmentId: string | null,
+    teamId: string | null
+  ) => {
+    return adminUsers.find((user) => {
+      const person = (user as any).person;
+      if (!person) return false;
+      if (person.orgFunction !== 'LEAD') return false;
+
+      if (teamId) {
+        return person.team?.id === teamId;
+      }
+
+      return person.department?.id === departmentId && !person.team?.id;
+    });
   };
 
   const departmentDisplayName = (departmentId: string | null | undefined) => {
@@ -1177,7 +1226,18 @@ const saveUserAssignment = async () => {
     const department = departmentById.get(departmentId);
     if (!department) return isDe ? 'Unbekannte Abteilung' : 'Unknown department';
 
-    return department.kuerzel ? `${department.kuerzel} â€” ${department.name}` : department.name;
+    return department.kuerzel ? `${department.kuerzel} — ${department.name}` : department.name;
+  };
+
+  const teamDisplayName = (teamId: string | null | undefined) => {
+    if (!teamId) return isDe ? 'Kein Team' : 'No team';
+
+    const team = teamById.get(teamId);
+    if (!team) return isDe ? 'Unbekanntes Team' : 'Unknown team';
+
+    return team.kuerzel
+      ? team.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + team.name
+      : team.name;
   };
 
   const locationDisplayName = (departmentId: string | null | undefined) => {
@@ -1189,7 +1249,7 @@ const saveUserAssignment = async () => {
   const location = locationById.get(department.locationId);
   if (!location) return isDe ? 'Unbekannter Standort' : 'Unknown location';
 
-  return location.kuerzel ? `${location.kuerzel} â€” ${location.name}` : location.name;
+  return location.kuerzel ? `${location.kuerzel} — ${location.name}` : location.name;
 };
 
   const statusFilterLabel = () => {
@@ -1255,7 +1315,7 @@ const saveUserAssignment = async () => {
     if (!printWindow) {
       setUiError(
         isDe
-          ? 'Druckfenster konnte nicht geÃ¶ffnet werden. Bitte Popup-Blocker prÃ¼fen.'
+          ? 'Druckfenster konnte nicht geöffnet werden. Bitte Popup-Blocker prüfen.'
           : 'Print window could not be opened. Please check your popup blocker.'
       );
       return;
@@ -1330,31 +1390,24 @@ const saveUserAssignment = async () => {
   };
 
   const renderUserFilterControls = () => (
-    <div className="mt-3 grid grid-cols-1 gap-2 border-t border-slate-100 pt-3 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="mt-3 grid grid-cols-1 gap-2 border-t border-slate-100 pt-3 sm:grid-cols-2 lg:grid-cols-6">
       <div className="space-y-1">
         <div className={labelCls}>{isDe ? 'Standort' : 'Location'}</div>
         <select
           className={inputCls}
           value={selectedLocationId ?? ''}
           onChange={(event) => {
-  const nextLocationId = event.target.value;
-  setEditLocationId(nextLocationId);
-
-  const departmentsForLocation = nextLocationId
-    ? allDepartmentOptions.filter((department) => department.locationId === nextLocationId)
-    : [];
-
-  if (departmentsForLocation.length === 1) {
-    setEditDepartmentId(departmentsForLocation[0].id);
-  } else {
-    setEditDepartmentId('');
-  }
-}}
+            const nextLocationId = event.target.value || null;
+            setSelectedLocationId(nextLocationId);
+            setSelectedDepartmentId(null);
+            setSelectedTeamId(null);
+            setInviteDepartmentId('');
+          }}
         >
           <option value="">{isDe ? 'Alle Standorte' : 'All locations'}</option>
           {locationOptions.map((location) => (
             <option key={location.id} value={location.id}>
-              {location.kuerzel ? `${location.kuerzel} â€” ${location.name}` : location.name}
+              {location.kuerzel ? `${location.kuerzel} — ${location.name}` : location.name}
             </option>
           ))}
         </select>
@@ -1368,13 +1421,49 @@ const saveUserAssignment = async () => {
           onChange={(event) => {
             const nextDepartmentId = event.target.value || null;
             setSelectedDepartmentId(nextDepartmentId);
+            setSelectedTeamId(null);
             setInviteDepartmentId(nextDepartmentId ?? '');
           }}
         >
           <option value="">{isDe ? 'Alle Abteilungen' : 'All departments'}</option>
           {departmentOptions.map((department) => (
             <option key={department.id} value={department.id}>
-              {department.kuerzel ? `${department.kuerzel} â€” ${department.name}` : department.name}
+              {department.kuerzel ? `${department.kuerzel} — ${department.name}` : department.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="space-y-1">
+        <div className={labelCls}>Team</div>
+        <select
+          className={inputCls}
+          value={selectedTeamId ?? ''}
+          onChange={(event) => {
+            const nextTeamId = event.target.value || null;
+            const team = nextTeamId ? teamById.get(nextTeamId) ?? null : null;
+
+            setSelectedTeamId(nextTeamId);
+
+            if (team) {
+              const department = departmentById.get(team.departmentId);
+              setSelectedDepartmentId(team.departmentId);
+
+              if (department?.locationId) {
+                setSelectedLocationId(department.locationId);
+              }
+
+              setInviteDepartmentId(team.departmentId);
+            }
+          }}
+          disabled={teamFilterOptions.length === 0}
+        >
+          <option value="">{isDe ? 'Alle Teams' : 'All teams'}</option>
+          {teamFilterOptions.map((team) => (
+            <option key={team.id} value={team.id}>
+              {team.kuerzel
+                ? team.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + team.name
+                : team.name}
             </option>
           ))}
         </select>
@@ -1457,81 +1546,856 @@ const saveUserAssignment = async () => {
     </div>
   );
 
-  const renderOrganisationPanel = () => (
-    <aside className={`${panelCls} overflow-hidden`}>
+    const departmentEmployeeCount = (departmentId: string) => {
+    return userRowsForTable.filter((person) => person.departmentId === departmentId).length;
+  };
+
+  const teamEmployeeCount = (teamId: string) => {
+    return userRowsForTable.filter((person) => person.teamId === teamId).length;
+  };
+
+  const locationEmployeeCount = (locationId: string) => {
+    return userRowsForTable.filter((person) => {
+      if (!person.departmentId) return false;
+
+      const department = departmentById.get(person.departmentId);
+      return department?.locationId === locationId;
+    }).length;
+  };
+
+const renderOrganisationPanel = () => {
+    const structureIsEmpty = locationOptions.length === 0;
+
+    return (
+      <aside className={panelCls + ' overflow-hidden'}>
+        <div className="border-b border-slate-200 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <Building2 className="h-5 w-5 text-slate-600" />
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">
+                {isDe ? 'Strukturbaum' : 'Structure tree'}
+              </h3>
+              <p className="mt-1 text-xs text-slate-500">
+                {isDe
+                  ? 'Standort, Abteilung und Team nach gleicher Logik auswaehlen.'
+                  : 'Select location, department and team with the same logic.'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4 px-5 py-5">
+          {structureIsEmpty ? (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+              {isDe
+                ? 'Noch keine Standorte angelegt. Lege rechts im Detailpanel den ersten Standort an.'
+                : 'No locations created yet. Create the first location in the detail panel on the right.'}
+            </div>
+          ) : (
+            locationOptions.map((location) => {
+              const locationDepartments = visibleDepartments
+                .filter((department) => department.locationId === location.id)
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name));
+
+              const isLocationActive = selectedLocationId === location.id;
+              const isLocationOnlySelected =
+                isLocationActive && !selectedDepartmentId && !selectedTeamId;
+
+              const locationTeamCount = locationDepartments.reduce((sum, department) => {
+                return sum + (teamsByDepartmentId.get(department.id)?.length ?? 0);
+              }, 0);
+
+              return (
+                <div key={location.id} className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedLocationId(location.id);
+                      setSelectedDepartmentId(null);
+                      setSelectedTeamId(null);
+                      setDepLocationId(location.id);
+                      setTeamDepartmentId('');
+                      setShowAddLocation(false);
+                      setShowAddDepartment(false);
+                      setShowAddTeam(false);
+                      setInviteDepartmentId('');
+                    }}
+                    className={[
+                      'w-full rounded-xl border px-4 py-3 text-left transition',
+                      isLocationOnlySelected
+                        ? 'border-[#00559F] bg-[#00559F]/10 shadow-sm'
+                        : isLocationActive
+                          ? 'border-[#00559F]/50 bg-white'
+                          : 'border-slate-200 bg-white hover:bg-slate-50',
+                    ].join(' ')}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          {isDe ? 'Standort' : 'Location'}
+                        </div>
+
+                        <div className="mt-1 truncate text-sm font-semibold text-slate-900">
+                          {location.kuerzel
+                            ? location.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + location.name
+                            : location.name}
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 flex-col items-end gap-1 text-xs text-slate-500">
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
+                          {locationDepartments.length} {isDe ? 'Abt.' : 'depts'}
+                        </span>
+                        <span>
+                          {locationTeamCount} {isDe ? 'Teams' : 'teams'}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+
+                  {isLocationActive && (
+                    <div className="ml-3 space-y-3 border-l border-slate-200 pl-3">
+                      <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        <span>{isDe ? 'Abteilungen' : 'Departments'}</span>
+                        <span>{locationDepartments.length}</span>
+                      </div>
+
+                      {locationDepartments.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-sm text-slate-500">
+                          {isDe
+                            ? 'Fuer diesen Standort sind noch keine Abteilungen angelegt.'
+                            : 'No departments have been created for this location yet.'}
+                        </div>
+                      ) : (
+                        locationDepartments.map((department) => {
+                          const departmentTeams = teamsByDepartmentId.get(department.id) ?? [];
+                          const isDepartmentActive = selectedDepartmentId === department.id;
+                          const isDepartmentOnlySelected = isDepartmentActive && !selectedTeamId;
+
+                          return (
+                            <div key={department.id} className="space-y-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedLocationId(location.id);
+                                  setSelectedDepartmentId(department.id);
+                                  setSelectedTeamId(null);
+                                  setDepLocationId(location.id);
+                                  setTeamDepartmentId(department.id);
+                                  setShowAddLocation(false);
+                                  setShowAddDepartment(false);
+                                  setShowAddTeam(false);
+                                  setInviteDepartmentId(department.id);
+                                }}
+                                className={[
+                                  'w-full rounded-xl border px-3 py-3 text-left transition',
+                                  isDepartmentOnlySelected
+                                    ? 'border-[#009A93] bg-[#009A93]/10 shadow-sm'
+                                    : isDepartmentActive
+                                      ? 'border-[#009A93]/50 bg-white'
+                                      : 'border-slate-200 bg-slate-50 hover:bg-white',
+                                ].join(' ')}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                      {isDe ? 'Abteilung' : 'Department'}
+                                    </div>
+
+                                    <div className="mt-1 truncate text-sm font-semibold text-slate-900">
+                                      {department.kuerzel
+                                        ? department.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + department.name
+                                        : department.name}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex shrink-0 flex-col items-end gap-1">
+                                    <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
+                                      {departmentTeams.length} {isDe ? 'Teams' : 'teams'}
+                                    </span>
+                                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                                      {departmentEmployeeCount(department.id)} {isDe ? 'MA' : 'users'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </button>
+
+                              {isDepartmentActive && (
+                                <div className="ml-3 space-y-2 border-l border-slate-200 pl-3">
+                                  <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                    <span>{isDe ? 'Teams' : 'Teams'}</span>
+                                    <span>{departmentTeams.length}</span>
+                                  </div>
+
+                                  {departmentTeams.length === 0 ? (
+                                    <div className="rounded-xl border border-dashed border-slate-300 bg-white px-3 py-3 text-xs text-slate-500">
+                                      {isDe
+                                        ? 'Noch keine Teams angelegt. Nutze rechts die Aktion Team hinzufuegen.'
+                                        : 'No teams created yet. Use the action Add team on the right.'}
+                                    </div>
+                                  ) : (
+                                    departmentTeams.map((team) => {
+                                      const isTeamActive = selectedTeamId === team.id;
+
+                                      return (
+                                        <button
+                                          key={team.id}
+                                          type="button"
+                                          onClick={() => {
+                                            setSelectedLocationId(location.id);
+                                            setSelectedDepartmentId(department.id);
+                                            setSelectedTeamId(team.id);
+                                            setTeamDepartmentId(department.id);
+                                            setShowAddLocation(false);
+                                            setShowAddDepartment(false);
+                                            setShowAddTeam(false);
+                                            setInviteDepartmentId(department.id);
+                                          }}
+                                          className={[
+                                            'flex w-full items-center justify-between rounded-xl border px-3 py-3 text-left transition',
+                                            isTeamActive
+                                              ? 'border-[#00559F] bg-[#00559F]/10 shadow-sm'
+                                              : 'border-slate-200 bg-white hover:bg-slate-50',
+                                          ].join(' ')}
+                                        >
+                                          <span className="flex min-w-0 items-center gap-3">
+                                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                                              <Users className="h-3.5 w-3.5" />
+                                            </span>
+
+                                            <span className="min-w-0">
+                                              <span className="block truncate text-sm font-semibold text-slate-900">
+                                                {team.kuerzel
+                                                  ? team.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + team.name
+                                                  : team.name}
+                                              </span>
+
+                                              <span className="mt-0.5 block text-xs text-slate-500">
+                                                {teamEmployeeCount(team.id)} {isDe ? 'MA' : 'users'}{' '}
+                                                {String.fromCharCode(0x00b7)}{' '}
+                                                {isDe ? 'Operatives Team' : 'Operational team'}
+                                              </span>
+                                            </span>
+                                          </span>
+
+                                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                                            {isDe ? 'Team' : 'Team'}
+                                          </span>
+                                        </button>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </aside>
+    );
+  };
+
+const renderTeamsPanel = () => {
+  const teamDepartment = selectedTeam ? departmentById.get(selectedTeam.departmentId) ?? null : null;
+  const teamLocation = teamDepartment?.locationId
+    ? locationById.get(teamDepartment.locationId) ?? null
+    : null;
+
+  const activeDepartment = selectedTeam ? teamDepartment : selectedDepartment;
+
+  const activeLocation = selectedTeam
+    ? teamLocation
+    : activeDepartment?.locationId
+      ? locationById.get(activeDepartment.locationId) ?? null
+      : selectedLocation;
+
+  const activeDepartmentTeams = activeDepartment
+    ? teamsByDepartmentId.get(activeDepartment.id) ?? []
+    : [];
+
+  const activeLocationDepartments = activeLocation
+    ? visibleDepartments.filter((department) => department.locationId === activeLocation.id)
+    : [];
+
+  const activeLocationTeamCount = activeLocationDepartments.reduce((sum, department) => {
+    return sum + (teamsByDepartmentId.get(department.id)?.length ?? 0);
+  }, 0);
+
+  const selectedTeamDescription =
+    selectedTeam && 'description' in selectedTeam
+      ? String((selectedTeam as { description?: string | null }).description ?? '').trim()
+      : '';
+
+  const currentOrgLeadUser = findOrgLeadUser(
+    activeDepartment?.id ?? null,
+    selectedTeam?.id ?? null
+  );
+
+  const activeDepartmentUserCount = activeDepartment
+    ? userRowsForTable.filter((person) => person.departmentId === activeDepartment.id).length
+    : 0;
+
+  const activeLocationUserCount = activeLocation
+    ? userRowsForTable.filter((person) => {
+        if (!person.departmentId) return false;
+
+        const department = departmentById.get(person.departmentId);
+        return department?.locationId === activeLocation.id;
+      }).length
+    : 0;
+
+  const responsibleLabel = selectedTeam
+    ? isDe
+      ? 'Team Lead'
+      : 'Team lead'
+    : activeDepartment
+      ? isDe
+        ? 'Abteilungslead'
+        : 'Department lead'
+      : activeLocation
+        ? isDe
+          ? 'Standort Lead'
+          : 'Location lead'
+        : isDe
+          ? 'Verantwortliche Person'
+          : 'Responsible person';
+
+  const responsibleActionLabel = selectedTeam
+    ? isDe
+      ? 'Team Lead festlegen'
+      : 'Set team lead'
+    : activeDepartment
+      ? isDe
+        ? 'Abteilungslead festlegen'
+        : 'Set department lead'
+      : activeLocation
+        ? isDe
+          ? 'Standort Lead festlegen'
+          : 'Set location lead'
+        : isDe
+          ? 'Lead festlegen'
+          : 'Set lead';
+
+  const userCountLabel = selectedTeam
+    ? isDe
+      ? 'Benutzer im Team'
+      : 'Users in team'
+    : activeDepartment
+      ? isDe
+        ? 'Benutzer in Abteilung'
+        : 'Users in department'
+      : activeLocation
+        ? isDe
+          ? 'Benutzer am Standort'
+          : 'Users at location'
+        : isDe
+          ? 'Benutzer'
+          : 'Users';
+
+  const userCountValue = selectedTeam
+    ? teamEmployeeCount(selectedTeam.id)
+    : activeDepartment
+      ? departmentEmployeeCount(activeDepartment.id)
+      : activeLocation
+        ? locationEmployeeCount(activeLocation.id)
+        : 0;
+
+  const userCountHint = selectedTeam
+    ? isDe
+      ? 'Benutzer, die diesem Team direkt zugeordnet sind.'
+      : 'Users directly assigned to this team.'
+    : activeDepartment
+      ? isDe
+        ? 'Grundlage fuer den spaeteren Abteilungslead.'
+        : 'Basis for the later department lead.'
+      : activeLocation
+        ? isDe
+          ? 'Grundlage fuer den spaeteren Standort Lead.'
+          : 'Basis for the later location lead.'
+        : '';
+
+  const openDepartmentLeadDialog = (departmentId: string) => {
+    const currentLead = departmentLeadById[departmentId] ?? null;
+
+    setDepartmentLeadPersonId(currentLead?.id ?? '');
+    setIsDepartmentLeadOpen(true);
+    setUiError(null);
+    setUiMessage(null);
+  };
+
+  const openTeamLeadDialog = () => {
+    if (!selectedTeam) {
+      setUiError(isDe ? 'Bitte zuerst ein Team ausw?hlen.' : 'Please select a team first.');
+      return;
+    }
+
+    const currentLeadUser = adminUsers.find((user) => {
+      const person = (user as any).person;
+      return person?.team?.id === selectedTeam.id && person?.orgFunction === 'LEAD';
+    });
+
+    setTeamLeadPersonId(String((currentLeadUser as any)?.person?.id ?? ''));
+    setIsTeamLeadOpen(true);
+    setUiError(null);
+    setUiMessage(null);
+  };
+
+  const saveTeamLead = async () => {
+    if (!selectedTeam) {
+      setUiError(isDe ? 'Bitte zuerst ein Team ausw?hlen.' : 'Please select a team first.');
+      return;
+    }
+
+    setUiError(null);
+    setUiMessage(null);
+    setIsSavingTeamLead(true);
+
+    try {
+      const response = await fetch('/api/directory/teams/' + selectedTeam.id + '/lead', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          personId: teamLeadPersonId || null,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || data?.success === false) {
+        throw new Error(data?.message ?? 'Team Lead konnte nicht gespeichert werden.');
+      }
+
+      setIsTeamLeadOpen(false);
+      setTeamLeadPersonId('');
+
+      await loadAdminUsers();
+
+      setUiMessage(
+        data?.message ??
+          (isDe ? 'Team Lead wurde gespeichert.' : 'Team lead has been saved.')
+      );
+    } catch (error) {
+      setUiError(
+        error instanceof Error
+          ? error.message
+          : isDe
+            ? 'Team Lead konnte nicht gespeichert werden.'
+            : 'Team lead could not be saved.'
+      );
+    } finally {
+      setIsSavingTeamLead(false);
+    }
+  };
+
+  const openLeadAssignmentHint = () => {
+    if (selectedTeam) {
+      openTeamLeadDialog();
+      return;
+    }
+
+    if (activeDepartment && !selectedTeam) {
+      openDepartmentLeadDialog(activeDepartment.id);
+      return;
+    }
+
+    setUiError(null);
+    setUiMessage(
+      activeLocation
+        ? isDe
+          ? 'Standort Lead-Zuordnung wird umgesetzt, sobald Benutzer dem Standortkontext zugeordnet sind.'
+          : 'Location lead assignment will be implemented once users are assigned to the location context.'
+        : isDe
+          ? 'Bitte zuerst einen Strukturknoten ausw?hlen.'
+          : 'Please select a structure node first.'
+    );
+  };
+
+  const formatLocation = (location: typeof selectedLocation) => {
+    if (!location) return isDe ? 'Kein Standort ausgewaehlt' : 'No location selected';
+    return location.kuerzel ? location.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + location.name : location.name;
+  };
+
+  const formatDepartment = (department: typeof selectedDepartment) => {
+    if (!department) return isDe ? 'Keine Abteilung ausgewaehlt' : 'No department selected';
+    return department.kuerzel ? department.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + department.name : department.name;
+  };
+
+  const formatTeam = (team: typeof selectedTeam) => {
+    if (!team) return isDe ? 'Kein Team ausgewaehlt' : 'No team selected';
+    return team.kuerzel ? team.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + team.name : team.name;
+  };
+
+  const detailTitle = selectedTeam
+    ? formatTeam(selectedTeam)
+    : activeDepartment
+      ? formatDepartment(activeDepartment)
+      : activeLocation
+        ? formatLocation(activeLocation)
+        : isDe
+          ? 'Keine Struktur ausgewaehlt'
+          : 'No structure selected';
+
+  const detailType = selectedTeam
+    ? 'Team'
+    : activeDepartment
+      ? isDe
+        ? 'Abteilung'
+        : 'Department'
+      : activeLocation
+        ? isDe
+          ? 'Standort'
+          : 'Location'
+        : isDe
+          ? 'Struktur'
+          : 'Structure';
+
+  const pathParts = [
+    activeLocation ? formatLocation(activeLocation) : null,
+    activeDepartment ? formatDepartment(activeDepartment) : null,
+    selectedTeam ? formatTeam(selectedTeam) : null,
+  ].filter(Boolean) as string[];
+
+  const pathText =
+    pathParts.length > 0
+      ? pathParts.join(' ' + String.fromCharCode(0x2192) + ' ')
+      : isDe
+        ? 'Noch kein Strukturknoten ausgewaehlt.'
+        : 'No structure node selected yet.';
+
+  const openCreateLocation = () => {
+    setCreateMode('location');
+    setShowAddLocation(false);
+    setShowAddDepartment(false);
+    setShowAddTeam(false);
+  };
+
+  const openCreateDepartment = () => {
+    setDepLocationId(activeLocation?.id ?? selectedLocationId ?? '');
+    setCreateMode('department');
+    setShowAddLocation(false);
+    setShowAddDepartment(false);
+    setShowAddTeam(false);
+  };
+
+  const openCreateTeam = () => {
+    setTeamDepartmentId(activeDepartment?.id ?? selectedDepartmentId ?? '');
+    setCreateMode('team');
+    setShowAddLocation(false);
+    setShowAddDepartment(false);
+    setShowAddTeam(false);
+  };
+
+  const openCreateUser = () => {
+    setAssignUserId('');
+    setCreateMode('user');
+    setShowAddLocation(false);
+    setShowAddDepartment(false);
+    setShowAddTeam(false);
+  };
+
+  const primaryCreateLabel = selectedTeam
+    ? isDe
+      ? 'Benutzer hinzufuegen'
+      : 'Add user'
+    : activeDepartment
+      ? isDe
+        ? 'Team hinzufuegen'
+        : 'Add team'
+      : activeLocation
+        ? isDe
+          ? 'Abteilung hinzufuegen'
+          : 'Add department'
+        : isDe
+          ? 'Standort hinzufuegen'
+          : 'Add location';
+
+  const openPrimaryCreateAction = () => {
+    if (selectedTeam) {
+      openCreateUser();
+      return;
+    }
+
+    if (activeDepartment) {
+      openCreateTeam();
+      return;
+    }
+
+    if (activeLocation) {
+      openCreateDepartment();
+      return;
+    }
+
+    openCreateLocation();
+  };
+
+  const deleteActiveDepartment = () => {
+    if (!activeDepartment) return;
+
+    if (confirm(isDe ? 'Abteilung wirklich loeschen?' : 'Delete department?')) {
+      removeDepartment(activeDepartment.id);
+      setSelectedDepartmentId(null);
+      setSelectedTeamId(null);
+      setTeamDepartmentId('');
+      setInviteDepartmentId('');
+    }
+  };
+
+  const deleteActiveTeam = () => {
+    if (!selectedTeam) return;
+
+    if (confirm(isDe ? 'Team wirklich loeschen?' : 'Delete team?')) {
+      removeTeam(selectedTeam.id);
+      setSelectedTeamId(null);
+    }
+  };
+
+  return (
+    <section className={panelCls + ' overflow-hidden'}>
       <div className="border-b border-slate-200 px-5 py-4">
-        <div className="flex items-center gap-3">
-          <Building2 className="h-5 w-5 text-slate-600" />
-          <h3 className="text-lg font-semibold text-slate-900">
-            {isDe ? 'Organisation' : 'Organisation'}
-          </h3>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900">
+              {isDe ? 'Strukturdetails' : 'Structure details'}
+            </h3>
+
+            <p className="mt-1 text-xs text-slate-500">
+              {isDe
+                ? 'Ein Strukturknoten auswaehlen, Details pruefen und die naechste Ebene hinzufuegen.'
+                : 'Select a structure node, review details and add the next level.'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+              {detailType}
+            </span>
+          </div>
         </div>
       </div>
 
       <div className="space-y-5 px-5 py-5">
-        <div className="space-y-2">
-          <div className={labelCls}>{isDe ? 'Standort' : 'Location'}</div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            {detailType}
+          </div>
 
-          <select
-            className={inputCls}
-            value={selectedLocationId ?? ''}
-            onChange={(event) => {
-              const nextLocationId = event.target.value || null;
-              setSelectedLocationId(nextLocationId);
-              setSelectedDepartmentId(null);
-              setInviteDepartmentId('');
-            }}
-          >
-            <option value="">{isDe ? 'Standort auswÃ¤hlen' : 'Select location'}</option>
-            {locationOptions.map((location) => (
-              <option key={location.id} value={location.id}>
-                {location.kuerzel ? `${location.kuerzel} â€” ${location.name}` : location.name}
-              </option>
-            ))}
-          </select>
+          <div className="mt-1 text-xl font-semibold text-slate-900">
+            {detailTitle}
+          </div>
 
-          {selectedLocation && (
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs text-slate-500">
-                {isDe ? 'Aktueller Standort:' : 'Current location:'}{' '}
-                <span className="font-medium text-slate-700">{selectedLocation.name}</span>
-              </p>
+          <div className="mt-2 text-sm text-slate-600">
+            <span className="font-semibold text-slate-700">
+              {isDe ? 'Pfad:' : 'Path:'}
+            </span>{' '}
+            <span className="font-medium text-slate-800">{pathText}</span>
+          </div>
+        </div>
 
-              <button
-                type="button"
-                onClick={onDeleteSelectedLocation}
-                className={[
-                  'text-xs font-medium',
-                  selectedLocationDepartmentCount > 0
-                    ? 'text-slate-400'
-                    : 'text-slate-500 hover:text-rose-700',
-                ].join(' ')}
-                title={
-                  selectedLocationDepartmentCount > 0
-                    ? isDe
-                      ? 'Standort enthÃ¤lt noch Abteilungen'
-                      : 'Location still contains departments'
-                    : isDe
-                      ? 'Standort lÃ¶schen'
-                      : 'Delete location'
-                }
-              >
-                {isDe ? 'LÃ¶schen' : 'Delete'}
-              </button>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              {isDe ? 'Standort' : 'Location'}
             </div>
-          )}
+            <div className="mt-1 truncate text-sm font-semibold text-slate-900">
+              {activeLocation ? formatLocation(activeLocation) : '?'}
+            </div>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => setShowAddLocation((value) => !value)}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            <Plus className="h-4 w-4" />
-            {isDe ? 'Standort hinzufÃ¼gen' : 'Add location'}
-          </button>
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              {isDe ? 'Abteilung' : 'Department'}
+            </div>
+            <div className="mt-1 truncate text-sm font-semibold text-slate-900">
+              {activeDepartment ? formatDepartment(activeDepartment) : '?'}
+            </div>
+          </div>
 
-          {showAddLocation && (
-            <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              {isDe ? 'Teams' : 'Teams'}
+            </div>
+            <div className="mt-1 text-sm font-semibold text-slate-900">
+              {selectedTeam ? 1 : activeDepartment ? activeDepartmentTeams.length : activeLocationTeamCount}
+            </div>
+          </div>
+        </div>
+
+        {activeLocation && (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    {responsibleLabel}
+                  </div>
+
+                  <div className="mt-1 text-sm font-semibold text-slate-900">
+                    {currentOrgLeadUser
+                      ? orgLeadUserDisplayName(currentOrgLeadUser)
+                      : selectedTeam
+                        ? isDe
+                          ? 'Noch nicht zugewiesen'
+                          : 'Not assigned yet'
+                        : activeDepartment
+                          ? isDe
+                            ? 'Noch nicht zugewiesen'
+                            : 'Not assigned yet'
+                          : isDe
+                            ? 'Noch nicht zugewiesen'
+                            : 'Not assigned yet'}
+                  </div>
+
+                  <div className="mt-1 text-xs text-slate-500">
+                    {isDe
+                      ? ''
+                      : ''}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={openLeadAssignmentHint}
+                  className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  {currentOrgLeadUser ? (isDe ? 'Lead ändern' : 'Change lead') : responsibleActionLabel}
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                {userCountLabel}
+              </div>
+
+              <div className="mt-1 text-sm font-semibold text-slate-900">
+                {userCountValue}
+              </div>
+
+              {userCountHint && (
+                <div className="mt-1 text-xs text-slate-500">
+                  {userCountHint}
+                </div>
+              )}
+            </div>
+
+            {selectedTeam && (
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 md:col-span-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  {isDe ? 'Beschreibung' : 'Description'}
+                </div>
+
+                <div className="mt-1 text-sm text-slate-700">
+                  {selectedTeamDescription ||
+                    (isDe ? 'Keine Beschreibung hinterlegt.' : 'No description available.')}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h4 className="text-sm font-semibold text-slate-900">
+                {isDe ? 'Aktionen' : 'Actions'}
+              </h4>
+              <p className="mt-1 text-xs text-slate-500">
+                {isDe
+                  ? 'Die Aktion richtet sich immer nach dem aktuell ausgewaehlten Strukturknoten.'
+                  : 'The action always follows the currently selected structure node.'}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {!activeLocation && (
+                <button
+                  type="button"
+                  onClick={openCreateLocation}
+                  className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  <Plus className="h-4 w-4" />
+                  {isDe ? 'Standort hinzufuegen' : 'Add location'}
+                </button>
+              )}
+
+              {activeLocation && !activeDepartment && (
+                <>
+                  <button
+                    type="button"
+                    onClick={openCreateDepartment}
+                    className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {isDe ? 'Abteilung hinzufuegen' : 'Add department'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={onDeleteSelectedLocation}
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {isDe ? 'Standort loeschen' : 'Delete location'}
+                  </button>
+                </>
+              )}
+
+              {activeDepartment && !selectedTeam && (
+                <>
+                  <button
+                    type="button"
+                    onClick={openCreateTeam}
+                    className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {isDe ? 'Team hinzufuegen' : 'Add team'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={deleteActiveDepartment}
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {isDe ? 'Abteilung loeschen' : 'Delete department'}
+                  </button>
+                </>
+              )}
+
+              {selectedTeam && (
+                <>
+                  <button
+                    type="button"
+                    onClick={openCreateUser}
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#009A93] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-110"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {isDe ? 'Benutzer hinzuf' + String.fromCharCode(0x00fc) + 'gen' : 'Add user'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={deleteActiveTeam}
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {isDe ? 'Team loeschen' : 'Delete team'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {showAddLocation && !activeLocation && (
+            <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
               <div className="space-y-1">
                 <div className={labelCls}>{isDe ? 'Standortname' : 'Location name'}</div>
                 <input
@@ -1543,7 +2407,7 @@ const saveUserAssignment = async () => {
               </div>
 
               <div className="space-y-1">
-                <div className={labelCls}>{isDe ? 'KÃ¼rzel' : 'Code'}</div>
+                <div className={labelCls}>{isDe ? 'Kuerzel' : 'Code'}</div>
                 <input
                   className={inputCls}
                   value={locKuerzel}
@@ -1552,140 +2416,20 @@ const saveUserAssignment = async () => {
                 />
               </div>
 
-              <button
-                type="button"
-                onClick={onAddLocation}
-                className="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-              >
-                {isDe ? 'Standort anlegen' : 'Create location'}
-              </button>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={onAddLocation}
+                  className="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  {isDe ? 'Anlegen' : 'Create'}
+                </button>
+              </div>
             </div>
           )}
-        </div>
 
-        <div className="border-t border-slate-200 pt-5">
-          <div className="mb-3 flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-slate-900">
-              {isDe ? 'Abteilungen' : 'Departments'}
-            </h4>
-
-            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
-              {departmentOptions.length}
-            </span>
-          </div>
-
-          <div className="space-y-2">
-            {departmentOptions.length === 0 && (
-              <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-sm text-slate-500">
-                {selectedLocation
-                  ? isDe
-                    ? 'FÃ¼r diesen Standort sind noch keine Abteilungen angelegt.'
-                    : 'No departments have been created for this location yet.'
-                  : isDe
-                    ? 'Bitte zuerst einen Standort auswÃ¤hlen.'
-                    : 'Please select a location first.'}
-              </div>
-            )}
-
-            {departmentOptions.map((department) => {
-              const isSelected = selectedDepartmentId === department.id;
-
-              return (
-                <button
-                  key={department.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedDepartmentId(department.id);
-                    setInviteDepartmentId(department.id);
-                  }}
-                  className={[
-                    'flex w-full items-center justify-between rounded-lg border px-3 py-3 text-left text-sm transition',
-                    isSelected
-                      ? 'border-[#009A93] bg-[#009A93]/10 text-slate-900'
-                      : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-white',
-                  ].join(' ')}
-                >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-sky-600 text-white">
-                      <Building2 className="h-3.5 w-3.5" />
-                    </span>
-
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium">
-                        {department.kuerzel
-                          ? `${department.kuerzel} â€” ${department.name}`
-                          : department.name}
-                      </span>
-                    </span>
-                  </span>
-
-                  <span
-                    onClick={(event) => {
-                      event.stopPropagation();
-
-                      if (confirm(isDe ? 'Abteilung wirklich lÃ¶schen?' : 'Delete department?')) {
-                        removeDepartment(department.id);
-
-                        if (selectedDepartmentId === department.id) {
-                          setSelectedDepartmentId(null);
-                        }
-
-                        if (inviteDepartmentId === department.id) {
-                          setInviteDepartmentId('');
-                        }
-                      }
-                    }}
-                    className="rounded-md p-1 text-slate-400 hover:bg-white hover:text-rose-700"
-                    title={isDe ? 'Abteilung lÃ¶schen' : 'Delete department'}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-  type="button"
-  onClick={() => {
-    setDepLocationId(selectedLocationId ?? '');
-    setShowAddDepartment((value) => !value);
-  }}
-  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-  disabled={locationOptions.length === 0}
-  title={
-    locationOptions.length === 0
-      ? isDe
-        ? 'Bitte zuerst einen Standort anlegen'
-        : 'Please create a location first'
-      : ''
-  }
->
-            <Plus className="h-4 w-4" />
-            {isDe ? 'Abteilung hinzufÃ¼gen' : 'Add department'}
-          </button>
-
-          {showAddDepartment && (
-            <div className="mt-3 space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-<div className="space-y-1">
-  <div className={labelCls}>{isDe ? 'Standort' : 'Location'}</div>
-  <select
-    className={inputCls}
-    value={effectiveDepartmentLocationId}
-    onChange={(event) => setDepLocationId(event.target.value)}
-  >
-    <option value="">
-      {isDe ? 'Standort auswÃ¤hlen' : 'Select location'}
-    </option>
-
-    {locationOptions.map((location) => (
-      <option key={location.id} value={location.id}>
-        {location.kuerzel ? `${location.kuerzel} â€” ${location.name}` : location.name}
-      </option>
-    ))}
-  </select>
-</div>
-
+          {showAddDepartment && activeLocation && !activeDepartment && (
+            <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
               <div className="space-y-1">
                 <div className={labelCls}>{isDe ? 'Abteilungsname' : 'Department name'}</div>
                 <input
@@ -1697,7 +2441,7 @@ const saveUserAssignment = async () => {
               </div>
 
               <div className="space-y-1">
-                <div className={labelCls}>{isDe ? 'KÃ¼rzel' : 'Code'}</div>
+                <div className={labelCls}>{isDe ? 'Kuerzel' : 'Code'}</div>
                 <input
                   className={inputCls}
                   value={depKuerzel}
@@ -1706,19 +2450,56 @@ const saveUserAssignment = async () => {
                 />
               </div>
 
-              <button
-                type="button"
-                onClick={onAddDepartment}
-                className="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-              >
-                {isDe ? 'Abteilung anlegen und zuordnen' : 'Create and assign department'}
-              </button>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={onAddDepartment}
+                  className="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  {isDe ? 'Anlegen' : 'Create'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {showAddTeam && activeDepartment && !selectedTeam && (
+            <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
+              <div className="space-y-1">
+                <div className={labelCls}>{isDe ? 'Teamname' : 'Team name'}</div>
+                <input
+                  className={inputCls}
+                  value={teamName}
+                  onChange={(event) => setTeamName(event.target.value)}
+                  placeholder={isDe ? 'z. B. Security Operations' : 'e.g. Security Operations'}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <div className={labelCls}>{isDe ? 'Kuerzel' : 'Code'}</div>
+                <input
+                  className={inputCls}
+                  value={teamKuerzel}
+                  onChange={(event) => setTeamKuerzel(event.target.value)}
+                  placeholder="SECOPS"
+                />
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={onAddTeam}
+                  className="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  {isDe ? 'Anlegen' : 'Create'}
+                </button>
+              </div>
             </div>
           )}
         </div>
       </div>
-    </aside>
+    </section>
   );
+};
 
 const renderDepartmentAssignmentPanel = () => {
   if (!selectedDepartment) return null;
@@ -1827,14 +2608,14 @@ const renderDepartmentAssignmentPanel = () => {
             onChange={(event) => setAssignUserId(event.target.value)}
           >
             <option value="">
-              {isDe ? 'Benutzer auswÃ¤hlen' : 'Select user'}
+              {isDe ? 'Benutzer auswählen' : 'Select user'}
             </option>
 
             {usersAssignableToSelectedDepartment.map((user) => {
               const currentDepartment = user.person?.department;
               const currentLabel = currentDepartment
                 ? currentDepartment.kuerzel
-                  ? `${currentDepartment.kuerzel} â€” ${currentDepartment.name}`
+                  ? `${currentDepartment.kuerzel} — ${currentDepartment.name}`
                   : currentDepartment.name
                 : isDe
                   ? 'Keine Abteilung'
@@ -1842,7 +2623,7 @@ const renderDepartmentAssignmentPanel = () => {
 
               return (
                 <option key={user.id} value={user.id}>
-                  {user.name || user.email} Â· {user.email} Â· {currentLabel}
+                  {user.name || user.email} · {user.email} · {currentLabel}
                 </option>
               );
             })}
@@ -1863,7 +2644,7 @@ const renderDepartmentAssignmentPanel = () => {
           >
             {isAssigningUser
               ? isDe
-                ? 'Zuordnung lÃ¤uft ...'
+                ? 'Zuordnung läuft ...'
                 : 'Assigning ...'
               : isDe
                 ? 'Der Abteilung zuordnen'
@@ -1916,16 +2697,20 @@ const renderDepartmentAssignmentPanel = () => {
             {isDe ? 'Benutzer' : 'Users'}
           </h3>
           <p className="mt-1 text-xs text-slate-500">
-            {selectedDepartment
+            {selectedTeam
               ? isDe
-                ? `Gefiltert nach Abteilung: ${selectedDepartment.name}`
-                : `Filtered by department: ${selectedDepartment.name}`
-              : selectedLocation
+                ? `Gefiltert nach Team: ${selectedTeam.name}`
+                : `Filtered by team: ${selectedTeam.name}`
+              : selectedDepartment
+                ? isDe
+                  ? `Gefiltert nach Abteilung: ${selectedDepartment.name}`
+                  : `Filtered by department: ${selectedDepartment.name}`
+                : selectedLocation
                 ? isDe
                   ? `Gefiltert nach Standort: ${selectedLocation.name}`
                   : `Filtered by location: ${selectedLocation.name}`
                 : isDe
-                  ? 'Alle Benutzer anzeigen oder Ã¼ber die Kontextzeile filtern.'
+                  ? 'Alle Benutzer anzeigen oder über die Kontextzeile filtern.'
                   : 'Show all users or filter via the context line.'}
           </p>
         </div>
@@ -1939,6 +2724,7 @@ const renderDepartmentAssignmentPanel = () => {
               <th className="px-5 py-3">{isDe ? 'Rolle' : 'Role'}</th>
               <th className="px-5 py-3">{isDe ? 'Standort' : 'Location'}</th>
               <th className="px-5 py-3">{isDe ? 'Abteilung' : 'Department'}</th>
+              <th className="px-5 py-3">Team</th>
               <th className="px-5 py-3">{isDe ? 'Status' : 'Status'}</th>
               <th className="px-5 py-3 text-right">{isDe ? 'Aktion' : 'Action'}</th>
             </tr>
@@ -1947,7 +2733,7 @@ const renderDepartmentAssignmentPanel = () => {
           <tbody className="divide-y divide-slate-200">
             {isLoadingAdminUsers && (
               <tr>
-                <td colSpan={6} className="px-5 py-8 text-center text-sm text-slate-500">
+                <td colSpan={7} className="px-5 py-8 text-center text-sm text-slate-500">
                   {isDe ? 'Benutzer werden geladen ...' : 'Loading users ...'}
                 </td>
               </tr>
@@ -1955,7 +2741,7 @@ const renderDepartmentAssignmentPanel = () => {
 
             {!isLoadingAdminUsers && filteredPeople.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-5 py-8 text-center text-sm text-slate-500">
+                <td colSpan={7} className="px-5 py-8 text-center text-sm text-slate-500">
                   {isDe
                     ? 'Keine Benutzer im aktuellen Filter gefunden.'
                     : 'No users found for the current filter.'}
@@ -1977,7 +2763,7 @@ const renderDepartmentAssignmentPanel = () => {
                           {userDisplayName(person)}
                         </div>
                         <div className="truncate text-xs text-slate-500">
-                          {person.email ?? 'â€”'}
+                          {person.email ?? '—'}
                         </div>
                       </div>
                     </div>
@@ -1993,6 +2779,10 @@ const renderDepartmentAssignmentPanel = () => {
 
                   <td className="px-5 py-4 text-slate-600">
                     {departmentDisplayName(person.departmentId)}
+                  </td>
+
+                  <td className="px-5 py-4 text-slate-600">
+                    {teamDisplayName(person.teamId)}
                   </td>
 
                   <td className="px-5 py-4">
@@ -2030,7 +2820,7 @@ const renderDepartmentAssignmentPanel = () => {
                             return;
                           }
 
-                          if (confirm(isDe ? 'Benutzer wirklich lÃ¶schen?' : 'Delete user?')) {
+                          if (confirm(isDe ? 'Benutzer wirklich löschen?' : 'Delete user?')) {
                             removePerson(person.id);
                           }
                         }}
@@ -2044,10 +2834,10 @@ const renderDepartmentAssignmentPanel = () => {
                         title={
                           isDeletingUserId === person.id
                             ? isDe
-                              ? 'Benutzer wird gelÃ¶scht ...'
+                              ? 'Benutzer wird gelöscht ...'
                               : 'Deleting user ...'
                             : isDe
-                              ? 'Benutzer lÃ¶schen'
+                              ? 'Benutzer löschen'
                               : 'Delete user'
                         }
                       >
@@ -2087,7 +2877,7 @@ const renderDepartmentAssignmentPanel = () => {
         </div>
 
         <div className="space-y-1">
-          <div className={labelCls}>{isDe ? 'Rolle auswÃ¤hlen' : 'Select role'}</div>
+          <div className={labelCls}>{isDe ? 'Rolle auswählen' : 'Select role'}</div>
           <select
             className={inputCls}
             value={inviteRoleId}
@@ -2102,16 +2892,16 @@ const renderDepartmentAssignmentPanel = () => {
         </div>
 
         <div className="space-y-1">
-          <div className={labelCls}>{isDe ? 'Abteilung auswÃ¤hlen' : 'Select department'}</div>
+          <div className={labelCls}>{isDe ? 'Abteilung auswählen' : 'Select department'}</div>
           <select
             className={inputCls}
             value={effectiveInviteDepartmentId}
             onChange={(event) => setInviteDepartmentId(event.target.value)}
           >
-            <option value="">{isDe ? 'Abteilung auswÃ¤hlen' : 'Select department'}</option>
+            <option value="">{isDe ? 'Abteilung auswählen' : 'Select department'}</option>
             {allDepartmentOptions.map((department) => (
               <option key={department.id} value={department.id}>
-                {department.kuerzel ? `${department.kuerzel} â€” ${department.name}` : department.name}
+                {department.kuerzel ? `${department.kuerzel} — ${department.name}` : department.name}
               </option>
             ))}
           </select>
@@ -2219,10 +3009,10 @@ const renderDepartmentAssignmentPanel = () => {
                         onClick={() => onDeleteInvite(invite.id)}
                         className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-rose-50 hover:text-rose-700"
                       >
-                        {isDe ? 'LÃ¶schen' : 'Delete'}
+                        {isDe ? 'Löschen' : 'Delete'}
                       </button>
                     ) : (
-                      <span className="text-xs text-slate-400">â€”</span>
+                      <span className="text-xs text-slate-400">—</span>
                     )}
                   </div>
                 </td>
@@ -2245,7 +3035,7 @@ const renderDepartmentAssignmentPanel = () => {
             </h3>
             <p className="mt-1 text-xs text-slate-500">
               {isDe
-                ? 'Vorbereitete Rollenprofile fÃ¼r den spÃ¤teren Berechtigungsaufbau.'
+                ? 'Vorbereitete Rollenprofile für den späteren Berechtigungsaufbau.'
                 : 'Prepared role profiles for the later permission model.'}
             </p>
           </div>
@@ -2277,17 +3067,17 @@ const renderDepartmentAssignmentPanel = () => {
     const locationName = selectedLocation
       ? selectedLocation.name
       : isDe
-        ? 'Kein Standort ausgewÃ¤hlt'
+        ? 'Kein Standort ausgewählt'
         : 'No location selected';
 
     const departmentName = selectedDepartment
       ? selectedDepartment.name
       : isDe
-        ? 'Keine Abteilung ausgewÃ¤hlt'
+        ? 'Keine Abteilung ausgewählt'
         : 'No department selected';
 
     const contextPath = selectedDepartment
-      ? `${locationName} â†’ ${departmentName}`
+      ? [locationName, departmentName].join(' ' + String.fromCharCode(0x2192) + ' ')
       : locationName;
 
     const contextByTab: Record<
@@ -2297,7 +3087,7 @@ const renderDepartmentAssignmentPanel = () => {
       organization: {
         titleDe: 'Organisationskontext',
         titleEn: 'Organisation context',
-        descriptionDe: 'Der ausgewÃ¤hlte Standort steuert, welche Abteilungen und Benutzer angezeigt werden.',
+        descriptionDe: 'Der ausgewählte Standort steuert, welche Abteilungen und Benutzer angezeigt werden.',
         descriptionEn: 'The selected location controls which departments and users are shown.',
         metricDe: `${selectedLocationDepartmentCount} Abteilungen`,
         metricEn: `${selectedLocationDepartmentCount} departments`,
@@ -2305,7 +3095,7 @@ const renderDepartmentAssignmentPanel = () => {
       users: {
         titleDe: 'Benutzerkontext',
         titleEn: 'User context',
-        descriptionDe: 'Die Benutzerliste wird anhand des ausgewÃ¤hlten Standorts und der ausgewÃ¤hlten Abteilung gefiltert.',
+        descriptionDe: 'Die Benutzerliste wird anhand des ausgewählten Standorts und der ausgewählten Abteilung gefiltert.',
         descriptionEn: 'The user list is filtered by the selected location and department.',
         metricDe: `${filteredPeople.length} Benutzer im Filter`,
         metricEn: `${filteredPeople.length} users in filter`,
@@ -2321,7 +3111,7 @@ const renderDepartmentAssignmentPanel = () => {
       roles: {
         titleDe: 'Rollen- und Rechtekontext',
         titleEn: 'Roles and permissions context',
-        descriptionDe: 'Rollenprofile sind systemweit vorbereitet und werden spÃ¤ter mit konkreten Berechtigungen verknÃ¼pft.',
+        descriptionDe: 'Rollenprofile sind systemweit vorbereitet und werden später mit konkreten Berechtigungen verknüpft.',
         descriptionEn: 'Role profiles are prepared system-wide and will later be linked to concrete permissions.',
         metricDe: `${ROLE_OPTIONS.length} Rollenprofile`,
         metricEn: `${ROLE_OPTIONS.length} role profiles`,
@@ -2340,7 +3130,7 @@ const renderDepartmentAssignmentPanel = () => {
 
             <div className="mt-1 text-xs text-slate-500">
               <span className="font-medium text-slate-700">{contextPath}</span>
-              <span className="mx-2 text-slate-300">Â·</span>
+              <span className="mx-2 text-slate-300">·</span>
               <span>{isDe ? context.descriptionDe : context.descriptionEn}</span>
             </div>
           </div>
@@ -2359,6 +3149,597 @@ const renderDepartmentAssignmentPanel = () => {
       </div>
     );
   };
+
+const renderTeamLeadModal = () => {
+  if (!isTeamLeadOpen || !selectedTeam) return null;
+
+  const displayTeamLeadUserName = (user: any) => {
+    const person = user.person ?? {};
+
+    const clean = (value: unknown) => {
+      const textValue = String(value ?? '').trim();
+      if (!textValue) return '';
+      if (textValue.includes('@')) return '';
+      return textValue;
+    };
+
+    const personName = [person.firstName, person.lastName]
+      .map(clean)
+      .filter(Boolean)
+      .join(' ');
+
+    const userName = [user.firstName, user.lastName]
+      .map(clean)
+      .filter(Boolean)
+      .join(' ');
+
+    const displayName = clean(user.name);
+
+    const email = String(person.email ?? user.email ?? '').trim();
+
+    const nameFromEmail = email
+      ? email
+          .split('@')[0]
+          .split(/[._-]+/)
+          .filter(Boolean)
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+          .join(' ')
+      : '';
+
+    return personName || userName || displayName || nameFromEmail || '?';
+  };
+
+  const usersInTeam = adminUsers
+    .filter((user) => (user as any).person?.team?.id === selectedTeam.id)
+    .slice()
+    .sort((a, b) => displayTeamLeadUserName(a).localeCompare(displayTeamLeadUserName(b)));
+
+  const selectedTeamLabel = selectedTeam.kuerzel
+    ? selectedTeam.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + selectedTeam.name
+    : selectedTeam.name;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+        <div className="border-b border-slate-200 px-5 py-4">
+          <h3 className="text-lg font-semibold text-slate-900">
+            {isDe ? 'Team Lead festlegen' : 'Set team lead'}
+          </h3>
+
+          <p className="mt-1 text-sm text-slate-500">
+            {selectedTeamLabel}
+          </p>
+        </div>
+
+        <div className="space-y-4 px-5 py-5">
+          <div className="space-y-1">
+            <div className={labelCls}>
+              {isDe ? 'Benutzer aus diesem Team' : 'Users from this team'}
+            </div>
+
+            <select
+              className={inputCls}
+              value={teamLeadPersonId}
+              onChange={(event) => setTeamLeadPersonId(event.target.value)}
+            >
+              <option value="">
+                {isDe ? 'Kein Team Lead' : 'No team lead'}
+              </option>
+
+              {usersInTeam.map((user) => (
+                <option key={(user as any).person?.id ?? user.id} value={(user as any).person?.id ?? ''}>
+                  {displayTeamLeadUserName(user)}
+                </option>
+              ))}
+            </select>
+
+            {usersInTeam.length === 0 && (
+              <p className="text-xs text-amber-700">
+                {isDe
+                  ? 'Diesem Team sind noch keine Benutzer zugeordnet.'
+                  : 'No users are assigned to this team yet.'}
+              </p>
+            )}
+
+            <p className="text-xs text-slate-500">
+              {isDe
+                ? 'Beim Speichern wird der bisherige Team Lead automatisch abgeloest.'
+                : 'Saving will automatically replace the current team lead.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4">
+          <button
+            type="button"
+            onClick={() => {
+              setIsTeamLeadOpen(false);
+              setTeamLeadPersonId('');
+            }}
+            disabled={isSavingTeamLead}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isDe ? 'Abbrechen' : 'Cancel'}
+          </button>
+
+          <button
+            type="button"
+            onClick={async () => {
+              if (!selectedTeam) {
+                setUiError(isDe ? 'Bitte zuerst ein Team auswaehlen.' : 'Please select a team first.');
+                return;
+              }
+
+              setUiError(null);
+              setUiMessage(null);
+              setIsSavingTeamLead(true);
+
+              try {
+                const response = await fetch('/api/directory/teams/' + selectedTeam.id + '/lead', {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    personId: teamLeadPersonId || null,
+                  }),
+                });
+
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok || data?.success === false) {
+                  throw new Error(data?.message ?? 'Team Lead konnte nicht gespeichert werden.');
+                }
+
+                setIsTeamLeadOpen(false);
+                setTeamLeadPersonId('');
+
+                await loadAdminUsers();
+
+                setUiMessage(
+                  data?.message ??
+                    (isDe ? 'Team Lead wurde gespeichert.' : 'Team lead has been saved.')
+                );
+              } catch (error) {
+                setUiError(
+                  error instanceof Error
+                    ? error.message
+                    : isDe
+                      ? 'Team Lead konnte nicht gespeichert werden.'
+                      : 'Team lead could not be saved.'
+                );
+              } finally {
+                setIsSavingTeamLead(false);
+              }
+            }}
+            disabled={isSavingTeamLead}
+            className={[
+              'rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm',
+              isSavingTeamLead ? 'cursor-wait bg-slate-400' : 'bg-[#009A93] hover:brightness-110',
+            ].join(' ')}
+          >
+            {isSavingTeamLead
+              ? isDe
+                ? 'Speichern ...'
+                : 'Saving ...'
+              : isDe
+                ? 'Speichern'
+                : 'Save'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const renderStructureCreateSlideOver = () => {
+  if (!createMode) return null;
+
+  const teamDepartment = selectedTeam ? departmentById.get(selectedTeam.departmentId) ?? null : null;
+  const teamLocation = teamDepartment?.locationId ? locationById.get(teamDepartment.locationId) ?? null : null;
+
+  const activeDepartment = selectedTeam ? teamDepartment : selectedDepartment;
+  const activeLocation = selectedTeam
+    ? teamLocation
+    : activeDepartment?.locationId
+      ? locationById.get(activeDepartment.locationId) ?? null
+      : selectedLocation;
+
+  const title =
+    createMode === 'location'
+      ? isDe
+        ? 'Standort hinzufuegen'
+        : 'Add location'
+      : createMode === 'department'
+        ? isDe
+          ? 'Abteilung hinzufuegen'
+          : 'Add department'
+        : createMode === 'team'
+          ? isDe
+            ? 'Team hinzufuegen'
+            : 'Add team'
+          : isDe
+            ? 'Benutzer hinzufuegen'
+            : 'Add user';
+
+  const description =
+    createMode === 'location'
+      ? isDe
+        ? 'Lege einen neuen Standort als oberste Organisationsebene an.'
+        : 'Create a new location as the top organisation level.'
+      : createMode === 'department'
+        ? isDe
+          ? 'Lege eine Abteilung unter dem ausgewaehlten Standort an.'
+          : 'Create a department below the selected location.'
+        : createMode === 'team'
+          ? isDe
+            ? 'Lege ein Team unter der ausgewaehlten Abteilung an.'
+            : 'Create a team below the selected department.'
+          : isDe
+            ? 'Ordne einen bestehenden Benutzer dem ausgewaehlten Team zu.'
+            : 'Assign an existing user to the selected team.';
+
+  const closeSlideOver = () => {
+    setCreateMode(null);
+    setAssignUserId('');
+  };
+
+  const assignUserToSelectedTeam = async () => {
+    if (!selectedTeam) {
+      setUiError(isDe ? 'Bitte zuerst ein Team auswaehlen.' : 'Please select a team first.');
+      return;
+    }
+
+    if (!assignUserId) {
+      setUiError(isDe ? 'Bitte einen Benutzer auswaehlen.' : 'Please select a user.');
+      return;
+    }
+
+    const user = adminUsers.find((item) => item.id === assignUserId);
+
+    if (!user) {
+      setUiError(isDe ? 'Benutzer wurde nicht gefunden.' : 'User was not found.');
+      return;
+    }
+
+    setUiError(null);
+    setUiMessage(null);
+    setIsAssigningUser(true);
+
+    try {
+      const response = await fetch('/api/admin/users/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: user.id,
+          roleCode: user.role?.code ?? 'VIEWER',
+          departmentId: selectedTeam.departmentId,
+          teamId: selectedTeam.id,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || data?.success === false) {
+        throw new Error(
+          data?.message ??
+            (isDe
+              ? 'Benutzer konnte dem Team nicht zugeordnet werden.'
+              : 'User could not be assigned to the team.')
+        );
+      }
+
+      setAssignUserId('');
+      setCreateMode(null);
+
+      setUiMessage(
+        isDe
+          ? 'Benutzer wurde dem Team zugeordnet.'
+          : 'User has been assigned to the team.'
+      );
+
+      await loadAdminUsers();
+    } catch (error) {
+      setUiError(
+        error instanceof Error
+          ? error.message
+          : isDe
+            ? 'Benutzer konnte dem Team nicht zugeordnet werden.'
+            : 'User could not be assigned to the team.'
+      );
+    } finally {
+      setIsAssigningUser(false);
+    }
+  };
+
+  const assignableUsersForTeam = selectedTeam
+    ? adminUsers
+        .filter((user) => user.person?.team?.id !== selectedTeam.id)
+        .slice()
+        .sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email))
+    : [];
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/35">
+      <button
+        type="button"
+        aria-label={isDe ? 'Schliessen' : 'Close'}
+        className="h-full flex-1 cursor-default"
+        onClick={closeSlideOver}
+      />
+
+      <aside className="flex h-full w-full max-w-[480px] flex-col border-l border-slate-200 bg-white shadow-2xl">
+        <div className="border-b border-slate-200 px-6 py-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+              <p className="mt-1 text-sm leading-relaxed text-slate-500">{description}</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={closeSlideOver}
+              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+            >
+              x
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
+          {(createMode === 'location' || createMode === 'department' || createMode === 'team') && (
+            <section className="space-y-3">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900">
+                  {isDe ? 'Allgemein' : 'General'}
+                </h4>
+                <p className="mt-1 text-xs text-slate-500">
+                  {isDe ? 'Name und Code fuer die neue Struktur.' : 'Name and code for the new structure.'}
+                </p>
+              </div>
+
+              {createMode === 'location' && (
+                <>
+                  <div className="space-y-1">
+                    <div className={labelCls}>{isDe ? 'Name' : 'Name'}</div>
+                    <input
+                      className={inputCls}
+                      value={locName}
+                      onChange={(event) => setLocName(event.target.value)}
+                      placeholder={isDe ? 'z. B. Frankfurt' : 'e.g. Frankfurt'}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className={labelCls}>{isDe ? 'Code' : 'Code'}</div>
+                    <input
+                      className={inputCls}
+                      value={locKuerzel}
+                      onChange={(event) => setLocKuerzel(event.target.value)}
+                      placeholder="FRA"
+                    />
+                  </div>
+                </>
+              )}
+
+              {createMode === 'department' && (
+                <>
+                  <div className="space-y-1">
+                    <div className={labelCls}>{isDe ? 'Name' : 'Name'}</div>
+                    <input
+                      className={inputCls}
+                      value={depName}
+                      onChange={(event) => setDepName(event.target.value)}
+                      placeholder={isDe ? 'z. B. Planning' : 'e.g. Planning'}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className={labelCls}>{isDe ? 'Code' : 'Code'}</div>
+                    <input
+                      className={inputCls}
+                      value={depKuerzel}
+                      onChange={(event) => setDepKuerzel(event.target.value)}
+                      placeholder="PLA"
+                    />
+                  </div>
+                </>
+              )}
+
+              {createMode === 'team' && (
+                <>
+                  <div className="space-y-1">
+                    <div className={labelCls}>{isDe ? 'Name' : 'Name'}</div>
+                    <input
+                      className={inputCls}
+                      value={teamName}
+                      onChange={(event) => setTeamName(event.target.value)}
+                      placeholder={isDe ? 'z. B. Short Term Planning' : 'e.g. Short Term Planning'}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className={labelCls}>{isDe ? 'Code' : 'Code'}</div>
+                    <input
+                      className={inputCls}
+                      value={teamKuerzel}
+                      onChange={(event) => setTeamKuerzel(event.target.value)}
+                      placeholder="STP"
+                    />
+                  </div>
+                </>
+              )}
+            </section>
+          )}
+
+          {(createMode === 'department' || createMode === 'team' || createMode === 'user') && (
+            <section className="space-y-3">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900">
+                  {isDe ? 'Zuordnung' : 'Assignment'}
+                </h4>
+                <p className="mt-1 text-xs text-slate-500">
+                  {isDe ? 'Der Kontext wird aus der ausgewaehlten Struktur abgeleitet.' : 'The context is derived from the selected structure.'}
+                </p>
+              </div>
+
+              {(createMode === 'department' || createMode === 'team' || createMode === 'user') && (
+                <div className="space-y-1">
+                  <div className={labelCls}>{isDe ? 'Standort' : 'Location'}</div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+                    {activeLocation
+                      ? activeLocation.kuerzel
+                        ? activeLocation.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + activeLocation.name
+                        : activeLocation.name
+                      : isDe
+                        ? 'Kein Standort ausgewaehlt'
+                        : 'No location selected'}
+                  </div>
+                </div>
+              )}
+
+              {(createMode === 'team' || createMode === 'user') && (
+                <div className="space-y-1">
+                  <div className={labelCls}>{isDe ? 'Abteilung' : 'Department'}</div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+                    {activeDepartment
+                      ? activeDepartment.kuerzel
+                        ? activeDepartment.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + activeDepartment.name
+                        : activeDepartment.name
+                      : isDe
+                        ? 'Keine Abteilung ausgewaehlt'
+                        : 'No department selected'}
+                  </div>
+                </div>
+              )}
+
+              {createMode === 'user' && selectedTeam && (
+                <div className="space-y-1">
+                  <div className={labelCls}>Team</div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+                    {selectedTeam.kuerzel
+                      ? selectedTeam.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + selectedTeam.name
+                      : selectedTeam.name}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          {createMode === 'user' && (
+            <section className="space-y-3">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900">
+                  {isDe ? 'Benutzer' : 'User'}
+                </h4>
+                <p className="mt-1 text-xs text-slate-500">
+                  {isDe
+                    ? 'Waehle einen bestehenden Benutzer aus, der diesem Team zugeordnet werden soll.'
+                    : 'Select an existing user to assign to this team.'}
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <div className={labelCls}>{isDe ? 'Benutzer auswaehlen' : 'Select user'}</div>
+                <select
+                  className={inputCls}
+                  value={assignUserId}
+                  onChange={(event) => setAssignUserId(event.target.value)}
+                >
+                  <option value="">
+                    {isDe ? 'Benutzer auswaehlen' : 'Select user'}
+                  </option>
+
+                  {assignableUsersForTeam.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {(user.name || user.email) + ' ? ' + user.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </section>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+          <button
+            type="button"
+            onClick={closeSlideOver}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            {isDe ? 'Abbrechen' : 'Cancel'}
+          </button>
+
+          <button
+            type="button"
+            onClick={
+              createMode === 'location'
+                ? onAddLocation
+                : createMode === 'department'
+                  ? onAddDepartment
+                  : createMode === 'team'
+                    ? onAddTeam
+                    : assignUserToSelectedTeam
+            }
+            disabled={
+              (createMode === 'department' && !activeLocation) ||
+              (createMode === 'team' && !activeDepartment) ||
+              (createMode === 'user' && (!selectedTeam || !assignUserId || isAssigningUser))
+            }
+            className={[
+              'rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm',
+              (createMode === 'department' && !activeLocation) ||
+              (createMode === 'team' && !activeDepartment) ||
+              (createMode === 'user' && (!selectedTeam || !assignUserId || isAssigningUser))
+                ? 'cursor-not-allowed bg-slate-400'
+                : 'bg-[#009A93] hover:brightness-110',
+            ].join(' ')}
+          >
+            {createMode === 'user'
+              ? isAssigningUser
+                ? isDe
+                  ? 'Zuordnung laeuft ...'
+                  : 'Assigning ...'
+                : isDe
+                  ? 'Zuordnen'
+                  : 'Assign'
+              : isDe
+                ? 'Speichern'
+                : 'Save'}
+          </button>
+        </div>
+      </aside>
+    </div>
+  );
+};
+
+const normalizeOrgFunction = (value: unknown): OrgFunction => {
+  return value === 'LEAD' || value === 'DEPUTY' || value === 'MEMBER' ? value : 'MEMBER';
+};
+
+const orgFunctionLabel = (value: OrgFunction) => {
+  if (value === 'LEAD') return 'Lead';
+  if (value === 'DEPUTY') return 'Deputy';
+  return isDe ? 'Mitarbeiter' : 'Member';
+};
+
+const findExistingLeadUser = (
+  departmentId: string | null,
+  teamId: string | null,
+  currentUserId?: string
+) => {
+  return adminUsers.find((user) => {
+    const person = user.person as any;
+    if (!person) return false;
+    if (user.id === currentUserId) return false;
+    if (person.orgFunction !== 'LEAD') return false;
+
+    if (teamId) {
+      return person.team?.id === teamId;
+    }
+
+    return person.department?.id === departmentId && !person.team?.id;
+  });
+};
+
 
 const renderEditUserModal = () => {
   if (!editingUser) return null;
@@ -2408,7 +3789,7 @@ const renderEditUserModal = () => {
 
     {locationOptions.map((location) => (
       <option key={location.id} value={location.id}>
-        {location.kuerzel ? `${location.kuerzel} â€” ${location.name}` : location.name}
+        {location.kuerzel ? `${location.kuerzel} — ${location.name}` : location.name}
       </option>
     ))}
   </select>
@@ -2419,12 +3800,15 @@ const renderEditUserModal = () => {
   <select
     className={inputCls}
     value={editDepartmentId}
-    onChange={(event) => setEditDepartmentId(event.target.value)}
+    onChange={(event) => {
+      setEditDepartmentId(event.target.value);
+      setEditTeamId('');
+    }}
   >
     <option value="">
   {editLocationId
     ? isDe
-      ? 'Abteilung auswÃ¤hlen'
+      ? 'Abteilung auswählen'
       : 'Select department'
     : isDe
       ? 'Keine Abteilung'
@@ -2434,12 +3818,93 @@ const renderEditUserModal = () => {
     {editDepartmentOptions.map((department) => (
       <option key={department.id} value={department.id}>
         {department.kuerzel
-          ? `${department.kuerzel} â€” ${department.name}`
+          ? `${department.kuerzel} — ${department.name}`
           : department.name}
       </option>
     ))}
   </select>
 </div>
+
+<div className="space-y-1">
+  <div className={labelCls}>{isDe ? 'Team' : 'Team'}</div>
+  <select
+    className={inputCls}
+    value={editTeamId}
+    onChange={(event) => setEditTeamId(event.target.value)}
+    disabled={!editDepartmentId || editTeamOptions.length === 0}
+  >
+    <option value="">
+      {!editDepartmentId
+        ? isDe
+          ? 'Bitte zuerst Abteilung auswaehlen'
+          : 'Please select department first'
+        : editTeamOptions.length === 0
+          ? isDe
+            ? 'Keine Teams in dieser Abteilung'
+            : 'No teams in this department'
+          : isDe
+            ? 'Kein Team'
+            : 'No team'}
+    </option>
+
+    {editTeamOptions.map((team) => (
+      <option key={team.id} value={team.id}>
+        {team.kuerzel
+          ? team.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + team.name
+          : team.name}
+      </option>
+    ))}
+  </select>
+
+  <p className="text-xs text-slate-500">
+    {isDe
+      ? 'Optional: Ein Benutzer kann direkt einem Team innerhalb der gewaehlten Abteilung zugeordnet werden.'
+      : 'Optional: A user can be assigned directly to a team within the selected department.'}
+  </p>
+
+          {(() => {
+            const existingLeadUser = findExistingLeadUser(
+              editDepartmentId || null,
+              editTeamId || null,
+              undefined
+            );
+
+            const leadBlocked = Boolean(existingLeadUser);
+
+            return (
+              <div className="space-y-1">
+                <label className={labelCls}>
+                  {isDe ? 'Organisationsfunktion' : 'Organizational function'}
+                </label>
+
+                <select
+                  className={inputCls}
+                  value={editOrgFunction}
+                  onChange={(event) => setEditOrgFunction(normalizeOrgFunction(event.target.value))}
+                >
+                  <option value="MEMBER">{orgFunctionLabel('MEMBER')}</option>
+                  <option value="LEAD" disabled={leadBlocked}>
+                    {leadBlocked
+                      ? 'Lead - bereits vergeben'
+                      : 'Lead'}
+                  </option>
+                  <option value="DEPUTY">{orgFunctionLabel('DEPUTY')}</option>
+                </select>
+
+                <p className="text-xs text-slate-500">
+                  {leadBlocked
+                    ? isDe
+                      ? 'Lead ist in dieser Abteilung bzw. diesem Team bereits vergeben. Fuer weitere Benutzer kann Deputy oder Mitarbeiter gewaehlt werden.'
+                      : 'Lead is already assigned in this department or team. Select Deputy or Member for additional users.'
+                    : isDe
+                      ? 'Lead kann je Abteilung bzw. Team nur einmal vergeben werden. Deputy kann mehrfach vergeben werden.'
+                      : 'Lead can only be assigned once per department or team. Deputy can be assigned multiple times.'}
+                </p>
+              </div>
+            );
+          })()}
+</div>
+
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4">
@@ -2475,6 +3940,384 @@ const renderEditUserModal = () => {
   );
 };
 
+  const renderOrganisationViewSwitch = () => (
+    <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm md:flex-row md:items-center md:justify-between">
+      <div>
+        <div className="text-sm font-semibold text-slate-900">
+          {isDe ? 'Organisationsansicht' : 'Organisation view'}
+        </div>
+        <div className="mt-1 text-xs text-slate-500">
+          {isDe
+            ? 'Wechsle zwischen Pflege der Struktur und visueller Darstellung.'
+            : 'Switch between maintaining the structure and visual representation.'}
+        </div>
+      </div>
+
+      <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+        <button
+          type="button"
+          onClick={() => setOrganisationViewMode('structure')}
+          className={[
+            'rounded-md px-3 py-1.5 text-sm font-semibold transition',
+            organisationViewMode === 'structure'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-500 hover:text-slate-900',
+          ].join(' ')}
+        >
+          {isDe ? 'Struktur bearbeiten' : 'Edit structure'}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setOrganisationViewMode('chart')}
+          className={[
+            'rounded-md px-3 py-1.5 text-sm font-semibold transition',
+            organisationViewMode === 'chart'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-500 hover:text-slate-900',
+          ].join(' ')}
+        >
+          Organigramm
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderOrgChartPanel = () => {
+    const locationsForChart = selectedLocationId
+      ? locationOptions.filter((location) => location.id === selectedLocationId)
+      : locationOptions;
+
+    const connectorColor = '#CBD5E1';
+    const dash = String.fromCharCode(0x2014);
+    const dot = String.fromCharCode(0x00b7);
+
+    const displayUserName = (user: any) => {
+      const person = user?.person ?? {};
+
+      const clean = (value: unknown) => {
+        const textValue = String(value ?? '').trim();
+        if (!textValue) return '';
+        if (textValue.includes('@')) return '';
+        return textValue;
+      };
+
+      const personName = [person.firstName, person.lastName]
+        .map(clean)
+        .filter(Boolean)
+        .join(' ');
+
+      const userName = [user?.firstName, user?.lastName]
+        .map(clean)
+        .filter(Boolean)
+        .join(' ');
+
+      const displayName = clean(user?.name);
+      const email = String(person.email ?? user?.email ?? '').trim();
+
+      const nameFromEmail = email
+        ? email
+            .split('@')[0]
+            .split(/[._-]+/)
+            .filter(Boolean)
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+            .join(' ')
+        : '';
+
+      return personName || userName || displayName || nameFromEmail || dash;
+    };
+
+    const usersForTeam = (teamId: string) => {
+      return adminUsers
+        .filter((user) => (user as any).person?.team?.id === teamId)
+        .slice()
+        .sort((a, b) => displayUserName(a).localeCompare(displayUserName(b)));
+    };
+
+    const leadForTeam = (teamId: string) => {
+      return adminUsers.find((user) => {
+        const person = (user as any).person;
+        return person?.team?.id === teamId && person?.orgFunction === 'LEAD';
+      });
+    };
+
+    const deputyCountForTeam = (teamId: string) => {
+      return adminUsers.filter((user) => {
+        const person = (user as any).person;
+        return person?.team?.id === teamId && person?.orgFunction === 'DEPUTY';
+      }).length;
+    };
+
+    const departmentLead = (departmentId: string) => {
+      return adminUsers.find((user) => {
+        const person = (user as any).person;
+        return (
+          person?.department?.id === departmentId &&
+          !person?.team?.id &&
+          person?.orgFunction === 'LEAD'
+        );
+      });
+    };
+
+    const orgNode = ({
+      eyebrow,
+      title,
+      subtitle,
+      variant = 'team',
+      compact = false,
+    }: {
+      eyebrow?: string;
+      title: string;
+      subtitle?: string;
+      variant?: 'root' | 'department' | 'team';
+      compact?: boolean;
+    }) => {
+      const variantClass =
+        variant === 'root'
+          ? 'border-sky-200 bg-gradient-to-r from-sky-50 to-cyan-50'
+          : variant === 'department'
+            ? 'border-teal-200 bg-gradient-to-r from-teal-50 to-cyan-50'
+            : 'border-slate-200 bg-white';
+
+      return (
+        <div
+          className={[
+            'relative z-10 rounded-2xl border shadow-sm',
+            variantClass,
+            compact ? 'w-[300px] px-4 py-3' : 'w-[300px] px-5 py-4',
+          ].join(' ')}
+        >
+          {eyebrow && (
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+              {eyebrow}
+            </div>
+          )}
+
+          <div className={compact ? 'text-sm font-semibold text-slate-900' : 'text-xl font-bold text-slate-900'}>
+            {title}
+          </div>
+
+          {subtitle && (
+            <div className="mt-2 text-xs text-slate-500">
+              {subtitle}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    return (
+      <section className={panelCls + ' overflow-hidden'}>
+        <div className="border-b border-slate-200 px-5 py-4">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">
+                Organigramm
+              </h3>
+
+              <p className="mt-1 text-xs text-slate-500">
+                {isDe
+                  ? 'Klassische Box-Linien-Darstellung der aktuellen Organisationsstruktur im LexTrack-Design.'
+                  : 'Classic box-line representation of the current organisation structure in LexTrack design.'}
+              </p>
+            </div>
+
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+              {locationsForChart.length} {isDe ? 'Standorte' : 'locations'}
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-8 overflow-x-auto bg-slate-50 px-5 py-6">
+          {locationsForChart.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-sm text-slate-500">
+              {isDe
+                ? 'Noch keine Organisationsstruktur vorhanden.'
+                : 'No organisation structure available yet.'}
+            </div>
+          )}
+
+          {locationsForChart.map((location) => {
+            const locationDepartments = visibleDepartments
+              .filter((department) => department.locationId === location.id)
+              .slice()
+              .sort((a, b) => a.name.localeCompare(b.name));
+
+            const locationLabel = location.kuerzel
+              ? location.kuerzel + ' ' + dash + ' ' + location.name
+              : location.name;
+
+            const departmentCount = Math.max(locationDepartments.length, 1);
+            const firstDepartmentX = 50 / departmentCount;
+            const lastDepartmentX = 100 - 50 / departmentCount;
+
+            return (
+              <div
+                key={location.id}
+                className="min-w-[1120px] rounded-2xl border border-slate-200 bg-white px-8 py-8 shadow-sm"
+              >
+                <div className="flex justify-center">
+                  {orgNode({
+                    eyebrow: isDe ? 'Standort' : 'Location',
+                    title: locationLabel,
+                    subtitle:
+                      locationEmployeeCount(location.id) +
+                      ' ' +
+                      (isDe ? 'Benutzer' : 'users'),
+                    variant: 'root',
+                  })}
+                </div>
+
+                {locationDepartments.length === 0 ? (
+                  <div className="mt-6 flex justify-center">
+                    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-500">
+                      {isDe ? 'Noch keine Abteilungen angelegt.' : 'No departments created yet.'}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <svg
+                      className="block h-16 w-full overflow-visible"
+                      viewBox="0 0 100 64"
+                      preserveAspectRatio="none"
+                      aria-hidden="true"
+                    >
+                      <line
+                        x1="50"
+                        y1="-2"
+                        x2="50"
+                        y2="26"
+                        stroke={connectorColor}
+                        strokeWidth="3"
+                        vectorEffect="non-scaling-stroke"
+                        strokeLinecap="butt"
+                      />
+
+                      {locationDepartments.length > 1 && (
+                        <line
+                          x1={String(firstDepartmentX)}
+                          y1="26"
+                          x2={String(lastDepartmentX)}
+                          y2="26"
+                          stroke={connectorColor}
+                          strokeWidth="3"
+                        vectorEffect="non-scaling-stroke"
+                          strokeLinecap="butt"
+                        />
+                      )}
+
+                      {locationDepartments.map((department, index) => {
+                        const x = ((index + 0.5) / departmentCount) * 100;
+
+                        return (
+                          <line
+                            key={department.id}
+                            x1={String(x)}
+                            y1="26"
+                            x2={String(x)}
+                            y2="66"
+                            stroke={connectorColor}
+                            strokeWidth="3"
+                        vectorEffect="non-scaling-stroke"
+                            strokeLinecap="butt"
+                          />
+                        );
+                      })}
+                    </svg>
+
+                    <div
+                      className="grid"
+                      style={{
+                        gridTemplateColumns: 'repeat(' + departmentCount + ', minmax(300px, 1fr))',
+                      }}
+                    >
+                      {locationDepartments.map((department) => {
+                        const teams = (teamsByDepartmentId.get(department.id) ?? [])
+                          .slice()
+                          .sort((a, b) => a.name.localeCompare(b.name));
+
+                        const departmentLabel = department.kuerzel
+                          ? department.kuerzel + ' ' + dash + ' ' + department.name
+                          : department.name;
+
+                        const depLead = departmentLead(department.id);
+
+                        return (
+                          <div key={department.id} className="flex flex-col items-center px-4">
+                            {orgNode({
+                              eyebrow: isDe ? 'Abteilung' : 'Department',
+                              title: departmentLabel,
+                              subtitle: depLead
+                                ? 'Lead: ' + displayUserName(depLead)
+                                : 'Lead: ' + dash,
+                              variant: 'department',
+                            })}
+
+                            {teams.length > 0 ? (
+                              <div className="flex flex-col items-center">
+                                <div className="h-8 w-[3px] bg-[#CBD5E1]" />
+
+                                <div className="flex flex-col items-center">
+                                  {teams.map((team, index) => {
+                                    const teamLabel = team.kuerzel
+                                      ? team.kuerzel + ' ' + dash + ' ' + team.name
+                                      : team.name;
+
+                                    const teamLead = leadForTeam(team.id);
+                                    const deputyCount = deputyCountForTeam(team.id);
+                                    const teamUsers = usersForTeam(team.id);
+
+                                    const subtitleParts = [
+                                      teamLead
+                                        ? 'Lead: ' + displayUserName(teamLead)
+                                        : 'Lead: ' + dash,
+                                      deputyCount > 0
+                                        ? 'Deputy: ' + deputyCount
+                                        : null,
+                                      teamUsers.length + ' ' + (isDe ? 'Benutzer' : 'users'),
+                                    ].filter(Boolean);
+
+                                    return (
+                                      <React.Fragment key={team.id}>
+                                        {index > 0 && (
+                                          <div className="h-5 w-[3px] bg-[#CBD5E1]" />
+                                        )}
+
+                                        {orgNode({
+                                          eyebrow: 'Team',
+                                          title: teamLabel,
+                                          subtitle: subtitleParts.join(' ' + dot + ' '),
+                                          variant: 'team',
+                                          compact: true,
+                                        })}
+                                      </React.Fragment>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center">
+                                <div className="h-8 w-[3px] bg-[#CBD5E1]" />
+
+                                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+                                  {isDe ? 'Noch keine Teams' : 'No teams yet'}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    );
+  };
+
   const renderMainContent = () => {
     if (activeTab === 'roles') {
       return <div className="grid grid-cols-1 gap-5">{renderRolesPanel()}</div>;
@@ -2499,13 +4342,17 @@ const renderEditUserModal = () => {
     }
 
     return (
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-        {renderOrganisationPanel()}
+      <div className="space-y-5">
+        {renderOrganisationViewSwitch()}
 
-        <div className="space-y-5">
-          {renderKpis()}
-          {renderUsersTable()}
-        </div>
+        {organisationViewMode === 'chart' ? (
+          renderOrgChartPanel()
+        ) : (
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
+            {renderOrganisationPanel()}
+            {renderTeamsPanel()}
+          </div>
+        )}
       </div>
     );
   };
@@ -2520,7 +4367,7 @@ const renderEditUserModal = () => {
 
           <p className="mt-1 text-xs text-white/80">
             {isDe
-              ? 'Verwalte Organisationsstruktur, BenutzerzugÃ¤nge und Rollenprofile.'
+              ? 'Verwalte Organisationsstruktur, Benutzerzugänge und Rollenprofile.'
               : 'Manage organisation structure, user access and role profiles.'}
           </p>
         </div>
@@ -2582,6 +4429,8 @@ const renderEditUserModal = () => {
 
       {renderContextPanel()}
       {renderMainContent()}
+      {renderStructureCreateSlideOver()}
+      {renderTeamLeadModal()}
       {renderEditUserModal()}
     </div>
   );

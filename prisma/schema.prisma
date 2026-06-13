@@ -15,46 +15,205 @@ enum AuthTokenType {
   ACTIVATE
 }
 
+enum PersonStatus {
+  INVITED
+  ACTIVE
+  INACTIVE
+}
+
+enum LocationType {
+  HQ
+  OFFICE
+  WAREHOUSE
+  MAINTENANCE_BASE
+  TRAINING_CENTER
+  BRANCH
+  OTHER
+}
+
+enum OrgFunction {
+  MEMBER
+  LEAD
+  DEPUTY
+}
+
+model Location {
+  id          String       @id @default(cuid())
+  name        String
+  kuerzel     String?      @db.VarChar(32)
+  type        LocationType @default(OFFICE)
+  description String?
+  isActive    Boolean      @default(true)
+
+  departments Department[]
+  addresses   LocationAddress[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([kuerzel])
+  @@index([name])
+  @@index([type])
+}
+
+model LocationAddress {
+  id String @id @default(cuid())
+
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  label       String?
+  street      String?
+  houseNumber String?
+  postalCode  String?
+  city        String?
+  state       String?
+  country     String?
+
+  latitude  Float?
+  longitude Float?
+
+  isPrimary Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([locationId])
+  @@index([city])
+  @@index([country])
+}
+
+model Department {
+  id          String  @id @default(cuid())
+  name        String
+  kuerzel     String? @db.VarChar(32)
+  description String?
+  isActive    Boolean @default(true)
+
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  people Person[]
+  teams  Team[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leadPersonId String?
+  leadPerson   Person? @relation("DepartmentLead", fields: [leadPersonId], references: [id], onDelete: SetNull)
+
+  @@unique([locationId, name])
+  @@index([leadPersonId])
+  @@index([locationId])
+}
+
+model Team {
+  id          String  @id @default(cuid())
+  name        String
+  kuerzel     String? @db.VarChar(32)
+  description String?
+  isActive    Boolean @default(true)
+
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  people Person[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([departmentId, name])
+  @@index([departmentId])
+}
+
+model Person {
+  id        String       @id @default(cuid())
+  firstName String
+  lastName  String?
+  email     String       @unique
+  status    PersonStatus @default(INVITED)
+
+  // Legacy-/Fallback-Zuordnung:
+  // Bleibt vorerst bestehen, damit bestehende Funktionen nicht brechen.
+  // Langfristig soll die organisatorische Zuordnung primär über teamId laufen.
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  // Neue primäre Organisationszuordnung:
+  // Person → Team → Abteilung → Standort
+  teamId String?
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  // Fachliche Rolle im Directory-Kontext.
+  // Die Login-Rolle liegt weiterhin zusätzlich am User-Modell.
+  roleId String?
+  role   Role?   @relation(fields: [roleId], references: [id], onDelete: SetNull)
+
+  // Verknüpfung zum echten Login-User nach Einladung / Registrierung.
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  invitedAt     DateTime?
+  acceptedAt    DateTime?
+  lastInvitedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ledDepartments Department[] @relation("DepartmentLead")
+
+  orgFunction OrgFunction @default(MEMBER)
+
+  @@index([teamId, orgFunction])
+  @@index([departmentId, orgFunction])
+  @@index([departmentId])
+  @@index([teamId])
+  @@index([roleId])
+  @@index([status])
+}
+
 model Role {
-  id          String   @id @default(cuid())
-  code        String   @unique
+  id          String  @id @default(cuid())
+  code        String  @unique
   name        String
   description String?
-  isActive    Boolean  @default(true)
-  isSystem    Boolean  @default(false)
+  isActive    Boolean @default(true)
+  isSystem    Boolean @default(false)
 
-  users       User[]
+  users   User[]
+  persons Person[] // optional: Directory-Person kann Rolle bekommen
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
+  id           String  @id @default(cuid())
+  email        String  @unique
   name         String
   passwordHash String?
-  isActive     Boolean   @default(true)
+  isActive     Boolean @default(true)
 
-  roleId       String
-  role         Role      @relation(fields: [roleId], references: [id])
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
 
-  tokens       AuthToken[]
+  tokens AuthToken[]
+  person Person? // Back-Relation (FK liegt in Person.userId)
 
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model AuthToken {
-  token      String        @id
-  type       AuthTokenType
-  expiresAt  DateTime
-  usedAt     DateTime?
+  token     String        @id
+  type      AuthTokenType
+  expiresAt DateTime
+  usedAt    DateTime?
 
-  userId     String
-  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt  DateTime      @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId, type])
 }
