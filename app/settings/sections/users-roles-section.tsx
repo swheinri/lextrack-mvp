@@ -1612,7 +1612,7 @@ const renderOrganisationPanel = () => {
                     type="button"
                     onClick={() => {
                       setSelectedLocationId(location.id);
-                      setSelectedDepartmentId(null);
+                                            setSelectedDepartmentId(null);
                       setSelectedTeamId(null);
                       setDepLocationId(location.id);
                       setTeamDepartmentId('');
@@ -1679,7 +1679,7 @@ const renderOrganisationPanel = () => {
                                 type="button"
                                 onClick={() => {
                                   setSelectedLocationId(location.id);
-                                  setSelectedDepartmentId(department.id);
+                                                                    setSelectedDepartmentId(department.id);
                                   setSelectedTeamId(null);
                                   setDepLocationId(location.id);
                                   setTeamDepartmentId(department.id);
@@ -1742,7 +1742,8 @@ const renderOrganisationPanel = () => {
                                         <button
                                           key={team.id}
                                           type="button"
-                                          onClick={() => {
+                                          onClick={(event) => {
+                                            event.stopPropagation();
                                             setSelectedLocationId(location.id);
                                             setSelectedDepartmentId(department.id);
                                             setSelectedTeamId(team.id);
@@ -2319,7 +2320,7 @@ const renderTeamsPanel = () => {
                 <button
                   type="button"
                   onClick={openCreateLocation}
-                  className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#009A93] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-110"
                 >
                   <Plus className="h-4 w-4" />
                   {isDe ? 'Standort hinzufuegen' : 'Add location'}
@@ -2331,7 +2332,7 @@ const renderTeamsPanel = () => {
                   <button
                     type="button"
                     onClick={openCreateDepartment}
-                    className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#009A93] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-110"
                   >
                     <Plus className="h-4 w-4" />
                     {isDe ? 'Abteilung hinzufuegen' : 'Add department'}
@@ -2353,7 +2354,7 @@ const renderTeamsPanel = () => {
                   <button
                     type="button"
                     onClick={openCreateTeam}
-                    className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#009A93] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-110"
                   >
                     <Plus className="h-4 w-4" />
                     {isDe ? 'Team hinzufuegen' : 'Add team'}
@@ -2420,7 +2421,7 @@ const renderTeamsPanel = () => {
                 <button
                   type="button"
                   onClick={onAddLocation}
-                  className="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                  className="w-full rounded-lg bg-[#009A93] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-110"
                 >
                   {isDe ? 'Anlegen' : 'Create'}
                 </button>
@@ -2454,7 +2455,7 @@ const renderTeamsPanel = () => {
                 <button
                   type="button"
                   onClick={onAddDepartment}
-                  className="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                  className="w-full rounded-lg bg-[#009A93] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-110"
                 >
                   {isDe ? 'Anlegen' : 'Create'}
                 </button>
@@ -2488,7 +2489,7 @@ const renderTeamsPanel = () => {
                 <button
                   type="button"
                   onClick={onAddTeam}
-                  className="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                  className="w-full rounded-lg bg-[#009A93] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-110"
                 >
                   {isDe ? 'Anlegen' : 'Create'}
                 </button>
