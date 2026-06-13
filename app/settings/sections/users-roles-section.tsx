@@ -712,8 +712,8 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
   }[] = [
     {
       id: 'organization',
-      labelDe: 'Organisation',
-      labelEn: 'Organisation',
+      labelDe: 'Organisationsstruktur',
+      labelEn: 'Organisationsstruktur',
       descriptionDe: 'Standorte, Abteilungen und Teams verwalten.',
       descriptionEn: 'Manage locations, departments and teams.',
       icon: <Building2 className="h-5 w-5" />,
@@ -1582,6 +1582,29 @@ const renderOrganisationPanel = () => {
               </p>
             </div>
           </div>
+
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              data-testid="add-location-tree"
+              onClick={() => {
+                setSelectedLocationId(null);
+                setSelectedDepartmentId(null);
+                setSelectedTeamId(null);
+                setOrganisationViewMode('structure');
+                setShowAddLocation(true);
+                setShowAddDepartment(false);
+                setShowAddTeam(false);
+                setDepLocationId('');
+                setTeamDepartmentId('');
+                setInviteDepartmentId('');
+              }}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#009A93] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-110"
+            >
+              <span aria-hidden="true">+</span>
+              <span>{isDe ? 'Standort hinzuf' + String.fromCharCode(0x00fc) + 'gen' : 'Add location'}</span>
+            </button>
+          </div>
         </div>
 
         <div className="space-y-4 px-5 py-5">
@@ -1593,7 +1616,7 @@ const renderOrganisationPanel = () => {
             </div>
           ) : (
             locationOptions.map((location) => {
-              const locationDepartments = visibleDepartments
+              const locationDepartments = Array.from(departmentById.values())
                 .filter((department) => department.locationId === location.id)
                 .slice()
                 .sort((a, b) => a.name.localeCompare(b.name));
@@ -1612,6 +1635,7 @@ const renderOrganisationPanel = () => {
                     type="button"
                     onClick={() => {
                       setSelectedLocationId(location.id);
+setDepLocationId(location.id);
                                             setSelectedDepartmentId(null);
                       setSelectedTeamId(null);
                       setDepLocationId(location.id);
@@ -1679,7 +1703,10 @@ const renderOrganisationPanel = () => {
                                 type="button"
                                 onClick={() => {
                                   setSelectedLocationId(location.id);
+setDepLocationId(location.id);
                                                                     setSelectedDepartmentId(department.id);
+setTeamDepartmentId(department.id);
+setInviteDepartmentId(department.id);
                                   setSelectedTeamId(null);
                                   setDepLocationId(location.id);
                                   setTeamDepartmentId(department.id);
@@ -1745,7 +1772,10 @@ const renderOrganisationPanel = () => {
                                           onClick={(event) => {
                                             event.stopPropagation();
                                             setSelectedLocationId(location.id);
+setDepLocationId(location.id);
                                             setSelectedDepartmentId(department.id);
+setTeamDepartmentId(department.id);
+setInviteDepartmentId(department.id);
                                             setSelectedTeamId(team.id);
                                             setTeamDepartmentId(department.id);
                                             setShowAddLocation(false);
@@ -2164,13 +2194,13 @@ const renderTeamsPanel = () => {
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold text-slate-900">
-              {isDe ? 'Strukturdetails' : 'Structure details'}
+              {isDe ? 'Stammdaten' : 'Master data'}
             </h3>
 
             <p className="mt-1 text-xs text-slate-500">
               {isDe
-                ? 'Ein Strukturknoten auswaehlen, Details pruefen und die naechste Ebene hinzufuegen.'
-                : 'Select a structure node, review details and add the next level.'}
+                ? 'Ausgewaehlten Strukturknoten pruefen, Stammdaten pflegen und die naechste Ebene hinzufuegen.'
+                : 'Review the selected structure node, maintain master data and add the next level.'}
             </p>
           </div>
 
@@ -2193,10 +2223,13 @@ const renderTeamsPanel = () => {
           </div>
 
           <div className="mt-2 text-sm text-slate-600">
-            <span className="font-semibold text-slate-700">
-              {isDe ? 'Pfad:' : 'Path:'}
-            </span>{' '}
-            <span className="font-medium text-slate-800">{pathText}</span>
+            {activeLocation
+              ? isDe
+                ? 'Grunddaten und Verantwortlichkeiten des ausgewaehlten Strukturknotens.'
+                : 'Master data and responsibilities of the selected structure node.'
+              : isDe
+                ? 'Keinen Strukturknoten ausgewaehlt. Bitte links einen Standort, eine Abteilung oder ein Team auswaehlen.'
+                : 'No structure node selected. Please select a location, department or team on the left.'}
           </div>
         </div>
 
@@ -2310,8 +2343,8 @@ const renderTeamsPanel = () => {
               </h4>
               <p className="mt-1 text-xs text-slate-500">
                 {isDe
-                  ? 'Die Aktion richtet sich immer nach dem aktuell ausgewaehlten Strukturknoten.'
-                  : 'The action always follows the currently selected structure node.'}
+                  ? 'Aktionen zur Pflege der Organisationsstruktur und der naechsten Ebene.'
+                  : 'Actions for maintaining the organisation structure and the next level.'}
               </p>
             </div>
 
@@ -3086,8 +3119,8 @@ const renderDepartmentAssignmentPanel = () => {
       { titleDe: string; titleEn: string; descriptionDe: string; descriptionEn: string; metricDe: string; metricEn: string }
     > = {
       organization: {
-        titleDe: 'Organisationskontext',
-        titleEn: 'Organisation context',
+        titleDe: 'Organisationspfad',
+        titleEn: 'Organisation path',
         descriptionDe: 'Der ausgewählte Standort steuert, welche Abteilungen und Benutzer angezeigt werden.',
         descriptionEn: 'The selected location controls which departments and users are shown.',
         metricDe: `${selectedLocationDepartmentCount} Abteilungen`,
@@ -3120,6 +3153,50 @@ const renderDepartmentAssignmentPanel = () => {
     };
 
     const context = contextByTab[activeTab];
+
+    if (activeTab === 'organization') {
+      const dashChar = ' ' + String.fromCharCode(0x2014) + ' ';
+      const arrowChar = ' ' + String.fromCharCode(0x2192) + ' ';
+
+      const locationLabel = selectedLocation
+        ? selectedLocation.kuerzel
+          ? selectedLocation.kuerzel + dashChar + selectedLocation.name
+          : selectedLocation.name
+        : null;
+
+      const departmentLabel = selectedDepartment
+        ? selectedDepartment.kuerzel
+          ? selectedDepartment.kuerzel + dashChar + selectedDepartment.name
+          : selectedDepartment.name
+        : null;
+
+      const teamLabel = selectedTeam
+        ? selectedTeam.kuerzel
+          ? selectedTeam.kuerzel + dashChar + selectedTeam.name
+          : selectedTeam.name
+        : null;
+
+      const organisationPath = [locationLabel, departmentLabel, teamLabel]
+        .filter(Boolean)
+        .join(arrowChar);
+
+      return (
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm">
+          <div className="text-sm font-semibold">
+            {isDe ? 'Organisationspfad' : 'Organisation path'}
+          </div>
+
+          <div className="mt-1 text-xs text-slate-500">
+            <span className="font-medium text-slate-700">
+              {isDe ? 'Pfad:' : 'Path:'}
+            </span>{' '}
+            <span>
+              {organisationPath || (isDe ? 'Kein Strukturknoten ausgew?hlt.' : 'No structure node selected.')}
+            </span>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm">
@@ -4158,15 +4235,43 @@ const renderEditUserModal = () => {
                 className="min-w-[1120px] rounded-2xl border border-slate-200 bg-white px-8 py-8 shadow-sm"
               >
                 <div className="flex justify-center">
-                  {orgNode({
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="inline-block cursor-pointer rounded-2xl transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-[#009A93]/40"
+                    onClick={() => {
+                      setSelectedLocationId(location.id);
+setDepLocationId(location.id);
+                      setSelectedDepartmentId(null);
+                      setSelectedTeamId(null);
+                      setOrganisationViewMode('structure');
+setShowAddLocation(false);
+setShowAddDepartment(false);
+setShowAddTeam(false);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Enter' && event.key !== ' ') return;
+                      event.preventDefault();
+                      setSelectedLocationId(location.id);
+setDepLocationId(location.id);
+                      setSelectedDepartmentId(null);
+                      setSelectedTeamId(null);
+                      setOrganisationViewMode('structure');
+setShowAddLocation(false);
+setShowAddDepartment(false);
+setShowAddTeam(false);
+                    }}
+                  >
+                    {orgNode({
                     eyebrow: isDe ? 'Standort' : 'Location',
                     title: locationLabel,
                     subtitle:
-                      locationEmployeeCount(location.id) +
-                      ' ' +
-                      (isDe ? 'Benutzer' : 'users'),
+                    locationEmployeeCount(location.id) +
+                    ' ' +
+                    (isDe ? 'Benutzer' : 'users'),
                     variant: 'root',
-                  })}
+                    })}
+                  </div>
                 </div>
 
                 {locationDepartments.length === 0 ? (
@@ -4245,14 +4350,48 @@ const renderEditUserModal = () => {
 
                         return (
                           <div key={department.id} className="flex flex-col items-center px-4">
-                            {orgNode({
+                            <div
+                              role="button"
+                              tabIndex={0}
+                              className="inline-block cursor-pointer rounded-2xl transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-[#009A93]/40"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setSelectedLocationId(location.id);
+setDepLocationId(location.id);
+                                setSelectedDepartmentId(department.id);
+setTeamDepartmentId(department.id);
+setInviteDepartmentId(department.id);
+                                setSelectedTeamId(null);
+                                setOrganisationViewMode('structure');
+setShowAddLocation(false);
+setShowAddDepartment(false);
+setShowAddTeam(false);
+                              }}
+                              onKeyDown={(event) => {
+                                if (event.key !== 'Enter' && event.key !== ' ') return;
+                                event.preventDefault();
+                                event.stopPropagation();
+                                setSelectedLocationId(location.id);
+setDepLocationId(location.id);
+                                setSelectedDepartmentId(department.id);
+setTeamDepartmentId(department.id);
+setInviteDepartmentId(department.id);
+                                setSelectedTeamId(null);
+                                setOrganisationViewMode('structure');
+setShowAddLocation(false);
+setShowAddDepartment(false);
+setShowAddTeam(false);
+                              }}
+                            >
+                              {orgNode({
                               eyebrow: isDe ? 'Abteilung' : 'Department',
                               title: departmentLabel,
                               subtitle: depLead
-                                ? 'Lead: ' + displayUserName(depLead)
-                                : 'Lead: ' + dash,
+                              ? 'Lead: ' + displayUserName(depLead)
+                              : 'Lead: ' + dash,
                               variant: 'department',
-                            })}
+                              })}
+                            </div>
 
                             {teams.length > 0 ? (
                               <div className="flex flex-col items-center">
@@ -4284,13 +4423,47 @@ const renderEditUserModal = () => {
                                           <div className="h-5 w-[3px] bg-[#CBD5E1]" />
                                         )}
 
-                                        {orgNode({
+                                        <div
+                                          role="button"
+                                          tabIndex={0}
+                                          className="inline-block cursor-pointer rounded-2xl transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-[#009A93]/40"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            setSelectedLocationId(location.id);
+setDepLocationId(location.id);
+                                            setSelectedDepartmentId(department.id);
+setTeamDepartmentId(department.id);
+setInviteDepartmentId(department.id);
+                                            setSelectedTeamId(team.id);
+                                            setOrganisationViewMode('structure');
+setShowAddLocation(false);
+setShowAddDepartment(false);
+setShowAddTeam(false);
+                                          }}
+                                          onKeyDown={(event) => {
+                                            if (event.key !== 'Enter' && event.key !== ' ') return;
+                                            event.preventDefault();
+                                            event.stopPropagation();
+                                            setSelectedLocationId(location.id);
+setDepLocationId(location.id);
+                                            setSelectedDepartmentId(department.id);
+setTeamDepartmentId(department.id);
+setInviteDepartmentId(department.id);
+                                            setSelectedTeamId(team.id);
+                                            setOrganisationViewMode('structure');
+setShowAddLocation(false);
+setShowAddDepartment(false);
+setShowAddTeam(false);
+                                          }}
+                                        >
+                                          {orgNode({
                                           eyebrow: 'Team',
                                           title: teamLabel,
                                           subtitle: subtitleParts.join(' ' + dot + ' '),
                                           variant: 'team',
                                           compact: true,
-                                        })}
+                                          })}
+                                        </div>
                                       </React.Fragment>
                                     );
                                   })}
@@ -4344,7 +4517,10 @@ const renderEditUserModal = () => {
 
     return (
       <div className="space-y-5">
-        {renderOrganisationViewSwitch()}
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.7fr)]">
+          {renderContextPanel()}
+          {renderOrganisationViewSwitch()}
+        </div>
 
         {organisationViewMode === 'chart' ? (
           renderOrgChartPanel()
@@ -4428,7 +4604,7 @@ const renderEditUserModal = () => {
         </div>
       )}
 
-      {renderContextPanel()}
+      {activeTab !== 'organization' && renderContextPanel()}
       {renderMainContent()}
       {renderStructureCreateSlideOver()}
       {renderTeamLeadModal()}
