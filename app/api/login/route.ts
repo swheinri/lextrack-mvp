@@ -1,20 +1,18 @@
-// app/api/login/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
-import { prisma } from '@/app/lib/prisma';
-
-export const runtime = 'nodejs';
-
-const AUTH_COOKIE_NAME = 'lextrack_auth';
+﻿import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/app/lib/prisma";
+import bcrypt from "bcryptjs";
+import { createSessionToken, getAuthCookieName } from "@/app/lib/session";
 
 type LoginBody = {
   email?: string;
   password?: string;
 };
 
-function normalizeEmail(v: string) {
-  return v.trim().toLowerCase();
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim().toLowerCase());
 }
+
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   let body: LoginBody;
@@ -22,34 +20,29 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
+    return NextResponse.json({ success: false, message: "Ungültige Anfrage." }, { status: 400 });
+  }
+
+  const email = String(body.email ?? "").trim().toLowerCase();
+  const password = String(body.password ?? "");
+
+  if (!email || !password || !isValidEmail(email)) {
     return NextResponse.json(
-      { success: false, message: 'Ungültige Anfrage.' },
+      { success: false, message: "Bitte E-Mail und Passwort eingeben." },
       { status: 400 }
     );
   }
 
-  const email = normalizeEmail(body.email ?? '');
-  const password = String(body.password ?? '');
-
-  if (!email || !password) {
-    return NextResponse.json(
-      { success: false, message: 'Bitte E-Mail und Passwort eingeben.' },
-      { status: 400 }
-    );
-  }
-
-  // Generische Fehlermeldung (kein Leak ob E-Mail existiert)
+  // Absichtlich generische Fehlermeldung (kein Hinweis, ob E-Mail oder Passwort falsch war)
   const invalid = () =>
-    NextResponse.json(
-      { success: false, message: 'Ungültige Zugangsdaten.' },
-      { status: 401 }
-    );
+    NextResponse.json({ success: false, message: "Ungültige Zugangsdaten." }, { status: 401 });
 
   try {
     const user = await prisma.user.findUnique({
       where: { email },
       select: {
         id: true,
+        email: true,
         isActive: true,
         passwordHash: true,
         role: { select: { code: true } },
@@ -61,23 +54,25 @@ export async function POST(request: NextRequest) {
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) return invalid();
 
-    const res = NextResponse.json({ success: true, role: user.role?.code ?? 'VIEWER' });
+    const token = await createSessionToken({
+      uid: user.id,
+      email: user.email,
+      role: user.role.code,
+    });
 
-    // Cookie reicht für deinen Proxy (nur "vorhanden" zählt)
-    res.cookies.set(AUTH_COOKIE_NAME, user.id, {
+    const res = NextResponse.json({ success: true });
+
+    res.cookies.set(getAuthCookieName(), token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
       maxAge: 60 * 60 * 8, // 8 Stunden
     });
 
     return res;
   } catch (e) {
-    console.error('[login] failed:', e);
-    return NextResponse.json(
-      { success: false, message: 'Technischer Fehler.' },
-      { status: 500 }
-    );
+    console.error("[login] failed:", e);
+    return invalid();
   }
 }

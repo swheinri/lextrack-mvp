@@ -3,7 +3,7 @@
 
 import React, { useMemo, useState } from 'react';
 import Eingabeform from './eingabeform';
-import { useRegisterStore, LawRow } from './registerstore';
+import { useRegisterStore, LawRow, type Status, normalizeStatus } from './registerstore';
 import EditorPanel from './editorpanel';
 import Registerview from './registerview';
 import { Info } from 'lucide-react';
@@ -12,6 +12,7 @@ import { useMatrixStore } from '../matrix/matrixstore';
 
 /* ---- Rollenmodell (UI-seitig) ---- */
 type UiRole = 'erfasser' | 'bewertender' | 'reviewer' | 'approver' | 'admin';
+type Lang = 'de' | 'en';
 
 /* ---------- Texte DE / EN ---------- */
 
@@ -25,7 +26,7 @@ const TEXT = {
     infoP1:
       'In diesem Bereich kannst du neue gesetzliche, normative oder interne Vorgaben erfassen – zum Beispiel Gesetze, Richtlinien, Normen, Policies oder interne Verfahrensanweisungen.',
     infoP2:
-      'Es gibt im MVP keine Pflichtfelder. Ein Eintrag erscheint im Compliance Kataster, sobald mindestens ein Basisfeld wie Rechtsart, Kürzel oder Bezeichnung ausgefüllt wurde.',
+      'Im MVP gibt es keine Pflichtfelder. Ein Eintrag erscheint im Compliance Kataster, sobald mindestens ein Basisfeld wie Dokumentenart, Kürzel oder Bezeichnung ausgefüllt wurde.',
     infoP3:
       'Optional kannst du eine externe Quelle über eine URL hinterlegen oder ein PDF-Dokument anhängen, um das zugrunde liegende Rechtsdokument direkt verfügbar zu machen.',
     infoClose: 'Schließen',
@@ -54,7 +55,7 @@ const TEXT = {
     infoP1:
       'In this section you can record new legal, normative or internal requirements – for example laws, guidelines, standards, policies or internal procedures.',
     infoP2:
-      'In the MVP there are no mandatory fields. An entry appears in the compliance register as soon as at least one basic field such as legal type, reference or title has been filled in.',
+      'In the MVP there are no mandatory fields. An entry appears in the compliance register as soon as at least one basic field such as document type, reference or title has been filled in.',
     infoP3:
       'Optionally, you can add an external source via URL or attach a PDF document so that the underlying legal document is directly available.',
     infoClose: 'Close',
@@ -76,23 +77,23 @@ const TEXT = {
   },
 } as const;
 
-/* ---- Hilfsfunktionen für History ---- */
+/* ---- History helpers ---- */
 
 function displayValue(val: unknown): string {
   if (val == null || val === '') return '—';
   return String(val);
 }
 
-function displayDate(val: unknown): string {
+function displayDate(val: unknown, locale: string): string {
   if (!val) return '';
   const d = new Date(String(val));
   if (isNaN(d.getTime())) return String(val);
-  return d.toLocaleDateString('de-DE');
+  return d.toLocaleDateString(locale);
 }
 
-function describeDateChange(label: string, beforeVal?: unknown, afterVal?: unknown) {
-  const from = beforeVal ? displayDate(beforeVal) : '';
-  const to = afterVal ? displayDate(afterVal) : '';
+function describeDateChange(label: string, beforeVal: unknown, afterVal: unknown, locale: string) {
+  const from = beforeVal ? displayDate(beforeVal, locale) : '';
+  const to = afterVal ? displayDate(afterVal, locale) : '';
 
   if (!from && to) return `${label} auf ${to} gesetzt`;
   if (from && !to) return `${label}-Datum entfernt`;
@@ -100,15 +101,49 @@ function describeDateChange(label: string, beforeVal?: unknown, afterVal?: unkno
   return null;
 }
 
-function buildHistoryEntries(before: LawRow, after: Partial<LawRow>) {
-  const fieldConfig: {
+function statusLabel(val: unknown, lang: Lang): string {
+  const norm = normalizeStatus(val);
+  const v = (norm ?? String(val ?? '').trim().toLowerCase()) as string;
+
+  const mapDe: Record<Status, string> = {
+    erfasst: 'erfasst',
+    zugeteilt: 'zugeteilt',
+    in_pruefung: 'in Prüfung',
+    zurueckgewiesen: 'zurückgewiesen',
+    freigegeben: 'freigegeben',
+    aktiv: 'aktiv',
+    obsolet: 'obsolet',
+    archiviert: 'archiviert',
+  };
+
+  const mapEn: Record<Status, string> = {
+    erfasst: 'captured',
+    zugeteilt: 'assigned',
+    in_pruefung: 'in review',
+    zurueckgewiesen: 'rejected',
+    freigegeben: 'released',
+    aktiv: 'active',
+    obsolet: 'obsolete',
+    archiviert: 'archived',
+  };
+
+  if (norm) {
+    return (lang === 'de' ? mapDe : mapEn)[norm];
+  }
+
+  return displayValue(v);
+}
+
+function buildHistoryEntries(before: LawRow, after: Partial<LawRow>, lang: Lang) {
+  const locale = lang === 'de' ? 'de-DE' : 'en-GB';
+
+  const fieldConfig: Array<{
     key: keyof LawRow;
     label: string;
     type?: 'date' | 'status';
-  }[] = [
-    // ✅ Dokumentenart (neu) + Rechtsart (legacy)
+  }> = [
     { key: 'dokumentenart', label: 'Dokumentenart' },
-    { key: 'rechtsart', label: 'Typ' },
+    { key: 'rechtsart', label: 'Typ (legacy)' },
 
     { key: 'kuerzel', label: 'Kürzel' },
     { key: 'bezeichnung', label: 'Bezeichnung' },
@@ -119,12 +154,9 @@ function buildHistoryEntries(before: LawRow, after: Partial<LawRow>) {
     { key: 'gueltigBis', label: 'Gültig bis', type: 'date' },
     { key: 'frist', label: 'Frist', type: 'date' },
 
-    // Quelle / Dokument
     { key: 'dokumentUrl', label: 'Quelle (URL)' },
-    { key: 'quelleUrl', label: 'Quelle (URL)' },
     { key: 'dokumentName', label: 'Dokument (Anzeigename)' },
 
-    // Organisation & Status
     { key: 'zustaendigkeit', label: 'Zuständigkeit' },
     { key: 'herausgeber', label: 'Herausgeber' },
     { key: 'relevanz', label: 'Relevanz' },
@@ -133,13 +165,7 @@ function buildHistoryEntries(before: LawRow, after: Partial<LawRow>) {
     { key: 'status', label: 'Dokumentenstatus', type: 'status' },
     { key: 'abgeloestDurch', label: 'Abgelöst durch' },
 
-    // Bewertung / Workflow
-    { key: 'riskMode', label: 'Riskengine' },
-    { key: 'bewertungErgebnis', label: 'Bewertungsergebnis' },
-    { key: 'workflowState', label: 'Workflow-Status' },
-    { key: 'evaluationStatus', label: 'Bewertungsstatus' },
-
-    // Verantwortlichkeiten
+    // Governance / Rollen
     { key: 'assignedTo', label: 'Zugewiesen an' },
     { key: 'reviewedBy', label: 'Reviewer' },
     { key: 'reviewerNote', label: 'Reviewer-Notiz' },
@@ -158,29 +184,32 @@ function buildHistoryEntries(before: LawRow, after: Partial<LawRow>) {
     const beforeVal = before[f];
     const afterVal = after[f];
 
-    if ((beforeVal ?? '') === (afterVal ?? '')) continue;
+    // Legacy-Noise vermeiden: "offen" wird zu "erfasst" normalisiert
+    const beforeNorm =
+      f === 'status' ? (normalizeStatus(beforeVal) ?? beforeVal) : beforeVal;
+    const afterNorm =
+      f === 'status' ? (normalizeStatus(afterVal) ?? afterVal) : afterVal;
+
+    if ((beforeNorm ?? '') === (afterNorm ?? '')) continue;
 
     if (cfg.type === 'date') {
-      const msg = describeDateChange(cfg.label, beforeVal, afterVal);
+      const msg = describeDateChange(cfg.label, beforeNorm, afterNorm, locale);
       if (msg) messages.push(msg);
       continue;
     }
 
     if (cfg.type === 'status') {
-      const from = displayValue(beforeVal);
-      const to = displayValue(afterVal);
-      if (!beforeVal && afterVal) {
-        messages.push(`Dokumentenstatus auf "${to}" gesetzt`);
-      } else if (from && !afterVal) {
-        messages.push('Dokumentenstatus entfernt');
-      } else if (from !== to) {
-        messages.push(`Dokumentenstatus von "${from}" auf "${to}" geändert`);
-      }
+      const from = statusLabel(beforeNorm, lang);
+      const to = statusLabel(afterNorm, lang);
+
+      if (!beforeNorm && afterNorm) messages.push(`Dokumentenstatus auf "${to}" gesetzt`);
+      else if (beforeNorm && !afterNorm) messages.push('Dokumentenstatus entfernt');
+      else if (from !== to) messages.push(`Dokumentenstatus von "${from}" auf "${to}" geändert`);
       continue;
     }
 
-    const from = displayValue(beforeVal);
-    const to = displayValue(afterVal);
+    const from = displayValue(beforeNorm);
+    const to = displayValue(afterNorm);
     messages.push(`${cfg.label} von "${from}" auf "${to}" geändert`);
   }
 
@@ -195,35 +224,27 @@ function ensureCreationEntry(existing: LawRow['history'], before: LawRow): Histo
   if (history.length === 0) {
     const createdAt = before.createdAt || before.publiziert || new Date().toISOString();
     const creator =
-      [before.erfasserVorname ?? '', before.erfasserNachname ?? '']
-        .filter(Boolean)
-        .join(' ') || 'System';
+      [before.erfasserVorname ?? '', before.erfasserNachname ?? ''].filter(Boolean).join(' ') ||
+      'System';
     history.push({ date: createdAt, user: creator, text: 'Angelegt' });
   }
   return history;
 }
 
 /* ---- Minimaltypisierung für MatrixDocs (nur was wir hier brauchen) ---- */
-type MatrixDocLite = {
-  lawId?: string | null;
-};
-
-type MatrixStoreLite = {
-  docs?: MatrixDocLite[];
-};
-
-/* ---- Component ---- */
+type MatrixDocLite = { lawId?: string | null };
+type MatrixStoreLite = { docs?: MatrixDocLite[] };
 
 export default function Page() {
   const { rows, remove, update } = useRegisterStore();
 
-  // Falls useMatrixStore in deinem Projekt nicht sauber typisiert ist:
   const matrixStore = useMatrixStore() as unknown as MatrixStoreLite;
   const docs = matrixStore.docs ?? [];
 
   const { language } = useLanguage();
-  const t = TEXT[language] ?? TEXT.de;
+  const t = (TEXT as any)[language] ?? TEXT.de;
   const isDe = language === 'de';
+  const uiLang: Lang = language === 'en' ? 'en' : 'de';
 
   const role: UiRole = 'admin';
 
@@ -233,37 +254,29 @@ export default function Page() {
   const [blockedRow, setBlockedRow] = useState<LawRow | null>(null);
   const [blockedReasons, setBlockedReasons] = useState<string[]>([]);
 
-  const current = useMemo(
-    () => rows.find((r) => r.id === editId) ?? null,
-    [rows, editId],
-  );
+  const current = useMemo(() => rows.find((r) => r.id === editId) ?? null, [rows, editId]);
 
-  // --- Save + History ---
   const handleSave = (id: string, patch: Partial<LawRow>) => {
     const before = rows.find((r) => r.id === id);
     if (!before) return;
 
-    // ✅ Wenn Dokumentenart gesetzt wird, spiegeln wir es in rechtsart (legacy),
-    // damit Register/Print/Alt-UI garantiert etwas anzeigen.
     const patched: Partial<LawRow> = { ...patch };
+
+    // Dokumentenart => legacy rechtsart spiegeln (damit ältere Anzeige/Exports stabil bleiben)
     if (Object.prototype.hasOwnProperty.call(patched, 'dokumentenart')) {
-      const dt = patched.dokumentenart;
-      patched.rechtsart = (dt ?? undefined) as any;
+      const dt = (patched as any).dokumentenart;
+      (patched as any).rechtsart = dt ?? undefined;
     }
 
-    // history aus patch ignorieren (wir bauen sie hier konsistent neu)
+    // History aus Patch ignorieren
     const { history, ...restPatch } = patched;
     void history;
 
-    const changeEntries = buildHistoryEntries(before, restPatch);
+    const changeEntries = buildHistoryEntries(before, restPatch, uiLang);
     const baseHistory = ensureCreationEntry(before.history, before);
-    const nextHistory =
-      changeEntries.length > 0 ? [...baseHistory, ...changeEntries] : baseHistory;
+    const nextHistory = changeEntries.length > 0 ? [...baseHistory, ...changeEntries] : baseHistory;
 
-    update(id, {
-      ...restPatch,
-      history: nextHistory,
-    });
+    update(id, { ...restPatch, history: nextHistory });
   };
 
   const openFromRegisterView = (row: LawRow) => setEditId(row.id);
@@ -309,10 +322,7 @@ export default function Page() {
 
     const today = new Date();
     const dateStr = today.toLocaleDateString(locale);
-    const timeStr = today.toLocaleTimeString(locale, {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const timeStr = today.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 
     const formatDate = (value?: string | null) => {
       if (!value) return '—';
@@ -321,25 +331,26 @@ export default function Page() {
       return d.toLocaleDateString(locale);
     };
 
-    const mapStatusForStats = (status?: string | null) => {
-      const s = (status ?? '').toLowerCase();
-      if (s === 'offen' || s === 'open') return 'open';
-      if (s === 'aktiv' || s === 'active') return 'active';
-      if (s === 'obsolet' || s === 'obsolete') return 'obsolete';
-      if (s === 'archiviert' || s === 'archived') return 'archived';
-      return 'other';
+    const mapStatusForStats = (status?: unknown) => {
+      const s = normalizeStatus(status);
+      if (!s) return 'other';
+      if (s === 'aktiv') return 'active';
+      if (s === 'obsolet') return 'obsolete';
+      if (s === 'archiviert') return 'archived';
+      // alles davor zählt als „erfasst / im Prozess“
+      return 'captured';
     };
 
     const total = rows.length;
-    let open = 0;
+    let captured = 0;
     let active = 0;
     let obsolete = 0;
     let archived = 0;
 
     rows.forEach((r) => {
       switch (mapStatusForStats(r.status ?? null)) {
-        case 'open':
-          open += 1;
+        case 'captured':
+          captured += 1;
           break;
         case 'active':
           active += 1;
@@ -355,7 +366,6 @@ export default function Page() {
 
     const rowsHtml = rows
       .map((r) => {
-        // ✅ Dokumentenart bevorzugen, sonst legacy rechtsart
         const rechtsart = (r.dokumentenart ?? r.rechtsart) || '—';
         const kuerzel = r.kuerzel || '—';
         const bezeichnung = r.bezeichnung || '—';
@@ -363,9 +373,8 @@ export default function Page() {
         const publiziert = formatDate(r.publiziert ?? null);
         const frist = formatDate(r.frist ?? null);
         const relevanz = r.relevanz || '—';
-        const status = r.status || '—';
-        const erfasser =
-          [r.erfasserVorname, r.erfasserNachname].filter(Boolean).join(' ') || '—';
+        const statusTxt = statusLabel(r.status ?? '', uiLang);
+        const erfasser = [r.erfasserVorname, r.erfasserNachname].filter(Boolean).join(' ') || '—';
 
         return `
           <tr>
@@ -376,7 +385,7 @@ export default function Page() {
             <td>${publiziert}</td>
             <td>${frist}</td>
             <td>${relevanz}</td>
-            <td>${status}</td>
+            <td>${statusTxt}</td>
             <td>${erfasser}</td>
           </tr>
         `;
@@ -425,9 +434,7 @@ export default function Page() {
         <h1>${titleLine}</h1>
         <h2>${isDe ? 'Regelwerkskataster' : 'Regulatory register'}</h2>
         <div class="meta-line">
-          ${isDe
-            ? 'Kataster für gesetzliche, normative und interne Vorgaben.'
-            : 'Register for legal, normative and internal requirements.'}
+          ${isDe ? 'Kataster für gesetzliche, normative und interne Vorgaben.' : 'Register for legal, normative and internal requirements.'}
         </div>
         <div class="badges">
           <div class="badge badge-primary">
@@ -435,8 +442,8 @@ export default function Page() {
             <strong>${total}</strong>
           </div>
           <div class="badge">
-            <span class="badge-label">${isDe ? 'Offen' : 'Open'}</span>
-            <strong>${open}</strong>
+            <span class="badge-label">${isDe ? 'Erfasst/Workflow' : 'Captured/workflow'}</span>
+            <strong>${captured}</strong>
           </div>
           <div class="badge">
             <span class="badge-label">${isDe ? 'Aktiv' : 'Active'}</span>
@@ -461,14 +468,14 @@ export default function Page() {
     <table>
       <thead>
         <tr>
-          <th style="width:55px;">${isDe ? 'Rechtsart' : 'Type'}</th>
+          <th style="width:80px;">${isDe ? 'Rechtsart' : 'Type'}</th>
           <th style="width:70px;">${isDe ? 'Kürzel' : 'Code'}</th>
           <th>${isDe ? 'Bezeichnung' : 'Title'}</th>
           <th style="width:110px;">${isDe ? 'Themenfeld' : 'Topic'}</th>
           <th style="width:70px;">${isDe ? 'Publiziert' : 'Published'}</th>
           <th style="width:70px;">${isDe ? 'Frist' : 'Due date'}</th>
           <th style="width:70px;">${isDe ? 'Relevanz' : 'Relevance'}</th>
-          <th style="width:70px;">${isDe ? 'Status' : 'Status'}</th>
+          <th style="width:95px;">${isDe ? 'Status' : 'Status'}</th>
           <th style="width:130px;">${isDe ? 'Erfassung durch' : 'Recorded by'}</th>
         </tr>
       </thead>
@@ -559,31 +566,20 @@ export default function Page() {
         </div>
       )}
 
-      {/* Formular zur Dokumentenerfassung */}
+      {/* Formular */}
       <Eingabeform />
 
-      {/* Compliance Register – interaktive Ansicht */}
+      {/* Compliance Register */}
       <div className="space-y-2">
         <div className="text-sm font-semibold text-slate-700">
           {isDe ? 'Compliance Kataster' : 'Compliance register'}
         </div>
 
-        <Registerview
-          role={role}
-          onOpen={openFromRegisterView}
-          onRemove={removeFromRegisterView}
-          onPrint={handlePrintRegister}
-        />
+        <Registerview role={role} onOpen={openFromRegisterView} onRemove={removeFromRegisterView} onPrint={handlePrintRegister} />
       </div>
 
-      {/* Editor für einen ausgewählten Datensatz */}
-      {current && (
-        <EditorPanel
-          row={current}
-          onClose={() => setEditId(null)}
-          onSave={handleSave}
-        />
-      )}
+      {/* Editor */}
+      {current && <EditorPanel row={current} onClose={() => setEditId(null)} onSave={handleSave} />}
 
       {/* Dialog: Eintrag kann NICHT gelöscht werden */}
       {blockedRow && (
@@ -591,30 +587,6 @@ export default function Page() {
           <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl ring-1 ring-slate-200">
             <h3 className="text-lg font-semibold text-slate-900">{t.cannotDeleteTitle}</h3>
             <p className="mt-2 text-sm text-slate-600">{t.cannotDeleteLead}</p>
-
-            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-800">
-              <div className="grid grid-cols-4 gap-4">
-                <div>
-                  <div className="font-semibold text-slate-600">Rechtsart</div>
-                  <div className="mt-0.5 whitespace-normal break-words text-slate-900">
-                    {(blockedRow.dokumentenart ?? blockedRow.rechtsart) || '—'}
-                  </div>
-                </div>
-                <div>
-                  <div className="font-semibold text-slate-600">Kürzel</div>
-                  <div className="mt-0.5 whitespace-normal break-words text-slate-900">
-                    {blockedRow.kuerzel || '—'}
-                  </div>
-                </div>
-                <div className="col-span-2">
-                  <div className="font-semibold text-slate-600">Bezeichnung / Themenfeld</div>
-                  <div className="mt-0.5 whitespace-normal break-words text-slate-900">
-                    {blockedRow.bezeichnung || 'Ohne Bezeichnung'}
-                    {blockedRow.themenfeld ? ` – ${blockedRow.themenfeld}` : ''}
-                  </div>
-                </div>
-              </div>
-            </div>
 
             <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-slate-800">
               {blockedReasons.map((reason) => (
@@ -641,30 +613,6 @@ export default function Page() {
           <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl ring-1 ring-slate-200">
             <h3 className="text-lg font-semibold text-slate-900">{t.deleteTitle}</h3>
             <p className="mt-2 text-sm text-slate-600">{t.deleteText}</p>
-
-            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-800">
-              <div className="grid grid-cols-4 gap-4">
-                <div>
-                  <div className="font-semibold text-slate-600">Rechtsart</div>
-                  <div className="mt-0.5 whitespace-normal break-words text-slate-900">
-                    {(rowToDelete.dokumentenart ?? rowToDelete.rechtsart) || '—'}
-                  </div>
-                </div>
-                <div>
-                  <div className="font-semibold text-slate-600">Kürzel</div>
-                  <div className="mt-0.5 whitespace-normal break-words text-slate-900">
-                    {rowToDelete.kuerzel || '—'}
-                  </div>
-                </div>
-                <div className="col-span-2">
-                  <div className="font-semibold text-slate-600">Bezeichnung / Themenfeld</div>
-                  <div className="mt-0.5 whitespace-normal break-words text-slate-900">
-                    {rowToDelete.bezeichnung || 'Ohne Bezeichnung'}
-                    {rowToDelete.themenfeld ? ` – ${rowToDelete.themenfeld}` : ''}
-                  </div>
-                </div>
-              </div>
-            </div>
 
             <div className="mt-6 flex justify-end gap-3">
               <button

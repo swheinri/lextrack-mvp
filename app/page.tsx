@@ -294,7 +294,7 @@ export default function OverviewPage() {
     ? 'Noch keine Daten vorhanden.'
     : 'No data available yet.';
 
-  const offenOhneStatus = stats.status.offen + stats.status.ohneStatus;
+  const offenOhneStatus = stats.status.erfasst + stats.status.ohneStatus;
 
   return (
     <div className="space-y-6">
@@ -501,8 +501,8 @@ export default function OverviewPage() {
                   value={offenOhneStatus}
                   hint={
                     isDe
-                      ? `Davon explizit „offen“: ${stats.status.offen}, ohne Status: ${stats.status.ohneStatus}.`
-                      : `Of these explicitly "open": ${stats.status.offen}, without status: ${stats.status.ohneStatus}.`
+                      ? `Davon explizit „offen“: ${stats.status.erfasst}, ohne Status: ${stats.status.ohneStatus}.`
+                      : `Of these explicitly "open": ${stats.status.erfasst}, without status: ${stats.status.ohneStatus}.`
                   }
                 />
               )}
@@ -540,7 +540,7 @@ export default function OverviewPage() {
                   items={[
                     {
                       label: isDe ? 'offen' : 'open',
-                      value: stats.status.offen,
+                      value: stats.status.erfasst,
                       color: CHART_COLORS.statusOpen,
                     },
                     {

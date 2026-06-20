@@ -1,7 +1,7 @@
 // app/register/evaluationwizard.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { LawRow, RiskMode } from './registerstore';
 
 type Ergebnis = 'muss' | 'kann' | 'nicht_relevant';
@@ -9,6 +9,13 @@ type BiaImpact = 'niedrig' | 'mittel' | 'hoch';
 
 function isBiaImpact(v: string): v is BiaImpact {
   return v === 'niedrig' || v === 'mittel' || v === 'hoch';
+}
+
+function levelFromScore(score: number): 'Niedrig' | 'Mittel' | 'Hoch' {
+  // simple, robuste Einteilung (kannst du später feinjustieren)
+  if (score >= 16) return 'Hoch';
+  if (score >= 9) return 'Mittel';
+  return 'Niedrig';
 }
 
 export default function EvaluationWizard({
@@ -21,22 +28,22 @@ export default function EvaluationWizard({
   onSubmit: (patch: Partial<LawRow>) => void;
 }) {
   // gemeinsame Felder
-  const [bewertungNotiz, setNotiz] = useState('');
+  const [evaluationNote, setEvaluationNote] = useState('');
 
-  // Qualitativ (Matrix)
+  // Qualitativ
   const [pQual, setPQual] = useState(3);
   const [iQual, setIQual] = useState(3);
 
   // EMV
   const [pEmv, setPEmv] = useState(0.3); // 0..1
   const [impactEmv, setImpactEmv] = useState(10000); // €
-  const emv = Math.round(pEmv * impactEmv);
+  const emv = useMemo(() => Math.round(pEmv * impactEmv), [pEmv, impactEmv]);
 
   // FMEA
   const [sev, setSev] = useState(5);
   const [occ, setOcc] = useState(5);
   const [det, setDet] = useState(5);
-  const rpn = sev * occ * det;
+  const rpn = useMemo(() => sev * occ * det, [sev, occ, det]);
 
   // BIA
   const [rto, setRto] = useState(24); // Stunden
@@ -73,19 +80,41 @@ export default function EvaluationWizard({
   const bewertungErgebnis: Ergebnis = autoResult();
 
   function submit() {
+    const nowIso = new Date().toISOString();
+
+    // ✅ WICHTIG:
+    // - KEIN workflowState / evaluationStatus mehr (existieren nicht in LawRow)
+    // - nur fachliche Bewertungsfelder patchen
     const patch: Partial<LawRow> = {
-      workflowState: 'bewertet',
+      riskMode: mode,
       bewertungErgebnis,
+      evaluationNote: evaluationNote.trim() || undefined,
+      evaluatedAt: nowIso,
 
-      // frei benennbare Notiz (Feld muss in registerstore.ts existieren)
-      // @ts-expect-error bewertungNotiz ist im Projekt im LawRow ergänzt, TS sieht es hier evtl. noch nicht
-      bewertungNotiz,
-
-      // optionale Resultate pro Engine
-      ...(mode === 'qualitativ' && { riskMatrix: { p: pQual, i: iQual, score: pQual * iQual } }),
-      ...(mode === 'emv' && { emv: { p: pEmv, impact: impactEmv, emv } }),
-      ...(mode === 'fmea' && { fmea: { sev, occ, det, rpn } }),
-      ...(mode === 'bia' && { bia: { rto, impact: biaImpact } }),
+      ...(mode === 'qualitativ'
+        ? {
+            evaluationLikelihood: pQual,
+            evaluationImpact: iQual,
+            evaluationScore: pQual * iQual,
+            evaluationLevel: levelFromScore(pQual * iQual),
+          }
+        : {}),
+      ...(mode === 'emv'
+        ? {
+            evaluationScore: emv,
+          }
+        : {}),
+      ...(mode === 'fmea'
+        ? {
+            evaluationScore: rpn,
+          }
+        : {}),
+      ...(mode === 'bia'
+        ? {
+            // Für BIA lassen wir evaluationScore minimal sinnvoll (z. B. RTO als Zahl)
+            evaluationScore: rto,
+          }
+        : {}),
     };
 
     onSubmit(patch);
@@ -96,9 +125,7 @@ export default function EvaluationWizard({
       <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-slate-200">
-          <h3 className="mb-4 text-lg font-semibold">
-            Bewertung – {mode.toUpperCase()}
-          </h3>
+          <h3 className="mb-4 text-lg font-semibold">Bewertung – {mode.toUpperCase()}</h3>
 
           {mode === 'qualitativ' && (
             <div className="grid grid-cols-2 gap-3">
@@ -124,9 +151,7 @@ export default function EvaluationWizard({
                   className="mt-1 w-full rounded border p-2"
                 />
               </label>
-              <div className="col-span-2 text-sm text-slate-600">
-                Score: {pQual * iQual}
-              </div>
+              <div className="col-span-2 text-sm text-slate-600">Score: {pQual * iQual}</div>
             </div>
           )}
 
@@ -154,9 +179,7 @@ export default function EvaluationWizard({
                   className="mt-1 w-full rounded border p-2"
                 />
               </label>
-              <div className="col-span-2 text-sm text-slate-600">
-                EMV: {emv.toLocaleString('de-DE')}
-              </div>
+              <div className="col-span-2 text-sm text-slate-600">EMV: {emv.toLocaleString('de-DE')}</div>
             </div>
           )}
 
@@ -233,8 +256,8 @@ export default function EvaluationWizard({
             <label className="text-sm">
               Notiz
               <textarea
-                value={bewertungNotiz}
-                onChange={(e) => setNotiz(e.target.value)}
+                value={evaluationNote}
+                onChange={(e) => setEvaluationNote(e.target.value)}
                 className="mt-1 w-full rounded border p-2"
                 rows={3}
               />
@@ -242,18 +265,14 @@ export default function EvaluationWizard({
           </div>
 
           <div className="mt-4 text-sm">
-            Automatisches Ergebnis:{' '}
-            <span className="font-medium">{bewertungErgebnis}</span>
+            Automatisches Ergebnis: <span className="font-medium">{bewertungErgebnis}</span>
           </div>
 
           <div className="mt-6 flex justify-end gap-3">
             <button onClick={onCancel} className="rounded border px-4 py-2">
               Abbrechen
             </button>
-            <button
-              onClick={submit}
-              className="rounded bg-[#009A93] px-4 py-2 text-white"
-            >
+            <button onClick={submit} className="rounded bg-[#009A93] px-4 py-2 text-white">
               Bewertung speichern
             </button>
           </div>

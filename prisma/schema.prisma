@@ -45,6 +45,16 @@ model Location {
   description String?
   isActive    Boolean      @default(true)
 
+  leadPersonId String?
+  leadPerson   Person? @relation("LocationLead", fields: [leadPersonId], references: [id], onDelete: SetNull)
+
+  organisationName String?
+  organisationalUnit String?
+  contactName String?
+  contactPhone String?
+  contactMobile String?
+  contactEmail String?
+
   departments Department[]
   addresses   LocationAddress[]
 
@@ -69,6 +79,12 @@ model LocationAddress {
   city        String?
   state       String?
   country     String?
+
+  building       String?
+  floor          String?
+  room           String?
+  area           String?
+  additionalInfo String?
 
   latitude  Float?
   longitude Float?
@@ -161,6 +177,7 @@ model Person {
   updatedAt DateTime @updatedAt
 
   ledDepartments Department[] @relation("DepartmentLead")
+  ledLocations   Location[]   @relation("LocationLead")
 
   orgFunction OrgFunction @default(MEMBER)
 

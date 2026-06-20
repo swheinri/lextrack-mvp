@@ -35,10 +35,14 @@ export function statusColorClasses(status: ComplianceStatus): string {
   switch (status) {
     case 'compliant':
       return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+
     case 'not_fulfilled':
       return 'bg-rose-100 text-rose-700 border-rose-200';
+
+    // ✅ N/A = blau (konsistent zur Balken-/Pill-Darstellung)
     case 'not_applicable':
-      return 'bg-slate-100 text-slate-600 border-slate-200';
+      return 'bg-sky-100 text-sky-700 border-sky-200';
+
     case 'open':
     default:
       return 'bg-amber-100 text-amber-800 border-amber-200';

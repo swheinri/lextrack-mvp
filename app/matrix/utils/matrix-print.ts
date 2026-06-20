@@ -1,5 +1,5 @@
 // app/matrix/utils/matrix-print.ts
-import type { MatrixClause, MatrixStatus, PsoeLevel, RiskLevel } from '../matrixstore';
+import type { MatrixClause, MatrixStatus, PsoeLevel, RiskLevel, ComplianceStatus } from '../matrixstore';
 import { matrixStatusLabel, statusLabel } from './matrix-status';
 
 type MatrixClauseWithLevels = MatrixClause & {
@@ -27,6 +27,18 @@ type MatrixPrintDoc = {
   [key: string]: unknown;
 };
 
+const DASH = '—';
+const DASH_THIN = '–';
+
+function toStr(v: unknown): string {
+  return typeof v === 'string' ? v : String(v ?? '');
+}
+
+function safeStr(v: unknown): string | undefined {
+  const s = typeof v === 'string' ? v.trim() : '';
+  return s.length ? s : undefined;
+}
+
 export function buildRef(c: MatrixClauseWithLevels): string {
   const parts: string[] = [];
   if (c.refLevel1) parts.push(c.refLevel1);
@@ -44,7 +56,7 @@ export function buildTitle(c: MatrixClauseWithLevels): string {
 }
 
 function escapeHtml(input: unknown): string {
-  const s = String(input ?? '');
+  const s = toStr(input);
   return s
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -53,13 +65,31 @@ function escapeHtml(input: unknown): string {
     .replace(/'/g, '&#39;');
 }
 
+function htmlLines(input: string): string {
+  return escapeHtml(input).replace(/\r?\n/g, '<br/>');
+}
+
+function normalizeMatrixStatus(s: unknown): MatrixStatus {
+  const v = String(s ?? '').trim().toLowerCase();
+  if (v === 'draft' || v === 'in_review' || v === 'final') return v as MatrixStatus;
+  return 'draft';
+}
+
+function safeComplianceStatus(s: unknown): ComplianceStatus | null {
+  const v = String(s ?? '').trim().toLowerCase();
+  if (v === 'open' || v === 'not_applicable' || v === 'not_fulfilled' || v === 'compliant') {
+    return v as ComplianceStatus;
+  }
+  return null;
+}
+
 function riskScore(s?: RiskLevel, p?: RiskLevel): number | null {
-  if (!s || !p) return null;
+  if (typeof s !== 'number' || typeof p !== 'number') return null;
   return s * p;
 }
 
 function riskLabel(s?: RiskLevel, p?: RiskLevel): string {
-  if (!s || !p) return '–';
+  if (typeof s !== 'number' || typeof p !== 'number') return DASH_THIN;
   return `S${s}/P${p}`;
 }
 
@@ -76,7 +106,7 @@ export function manualsLabelForClause(c: MatrixClause): string {
     })
     .filter(Boolean) as string[];
 
-  if (lines.length === 0) return '–';
+  if (lines.length === 0) return DASH_THIN;
   return Array.from(new Set(lines)).join('\n');
 }
 
@@ -86,7 +116,7 @@ export function processLabelForClause(c: MatrixClause): string {
     .map((r) => [r.processNumber, r.processTitle].filter(Boolean).join(' – '))
     .filter(Boolean) as string[];
 
-  if (lines.length === 0) return '–';
+  if (lines.length === 0) return DASH_THIN;
   return lines.join('\n');
 }
 
@@ -96,7 +126,7 @@ export function formLabelForClause(c: MatrixClause): string {
     .map((r) => [r.formNumber, r.formTitle].filter(Boolean).join(' – '))
     .filter(Boolean) as string[];
 
-  if (lines.length === 0) return '–';
+  if (lines.length === 0) return DASH_THIN;
   return lines.join('\n');
 }
 
@@ -105,10 +135,10 @@ export function processAndFormsLabelForClause(c: MatrixClause): string {
   const f = formLabelForClause(c);
 
   const parts: string[] = [];
-  if (p && p !== '–') parts.push(p);
-  if (f && f !== '–') parts.push(f);
+  if (p && p !== DASH_THIN) parts.push(p);
+  if (f && f !== DASH_THIN) parts.push(f);
 
-  return parts.length ? parts.join('\n') : '–';
+  return parts.length ? parts.join('\n') : DASH_THIN;
 }
 
 export function printMatrix(opts: {
@@ -140,27 +170,30 @@ export function printMatrix(opts: {
   const dateStr = today.toLocaleDateString(locale);
   const timeStr = today.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 
-  const matrixStatus: MatrixStatus = (doc.status ?? 'draft') as MatrixStatus;
+  const matrixStatus = normalizeMatrixStatus(doc.status);
 
   const psoeSummary = (() => {
     if (!psoeStats.avgLevel) {
       return isDe ? 'PSOE-Reifegrad: – (keine Bewertungen vorhanden)' : 'PSOE maturity: – (no ratings yet)';
     }
-    const scoreStr = psoeStats.avgScore.toFixed(1);
+    const scoreStr = Number.isFinite(psoeStats.avgScore) ? psoeStats.avgScore.toFixed(1) : '–';
     return isDe
       ? `PSOE-Reifegrad gesamt: ${psoeStats.avgLevel} (${scoreStr} / 4)`
       : `Overall PSOE maturity: ${psoeStats.avgLevel} (${scoreStr} / 4)`;
   })();
 
   const riskSummary = (() => {
-    if (riskStats.count === 0) {
+    if (!riskStats.count) {
       return isDe
         ? `Risiko: – (keine Bewertungen im Scope: ${docRiskScope === 'all' ? 'alle' : 'nur nicht compliant'})`
         : `Risk: – (no ratings in scope: ${docRiskScope === 'all' ? 'all' : 'non-compliant only'})`;
     }
-    const avg = riskStats.avgScore.toFixed(1);
-    const worst = riskStats.worstScore;
-    const docVal = riskStats.docValue != null ? riskStats.docValue.toFixed(1) : '–';
+    const avg = Number.isFinite(riskStats.avgScore) ? riskStats.avgScore.toFixed(1) : '–';
+    const worst = Number.isFinite(riskStats.worstScore) ? String(riskStats.worstScore) : '–';
+    const docVal = riskStats.docValue != null && Number.isFinite(riskStats.docValue)
+      ? riskStats.docValue.toFixed(1)
+      : '–';
+
     const modeLbl =
       docRiskMode === 'worst_case'
         ? isDe
@@ -169,19 +202,24 @@ export function printMatrix(opts: {
         : isDe
           ? 'Index (Ø)'
           : 'Index (avg)';
+
     return isDe
       ? `Dokumentrisiko (${modeLbl}): ${docVal} / 16 · Ø: ${avg} / 16 · Worst: ${worst} / 16`
       : `Document risk (${modeLbl}): ${docVal} / 16 · Avg: ${avg} / 16 · Worst: ${worst} / 16`;
   })();
 
   const metaParts: string[] = [];
-  const lawRechtsart = typeof doc.lawRechtsart === 'string' ? doc.lawRechtsart : undefined;
-  const lawThemenfeld = typeof doc.lawThemenfeld === 'string' ? doc.lawThemenfeld : undefined;
+
+  const lawRechtsart = safeStr(doc.lawRechtsart);
+  const lawThemenfeld = safeStr(doc.lawThemenfeld);
+  const lawKuerzel = safeStr(doc.lawKuerzel);
+  const lawBezeichnung = safeStr(doc.lawBezeichnung);
 
   if (lawRechtsart) metaParts.push(`${isDe ? 'Rechtsart' : 'Type'}: ${lawRechtsart}`);
-  if (doc.lawKuerzel) metaParts.push(`${isDe ? 'Kürzel' : 'Code'}: ${doc.lawKuerzel}`);
+  if (lawKuerzel) metaParts.push(`${isDe ? 'Kürzel' : 'Code'}: ${lawKuerzel}`);
   if (lawThemenfeld) metaParts.push(`${isDe ? 'Themenfeld' : 'Topic'}: ${lawThemenfeld}`);
   metaParts.push(`${isDe ? 'Matrixstatus' : 'Matrix status'}: ${matrixStatusLabel(matrixStatus, isDe)}`);
+
   const metaLine = metaParts.join(' · ');
 
   const summaryLine = isDe
@@ -190,53 +228,48 @@ export function printMatrix(opts: {
 
   const rowsHtml = clauses
     .map((c) => {
-      const ref = buildRef(c as MatrixClauseWithLevels) || '—';
-      const title = buildTitle(c as MatrixClauseWithLevels) || '—';
-      const status = statusLabel(c.status, isDe);
+      const cWithLevels = c as MatrixClauseWithLevels;
 
-      const manualsLabel = manualsLabelForClause(c) || '–';
-      const procFormsLabel = processAndFormsLabelForClause(c) || '–';
+      const ref = buildRef(cWithLevels) || DASH;
+      const title = buildTitle(cWithLevels) || DASH;
 
-      const evid = hasEvidence(c);
-      const evidenceLabel = evid ? (isDe ? 'vorhanden' : 'available') : isDe ? 'fehlt' : 'missing';
+      const cs = safeComplianceStatus((c as any)?.status);
+      const status = cs ? statusLabel(cs, isDe) : DASH;
 
-      const maturity = c.psoeLevel ?? '—';
+      const manualsLabel = manualsLabelForClause(c) || DASH_THIN;
+      const procFormsLabel = processAndFormsLabelForClause(c) || DASH_THIN;
+
+      const evid = !!hasEvidence(c);
+      const evidenceLabel = evid ? (isDe ? 'vorhanden' : 'available') : (isDe ? 'fehlt' : 'missing');
+
+      const maturity = (c.psoeLevel ?? DASH) as string;
 
       const s = (c.riskSeverity ?? undefined) as RiskLevel | undefined;
       const p = (c.riskProbability ?? undefined) as RiskLevel | undefined;
 
       const rLbl = riskLabel(s, p);
       const rScore = riskScore(s, p);
-      const riskOut = rScore ? `${rLbl} (${rScore}/16)` : '—';
-
-      const safeRef = escapeHtml(ref);
-      const safeTitle = escapeHtml(title);
-      const safeStatus = escapeHtml(status);
-      const safeManuals = escapeHtml(manualsLabel).replace(/\n/g, '<br/>');
-      const safeProcForms = escapeHtml(procFormsLabel).replace(/\n/g, '<br/>');
-      const safeEvidence = escapeHtml(evidenceLabel);
-      const safeMaturity = escapeHtml(maturity);
-      const safeRisk = escapeHtml(riskOut);
+      const riskOut = rScore != null ? `${rLbl} (${rScore}/16)` : DASH;
 
       return `
         <tr>
-          <td>${safeRef}</td>
-          <td>${safeTitle}</td>
-          <td>${safeStatus}</td>
-          <td>${safeManuals}</td>
-          <td>${safeProcForms}</td>
-          <td style="text-align:center;">${safeEvidence}</td>
-          <td style="text-align:center;">${safeMaturity}</td>
-          <td style="text-align:center;">${safeRisk}</td>
+          <td>${escapeHtml(ref)}</td>
+          <td>${escapeHtml(title)}</td>
+          <td>${escapeHtml(status)}</td>
+          <td>${htmlLines(manualsLabel)}</td>
+          <td>${htmlLines(procFormsLabel)}</td>
+          <td style="text-align:center;">${escapeHtml(evidenceLabel)}</td>
+          <td style="text-align:center;">${escapeHtml(maturity)}</td>
+          <td style="text-align:center;">${escapeHtml(riskOut)}</td>
         </tr>
       `;
     })
     .join('');
 
   const titleLine =
-    doc.lawKuerzel && doc.lawBezeichnung
-      ? `${doc.lawKuerzel} – ${doc.lawBezeichnung}`
-      : doc.lawBezeichnung || doc.lawKuerzel || (isDe ? 'Compliance-Matrix' : 'Compliance matrix');
+    lawKuerzel && lawBezeichnung
+      ? `${lawKuerzel} – ${lawBezeichnung}`
+      : lawBezeichnung || lawKuerzel || (isDe ? 'Compliance-Matrix' : 'Compliance matrix');
 
   const html = `<!DOCTYPE html>
 <html lang="${isDe ? 'de' : 'en'}">
@@ -248,6 +281,7 @@ export function printMatrix(opts: {
     body { margin: 24px; font-size: 11px; color: #111827; background:#f3f4f6; }
     h1 { font-size: 16px; margin: 0 0 2px 0; }
     h2 { font-size: 12px; margin: 0 0 4px 0; font-weight: 500; color: #4b5563; }
+
     .page {
       max-width: 980px;
       margin: 0 auto;
@@ -257,23 +291,41 @@ export function printMatrix(opts: {
       padding: 16px 20px 18px 20px;
       box-shadow: 0 0 0 1px #e5e7eb;
     }
+
     .topbar { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; gap: 10px; }
     .brand { font-size:10px; color:#6b7280; }
+
+    .pills { margin-top:6px; display:flex; flex-wrap:wrap; gap:6px; }
     .pill {
-      font-size:10px; color:#2563eb; margin-top:4px;
+      font-size:10px; color:#2563eb;
       display:inline-flex; align-items:center;
       padding:2px 8px; border-radius:999px; border:1px solid #bfdbfe; background:#eff6ff;
+      white-space: normal;
     }
+
     .meta-line { font-size:9px; color:#6b7280; margin-bottom:4px; }
     .summary-line {
-      margin-top:6px; margin-bottom:10px; font-size:9px; color:#374151;
+      margin-top:8px; margin-bottom:10px; font-size:9px; color:#374151;
       display:inline-block; padding:4px 8px; border-radius:999px;
       background:#f9fafb; border:1px solid #e5e7eb;
     }
+
     table { width: 100%; border-collapse: collapse; margin-top: 4px; }
     th, td { border: 1px solid #d1d5db; padding: 4px 6px; vertical-align: top; }
     th { background:#f3f4f6; font-weight:600; text-align:left; }
-    tfoot td { border:none; font-size:9px; color:#6b7280; padding-top:12px; }
+
+    .footer {
+      margin-top: 10px;
+      display:flex;
+      justify-content:space-between;
+      font-size:9px;
+      color:#6b7280;
+    }
+
+    @media print {
+      body { background:#ffffff; margin: 10mm; }
+      .page { box-shadow:none; border-radius:0; padding:0; border: none; }
+    }
   </style>
 </head>
 <body>
@@ -284,10 +336,15 @@ export function printMatrix(opts: {
         <h1>${escapeHtml(titleLine)}</h1>
         <h2>${isDe ? 'Compliance-Matrix' : 'Compliance matrix'}</h2>
         <div class="meta-line">${escapeHtml(metaLine)}</div>
-        <div class="pill">${escapeHtml(psoeSummary)}</div>
-        <div class="pill" style="margin-left:6px;">${escapeHtml(riskSummary)}</div>
+
+        <div class="pills">
+          <div class="pill">${escapeHtml(psoeSummary)}</div>
+          <div class="pill">${escapeHtml(riskSummary)}</div>
+        </div>
+
         <div class="summary-line">${escapeHtml(summaryLine)}</div>
       </div>
+
       <div style="text-align:right; font-size:10px; color:#6b7280;">
         <div>${isDe ? 'Ausgedruckt am' : 'Printed on'} ${escapeHtml(dateStr)}</div>
         <div>${escapeHtml(timeStr)}</div>
@@ -319,19 +376,10 @@ export function printMatrix(opts: {
       </tbody>
     </table>
 
-    <table>
-      <tfoot>
-        <tr>
-          <td>© 2025 LexTrack – Regulatory Intelligence &amp; Compliance</td>
-          <td style="text-align:right;">${isDe ? 'Intern' : 'Internal'}</td>
-        </tr>
-        <tr>
-          <td colspan="2" style="text-align:right; font-size:8px; padding-top:2px; color:#9ca3af;">
-            ${isDe ? 'Generiert mit LexTrack Compliance Suite' : 'Generated with LexTrack Compliance Suite'}
-          </td>
-        </tr>
-      </tfoot>
-    </table>
+    <div class="footer">
+      <div>© 2025 LexTrack – Regulatory Intelligence &amp; Compliance</div>
+      <div>${isDe ? 'Intern' : 'Internal'} · ${isDe ? 'Generiert mit LexTrack Compliance Suite' : 'Generated with LexTrack Compliance Suite'}</div>
+    </div>
   </div>
 </body>
 </html>`;

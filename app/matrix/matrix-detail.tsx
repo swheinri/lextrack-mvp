@@ -1,17 +1,17 @@
-// matrix/matrix-detail.tsx
+// app/matrix/matrix-detail.tsx
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Trash2, Printer, Filter } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Filter, Printer, Trash2 } from 'lucide-react';
 
 import { useLanguage } from '../components/i18n/language';
 import MatrixAttachments from './matrix-attachments';
 import { printMatrix } from './utils/matrix-print';
 import {
-  statusLabel,
-  statusColorClasses,
-  matrixStatusLabel,
   matrixStatusColorClasses,
+  matrixStatusLabel,
+  statusColorClasses,
+  statusLabel,
 } from './utils/matrix-status';
 
 import {
@@ -26,144 +26,35 @@ import {
   type RiskLevel,
 } from './matrixstore';
 
-  const EMPTY_CLAUSES: MatrixClause[] = [];
+import type {
+  MatrixClauseWithLevels,
+  DocRiskAggregationMode,
+  DocRiskScope,
+  RiskBand,
+} from './utils/matrix-detail-helpers';
+
+import {
+  buildRef,
+  buildTitle,
+  manualsLabelForClause,
+  processAndFormsLabelForClause,
+  PSOE_SCORE,
+  psoeLabel,
+  psoeNeedlePercent,
+  riskScore,
+  riskBand,
+  riskBandLabel,
+  riskBandClasses,
+  riskLabel,
+  clampRiskLevel,
+  createLocalId,
+} from './utils/matrix-detail-helpers';
+
+const EMPTY_CLAUSES: MatrixClause[] = [];
 
 /* =========================================================
-   Hilfstypen
+   PSOE Gauge
 ========================================================= */
-
-type MatrixClauseWithLevels = MatrixClause & {
-  refLevel1?: string;
-  refLevel2?: string;
-  refLevel3?: string;
-  titleLevel1?: string;
-  titleLevel2?: string;
-  titleLevel3?: string;
-};
-
-type DocRiskAggregationMode = 'worst_case' | 'index';
-type DocRiskScope = 'all' | 'non_compliant';
-
-/* =========================================================
-   Helper: Ref / Title Builder
-========================================================= */
-
-function buildRef(c: MatrixClauseWithLevels): string {
-  const parts: string[] = [];
-  if (c.refLevel1) parts.push(c.refLevel1);
-  if (c.refLevel2) parts.push(c.refLevel2);
-  if (c.refLevel3) parts.push(c.refLevel3);
-  return parts.join(' ');
-}
-
-function buildTitle(c: MatrixClauseWithLevels): string {
-  const parts: string[] = [];
-  if (c.titleLevel1) parts.push(c.titleLevel1);
-  if (c.titleLevel2) parts.push(c.titleLevel2);
-  if (c.titleLevel3) parts.push(c.titleLevel3);
-  return parts.join(' – ');
-}
-
-/* =========================================================
-   Labels für Referenzen
-========================================================= */
-
-function manualsLabelForClause(c: MatrixClause): string {
-  const refs = c.internalRefs ?? [];
-  const lines = refs
-    .map((r) => {
-      const parts: string[] = [];
-      if (r.exposition) parts.push(r.exposition);
-      if (r.chapter) parts.push(r.chapter);
-      const head = parts.join(' ');
-      if (r.description) return head ? `${head} – ${r.description}` : r.description;
-      return head;
-    })
-    .filter(Boolean) as string[];
-
-  if (lines.length === 0) return '–';
-  return Array.from(new Set(lines)).join('\n');
-}
-
-function processLabelForClause(c: MatrixClause): string {
-  const refs = c.processRefs ?? [];
-  const lines = refs
-    .map((r) => [r.processNumber, r.processTitle].filter(Boolean).join(' – '))
-    .filter(Boolean) as string[];
-
-  if (lines.length === 0) return '–';
-  return lines.join('\n');
-}
-
-function formLabelForClause(c: MatrixClause): string {
-  const refs = c.formRefs ?? [];
-  const lines = refs
-    .map((r) => [r.formNumber, r.formTitle].filter(Boolean).join(' – '))
-    .filter(Boolean) as string[];
-
-  if (lines.length === 0) return '–';
-  return lines.join('\n');
-}
-
-function processAndFormsLabelForClause(c: MatrixClause): string {
-  const p = processLabelForClause(c);
-  const f = formLabelForClause(c);
-
-  const parts: string[] = [];
-  if (p && p !== '–') parts.push(p);
-  if (f && f !== '–') parts.push(f);
-
-  return parts.length ? parts.join('\n') : '–';
-}
-
-/* =========================================================
-   PSOE helpers + Gauge
-========================================================= */
-
-const PSOE_SCORE: Record<PsoeLevel, number> = {
-  P: 1,
-  S: 2,
-  O: 3,
-  E: 4,
-};
-
-function psoeLabel(level: PsoeLevel, isDe: boolean): string {
-  if (isDe) {
-    switch (level) {
-      case 'P':
-        return 'Present (P) – Grundlagen vorhanden';
-      case 'S':
-        return 'Suitable (S) – geeignet / passend';
-      case 'O':
-        return 'Operational (O) – im Betrieb';
-      case 'E':
-        return 'Effective (E) – wirksam / effizient';
-    }
-  } else {
-    switch (level) {
-      case 'P':
-        return 'Present (P) – basic presence';
-      case 'S':
-        return 'Suitable (S) – fit for purpose';
-      case 'O':
-        return 'Operational (O) – in operation';
-      case 'E':
-        return 'Effective (E) – effective & efficient';
-    }
-  }
-  return isDe ? 'Unbekannt' : 'Unknown';
-}
-
-function clampNum(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
-}
-
-function psoeNeedlePercent(avgScore: number) {
-  // bei 0 (keine Ratings) nicht clampen -> Nadel bleibt links, aber wir können sauber mit 1..4 rechnen
-  const s = clampNum(avgScore || 1, 1, 4);
-  return ((s - 1) / 3) * 100;
-}
-
 function PsoeGauge({
   avgScore,
   avgLevel,
@@ -226,82 +117,6 @@ function PsoeGauge({
       </div>
     </div>
   );
-}
-
-/* =========================================================
-   Risk helpers (4x4)
-========================================================= */
-
-type RiskBand = 'low' | 'medium' | 'high' | 'critical';
-
-function riskScore(s?: RiskLevel | null, p?: RiskLevel | null): number | null {
-  if (!s || !p) return null;
-  return s * p;
-}
-
-function riskBand(score: number): RiskBand {
-  if (score <= 4) return 'low';
-  if (score <= 8) return 'medium';
-  if (score <= 12) return 'high';
-  return 'critical';
-}
-
-function riskBandLabel(b: RiskBand, isDe: boolean): string {
-  if (isDe) {
-    switch (b) {
-      case 'low':
-        return 'niedrig';
-      case 'medium':
-        return 'mittel';
-      case 'high':
-        return 'hoch';
-      case 'critical':
-        return 'kritisch';
-    }
-  } else {
-    switch (b) {
-      case 'low':
-        return 'low';
-      case 'medium':
-        return 'medium';
-      case 'high':
-        return 'high';
-      case 'critical':
-        return 'critical';
-    }
-  }
-  return isDe ? 'unbekannt' : 'unknown';
-}
-
-function riskBandClasses(b: RiskBand): string {
-  switch (b) {
-    case 'low':
-      return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-    case 'medium':
-      return 'bg-amber-100 text-amber-800 border-amber-200';
-    case 'high':
-      return 'bg-orange-100 text-orange-800 border-orange-200';
-    case 'critical':
-    default:
-      return 'bg-rose-100 text-rose-700 border-rose-200';
-  }
-}
-
-function riskLabel(s?: RiskLevel | null, p?: RiskLevel | null): string {
-  if (!s || !p) return '–';
-  return `S${s}/P${p}`;
-}
-
-function clampRiskLevel(n: number): RiskLevel {
-  return Math.min(4, Math.max(1, Math.round(n))) as RiskLevel;
-}
-
-/* =========================================================
-   ID helper
-========================================================= */
-
-function createLocalId(prefix: string): string {
-  return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
 /* =========================================================

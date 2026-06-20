@@ -27,13 +27,13 @@ const RELEVANCE_LABEL: Record<Lang, Record<string, string>> = {
 const STATUS_LABEL: Record<Lang, Record<string, string>> = {
   de: {
     aktiv: 'aktiv',
-    offen: 'offen',
+    erfasst: 'erfasst',
     archiviert: 'archiviert',
     obsolet: 'obsolet',
   },
   en: {
     aktiv: 'active',
-    offen: 'open',
+    erfasst: 'captured',
     archiviert: 'archived',
     obsolet: 'obsolete',
   },

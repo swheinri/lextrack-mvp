@@ -42,16 +42,24 @@ const FILTER_LS_KEY = 'lextrack_register_filters_v1';
 
 const STATUS_LABEL: Record<Lang, Record<Status, string>> = {
   de: {
+    erfasst: 'erfasst',
+    zugeteilt: 'zugeteilt',
+    in_pruefung: 'in Prüfung',
+    zurueckgewiesen: 'zurückgewiesen',
+    freigegeben: 'freigegeben',
     aktiv: 'aktiv',
-    offen: 'offen',
-    archiviert: 'archiviert',
     obsolet: 'obsolet',
+    archiviert: 'archiviert',
   },
   en: {
+    erfasst: 'captured',
+    zugeteilt: 'assigned',
+    in_pruefung: 'in review',
+    zurueckgewiesen: 'rejected',
+    freigegeben: 'released',
     aktiv: 'active',
-    offen: 'open',
-    archiviert: 'archived',
     obsolet: 'obsolete',
+    archiviert: 'archived',
   },
 };
 
@@ -75,6 +83,13 @@ function readFiltersFromLS(): FilterState {
     if (!raw) return DEFAULT_FILTERS;
 
     const parsed = JSON.parse(raw) as Partial<FilterState>;
+
+    const rawStatus =
+      typeof parsed.status === 'string' && parsed.status ? parsed.status : 'alle';
+
+    // ✅ Legacy-Fix: alter Filterwert "offen" -> neuer Status "erfasst"
+    const normalizedStatus = rawStatus === 'offen' ? 'erfasst' : rawStatus;
+
     return {
       themenfeld:
         typeof parsed.themenfeld === 'string' && parsed.themenfeld
@@ -88,8 +103,7 @@ function readFiltersFromLS(): FilterState {
         typeof parsed.relevanz === 'string' && parsed.relevanz
           ? parsed.relevanz
           : 'alle',
-      status:
-        typeof parsed.status === 'string' && parsed.status ? parsed.status : 'alle',
+      status: normalizedStatus,
     };
   } catch {
     return DEFAULT_FILTERS;

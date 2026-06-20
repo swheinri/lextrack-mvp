@@ -2,18 +2,16 @@
 'use client';
 
 import React from 'react';
+import { useLanguage } from '../../components/i18n/language';
+import UsersRolesSection from '../sections/users-roles-section';
 
-export default function SettingsUsersPage() {
+export default function UsersPage() {
+  const { language } = useLanguage();
+  const isDe = language === 'de';
+
   return (
-    <div className="space-y-3">
-      <h1 className="text-base sm:text-lg font-semibold text-slate-800">
-        Benutzer & Rollen – in Vorbereitung
-      </h1>
-      <p className="text-sm text-slate-600">
-        Dieser Bereich ist im aktuellen MVP noch nicht aktiv. 
-        Die Verwaltung von Benutzern und Rollen wird in einem 
-        späteren Release ergänzt.
-      </p>
+    <div className="px-4 py-6 sm:px-6 lg:px-8">
+      <UsersRolesSection />
     </div>
   );
 }

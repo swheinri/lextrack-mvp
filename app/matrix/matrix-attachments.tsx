@@ -26,50 +26,95 @@ function formatSize(bytes: number): string {
   return `${mb.toFixed(1)} MB`;
 }
 
+function makeUploadId(prefix: string) {
+  const c = (globalThis as unknown as { crypto?: Crypto }).crypto;
+  const uuid =
+    c && 'randomUUID' in c && typeof (c as any).randomUUID === 'function'
+      ? (c as any).randomUUID()
+      : Math.random().toString(36).slice(2, 10);
+  return `${prefix}_${uuid}`;
+}
+
 export default function MatrixAttachments({ clauseId, isDe, onChangeCount }: Props) {
   const [items, setItems] = useState<UploadItem[]>([]);
+  const [msg, setMsg] = useState<string | null>(null);
 
-  // ✅ Lint-safe: Callback in Ref spiegeln, damit effect NICHT von der Funktions-Identität abhängt
+  // ✅ Callback in Ref spiegeln (Effect hängt nicht an Funktions-Identität)
   const onChangeCountRef = useRef<Props['onChangeCount']>(onChangeCount);
-
   useEffect(() => {
     onChangeCountRef.current = onChangeCount;
   }, [onChangeCount]);
 
-  // Nur reagieren, wenn sich die Anzahl der Items ändert
+  // ✅ Items-Ref für sauberes Unmount-Cleanup
+  const itemsRef = useRef<UploadItem[]>([]);
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
+  // Nur reagieren, wenn sich die Anzahl ändert
   useEffect(() => {
     onChangeCountRef.current?.(items.length);
   }, [items.length]);
 
-  // Optional, aber sauber: ObjectURLs beim Unmount aufräumen
+  // ✅ Bei clauseId-Wechsel: alte ObjectURLs freigeben + Liste leeren
+  useEffect(() => {
+    setMsg(null);
+    setItems((prev) => {
+      prev.forEach((it) => URL.revokeObjectURL(it.url));
+      return [];
+    });
+  }, [clauseId]);
+
+  // ✅ Cleanup beim Unmount: ALLE aktuell bekannten URLs freigeben
   useEffect(() => {
     return () => {
-      items.forEach((it) => URL.revokeObjectURL(it.url));
+      itemsRef.current.forEach((it) => URL.revokeObjectURL(it.url));
     };
-    // bewusst leer: Cleanup nur beim Unmount; URLs werden zusätzlich beim Remove revoked
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const MAX_MB = 10; // MVP-Schutz (optional)
+  const MAX_BYTES = MAX_MB * 1024 * 1024;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    setMsg(null);
+
     const now = new Date().toISOString();
-    const newItems: UploadItem[] = Array.from(files).map((file) => {
+    const picked = Array.from(files);
+
+    const accepted: UploadItem[] = [];
+    let rejectedCount = 0;
+
+    for (const file of picked) {
+      if (file.size > MAX_BYTES) {
+        rejectedCount += 1;
+        continue;
+      }
+
       const url = URL.createObjectURL(file);
-      return {
-        id: `${clauseId}_${file.name}_${file.lastModified}_${Math.random()
-          .toString(36)
-          .slice(2, 8)}`,
+      accepted.push({
+        id: makeUploadId(clauseId || 'clause'),
         name: file.name,
         size: file.size,
         type: file.type || 'application/octet-stream',
         url,
         uploadedAt: now,
-      };
-    });
+      });
+    }
 
-    setItems((prev) => [...prev, ...newItems]);
+    if (rejectedCount > 0) {
+      setMsg(
+        isDe
+          ? `${rejectedCount} Datei(en) wurden übersprungen (max. ${MAX_MB} MB).`
+          : `${rejectedCount} file(s) were skipped (max ${MAX_MB} MB).`
+      );
+    }
+
+    if (accepted.length > 0) {
+      setItems((prev) => [...prev, ...accepted]);
+    }
 
     // Input zurücksetzen, damit derselbe Dateiname erneut gewählt werden kann
     e.target.value = '';
@@ -85,6 +130,10 @@ export default function MatrixAttachments({ clauseId, isDe, onChangeCount }: Pro
 
   if (!clauseId) return null;
 
+  const labelAdd = isDe ? 'Datei hinzufügen' : 'Add file';
+  const labelDownload = isDe ? 'Download' : 'Download';
+  const labelRemove = isDe ? 'Anhang entfernen' : 'Remove attachment';
+
   return (
     <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
       <div className="flex items-center justify-between gap-2">
@@ -94,10 +143,23 @@ export default function MatrixAttachments({ clauseId, isDe, onChangeCount }: Pro
 
         <label className="inline-flex cursor-pointer items-center rounded-full border border-slate-300 bg-white px-2 py-1 text-[11px] text-slate-700 shadow-sm hover:bg-slate-50">
           <span className="mr-1 text-base leading-none">＋</span>
-          {isDe ? 'Datei hinzufügen' : 'Add file'}
-          <input type="file" className="hidden" multiple onChange={handleFileChange} />
+          {labelAdd}
+          <input
+            type="file"
+            className="hidden"
+            multiple
+            // optional sinnvoll: PDFs + Bilder
+            accept="application/pdf,image/*"
+            onChange={handleFileChange}
+          />
         </label>
       </div>
+
+      {msg && (
+        <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-900">
+          {msg}
+        </div>
+      )}
 
       {items.length === 0 ? (
         <p className="mt-2 text-[11px] text-slate-400">
@@ -125,14 +187,15 @@ export default function MatrixAttachments({ clauseId, isDe, onChangeCount }: Pro
                   download={it.name}
                   className="rounded-full border border-slate-300 px-2 py-0.5 text-[10px] text-slate-700 hover:bg-slate-100"
                 >
-                  Download
+                  {labelDownload}
                 </a>
 
                 <button
                   type="button"
                   onClick={() => handleRemove(it.id)}
                   className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-red-200 text-[11px] text-red-500 hover:bg-red-50"
-                  title={isDe ? 'Anhang entfernen' : 'Remove attachment'}
+                  title={labelRemove}
+                  aria-label={labelRemove}
                 >
                   ×
                 </button>

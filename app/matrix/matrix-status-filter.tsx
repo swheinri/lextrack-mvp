@@ -1,12 +1,14 @@
 // app/matrix/matrix-status-filter.tsx
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { ComplianceStatus } from './matrixstore';
 
+type FilterValue = ComplianceStatus | 'all';
+
 type Props = {
-  value: ComplianceStatus | 'all';
-  onChange: (v: ComplianceStatus | 'all') => void;
+  value: FilterValue;
+  onChange: (v: FilterValue) => void;
   isDe: boolean;
 };
 
@@ -20,7 +22,7 @@ function statusLabel(status: ComplianceStatus, isDe: boolean): string {
       case 'not_fulfilled':
         return 'Nicht erfüllt';
       case 'compliant':
-        return 'Compliance';
+        return 'Erfüllt';
       default:
         return 'Unbekannt';
     }
@@ -41,7 +43,10 @@ function statusLabel(status: ComplianceStatus, isDe: boolean): string {
 }
 
 export default function MatrixStatusFilter({ value, onChange, isDe }: Props) {
-  const options: Array<ComplianceStatus | 'all'> = ['all', 'open', 'compliant', 'not_fulfilled', 'not_applicable'];
+  const options = useMemo<FilterValue[]>(
+    () => ['all', 'open', 'compliant', 'not_fulfilled', 'not_applicable'],
+    []
+  );
 
   return (
     <div className="inline-flex flex-wrap items-center gap-1 text-[11px]">
@@ -58,12 +63,14 @@ export default function MatrixStatusFilter({ value, onChange, isDe }: Props) {
             key={s}
             type="button"
             onClick={() => onChange(s)}
+            aria-pressed={active}
             className={[
-              'rounded-full border px-2.5 py-1',
+              'rounded-full border px-2.5 py-1 transition',
               active
                 ? 'border-[#009A93] bg-[#009A93] text-white'
                 : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50',
             ].join(' ')}
+            title={label}
           >
             {label}
           </button>

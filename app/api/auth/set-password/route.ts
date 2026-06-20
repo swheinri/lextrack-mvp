@@ -1,115 +1,117 @@
 // app/api/auth/set-password/route.ts
 import { NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
+
 import { prisma } from '@/app/lib/prisma';
 import { hashToken } from '@/app/lib/token-hash';
-import bcrypt from 'bcryptjs';
+import { validatePassword } from '@/app/lib/password-policy';
 
 export const runtime = 'nodejs';
 
-const POLICY = {
-  minLen: 10,
-  minDigits: 1,
-  minSpecial: 1,
-};
-
-function countMatches(value: string, re: RegExp): number {
-  const m = value.match(re);
-  return m ? m.length : 0;
-}
-
-function validatePassword(pw: string) {
-  const s = String(pw ?? '');
-  const lengthOk = s.length >= POLICY.minLen;
-  const upperOk = /[A-Z]/.test(s);
-  const lowerOk = /[a-z]/.test(s);
-  const digitCount = countMatches(s, /\d/g);
-  const digitsOk = digitCount >= POLICY.minDigits;
-  const specialCount = countMatches(s, /[^A-Za-z0-9]/g);
-  const specialOk = specialCount >= POLICY.minSpecial;
-
-  const ok = lengthOk && upperOk && lowerOk && digitsOk && specialOk;
-
-  return {
-    ok,
-    details: [
-      !lengthOk ? `mind. ${POLICY.minLen} Zeichen` : null,
-      !upperOk ? 'mind. 1 Großbuchstabe' : null,
-      !lowerOk ? 'mind. 1 Kleinbuchstabe' : null,
-      !digitsOk ? `mind. ${POLICY.minDigits} Zahl` : null,
-      !specialOk ? `mind. ${POLICY.minSpecial} Sonderzeichen` : null,
-    ].filter(Boolean) as string[],
-  };
-}
-
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
-  const plainToken = String(body?.token ?? '').trim();
+  const token = String(body?.token ?? '').trim();
   const password = String(body?.password ?? '');
 
-  if (!plainToken) {
+  if (!token) {
     return NextResponse.json(
       { success: false, message: 'Token fehlt.' },
       { status: 400 }
     );
   }
 
-  const pwCheck = validatePassword(password);
-  if (!pwCheck.ok) {
+  const pw = validatePassword(password);
+
+  if (!pw.ok) {
     return NextResponse.json(
       {
         success: false,
         message: 'Passwort erfüllt die Anforderungen nicht.',
-        details: pwCheck.details,
+        details: pw.reasons,
       },
       { status: 400 }
     );
   }
 
-  try {
-    const tokenHash = hashToken(plainToken);
-    const now = new Date();
+  const tokenHash = hashToken(token);
+  const now = new Date();
 
-    const tokenRow = await prisma.authToken.findFirst({
-      where: {
-        token: tokenHash,
-        type: 'RESET',
-        usedAt: null,
-        expiresAt: { gt: now },
+  try {
+    const t = await prisma.authToken.findUnique({
+      where: { token: tokenHash },
+      select: {
+        token: true,
+        type: true,
+        expiresAt: true,
+        usedAt: true,
+        userId: true,
       },
-      include: { user: { select: { id: true, isActive: true } } },
     });
 
-    if (!tokenRow || !tokenRow.user?.isActive) {
+    if (
+      !t ||
+      (t.type !== 'RESET' && t.type !== 'INVITE') ||
+      t.usedAt ||
+      t.expiresAt <= now
+    ) {
       return NextResponse.json(
-        {
-          success: false,
-          message: 'Dieser Reset-Link ist ungültig, abgelaufen oder wurde bereits benutzt.',
-        },
+        { success: false, message: 'Token ungültig oder abgelaufen.' },
         { status: 400 }
       );
     }
 
-    const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = await bcrypt.hash(password, 10);
 
     await prisma.$transaction([
       prisma.user.update({
-        where: { id: tokenRow.userId },
-        data: { passwordHash },
+        where: { id: t.userId },
+        data: {
+          passwordHash,
+          isActive: true,
+        },
       }),
+
       prisma.authToken.update({
-        where: { token: tokenRow.token },
+        where: { token: tokenHash },
         data: { usedAt: now },
       }),
-      // optional: alle anderen offenen Reset-Tokens ebenfalls invalidieren
-      prisma.authToken.updateMany({
-        where: { userId: tokenRow.userId, type: 'RESET', usedAt: null },
-        data: { usedAt: now },
+
+prisma.person.updateMany({
+  where: { userId: t.userId },
+  data: {
+    status: 'ACTIVE',
+    acceptedAt: now,
+  },
+}),
+
+      // Andere offene RESET-Tokens dieses Users invalidieren
+      prisma.authToken.deleteMany({
+        where: {
+          userId: t.userId,
+          type: 'RESET',
+          usedAt: null,
+          token: { not: tokenHash },
+        },
+      }),
+
+      // Andere offene INVITE-Tokens dieses Users invalidieren
+      prisma.authToken.deleteMany({
+        where: {
+          userId: t.userId,
+          type: 'INVITE',
+          usedAt: null,
+          token: { not: tokenHash },
+        },
       }),
     ]);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      type: t.type,
+    });
   } catch (e) {
     console.error('[set-password] failed:', e);
+
     return NextResponse.json(
       { success: false, message: 'Passwort konnte nicht gesetzt werden.' },
       { status: 500 }

@@ -173,16 +173,16 @@ export default function DashboardPage() {
   const allSubtitle =
     language === 'de'
       ? `Aktiv: ${statusStats.aktiv} · Obsolet: ${statusStats.obsolet} · Archiviert: ${statusStats.archiviert} · Offen/ohne Status: ${
-          statusStats.offen + statusStats.ohneStatus
+          statusStats.erfasst + statusStats.ohneStatus
         }`
       : `Active: ${statusStats.aktiv} · Obsolete: ${statusStats.obsolet} · Archived: ${statusStats.archiviert} · Open/without status: ${
-          statusStats.offen + statusStats.ohneStatus
+          statusStats.erfasst + statusStats.ohneStatus
         }`;
 
   const activeSubtitle =
     language === 'de'
-      ? `Dokumente mit Status „aktiv“. Zusätzlich ${statusStats.offen} offen.`
-      : `Documents with status "active". Additionally ${statusStats.offen} open.`;
+      ? `Dokumente mit Status „aktiv“. Zusätzlich ${statusStats.erfasst} erfasst.`
+      : `Documents with status "active". Additionally ${statusStats.erfasst} recorded.`;
 
   const obsoleteSubtitle =
     language === 'de'

@@ -78,6 +78,8 @@ const FIELD_TEXT = {
     attachButton: 'Rechtsdokument anfügen',
     attachHint: 'PDF optional, max. 2 MB.',
     submitButton: 'Ins Register übernehmen',
+
+    requiredPrefix: 'Bitte fülle die Pflichtfelder aus:',
   },
   en: {
     docTypeLabel: 'Document type',
@@ -125,11 +127,13 @@ const FIELD_TEXT = {
     attachButton: 'Attach legal document',
     attachHint: 'PDF optional, max. 2 MB.',
     submitButton: 'Add to register',
+
+    requiredPrefix: 'Please fill the required fields:',
   },
 } as const;
 
 const label = 'text-xs font-semibold text-slate-700 mb-1';
-const input =
+const inputBase =
   'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm placeholder-slate-400 outline-none transition duration-200 hover:border-slate-300 focus:border-[#009A93] focus:ring-4 focus:ring-[#009A93]/20';
 const box = 'bg-white rounded-xl shadow-sm ring-1 ring-slate-200';
 const btn =
@@ -154,23 +158,125 @@ function Field({
   );
 }
 
+type MissingMap = {
+  dokumentenart: boolean;
+  kuerzel: boolean;
+  bezeichnung: boolean;
+  themenfeld: boolean;
+};
+
+function isBlank(v: unknown) {
+  return !String(v ?? '').trim();
+}
+
 export default React.memo(function Eingabeform() {
   const { add } = useRegisterStore();
   const formRef = useRef<HTMLFormElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // refs für Auto-Scroll/Focus
+  const docTypeRef = useRef<HTMLSelectElement>(null);
+  const kuerzelRef = useRef<HTMLInputElement>(null);
+  const bezeichnungRef = useRef<HTMLInputElement>(null);
+  const themenfeldRef = useRef<HTMLSelectElement>(null);
+
   const { language } = useLanguage();
   const t = FIELD_TEXT[language];
 
+  // controlled states (für präzise Validierung + Reset)
   const [docType, setDocType] = useState<Dokumentenart | ''>('');
   const [contractEnv, setContractEnv] = useState<Vertragsumfeld | ''>('');
+  const [kuerzel, setKuerzel] = useState('');
+  const [bezeichnung, setBezeichnung] = useState('');
+  const [themenfeld, setThemenfeld] = useState('');
+
+  const [missing, setMissing] = useState<MissingMap>({
+    dokumentenart: false,
+    kuerzel: false,
+    bezeichnung: false,
+    themenfeld: false,
+  });
+  const [errorText, setErrorText] = useState<string | null>(null);
 
   const pickPdf = () => fileRef.current?.click();
 
+  const inputInvalid = (flag: boolean) =>
+    [inputBase, flag ? 'border-rose-300 ring-4 ring-rose-200/40' : ''].join(' ');
+
+  const focusFirstMissing = (m: MissingMap) => {
+    const first =
+      (m.dokumentenart && docTypeRef.current) ||
+      (m.kuerzel && kuerzelRef.current) ||
+      (m.bezeichnung && bezeichnungRef.current) ||
+      (m.themenfeld && themenfeldRef.current);
+
+    if (!first) return;
+
+    // erst scrollen, dann fokussieren (verhindert „springt weg“-Gefühl)
+    requestAnimationFrame(() => {
+      try {
+        first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch {
+        // ignore
+      }
+      try {
+        (first as any).focus?.();
+      } catch {
+        // ignore
+      }
+    });
+  };
+
+  const requiredLabels =
+    language === 'de'
+      ? {
+          dokumentenart: 'Dokumentenart',
+          kuerzel: 'Kürzel',
+          bezeichnung: 'Bezeichnung',
+          themenfeld: 'Themenfeld',
+        }
+      : {
+          dokumentenart: 'Document type',
+          kuerzel: 'Reference',
+          bezeichnung: 'Title',
+          themenfeld: 'Topic area',
+        };
+
   const submit: React.FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
+
+    // Pflichtfelder prüfen (genau!)
+    const nextMissing: MissingMap = {
+      dokumentenart: isBlank(docType),
+      kuerzel: isBlank(kuerzel),
+      bezeichnung: isBlank(bezeichnung),
+      themenfeld: isBlank(themenfeld),
+    };
+
+    const hasMissing = Object.values(nextMissing).some(Boolean);
+    if (hasMissing) {
+      setMissing(nextMissing);
+
+      const list = (Object.keys(nextMissing) as Array<keyof MissingMap>)
+        .filter((k) => nextMissing[k])
+        .map((k) => requiredLabels[k]);
+
+      setErrorText(`${t.requiredPrefix} ${list.join(', ')}.`);
+      focusFirstMissing(nextMissing);
+      return;
+    }
+
+    // ok → Fehler zurücksetzen
+    setMissing({
+      dokumentenart: false,
+      kuerzel: false,
+      bezeichnung: false,
+      themenfeld: false,
+    });
+    setErrorText(null);
+
     const fd = new FormData(e.currentTarget);
     const get = (name: string) => (fd.get(name)?.toString().trim() ?? '');
-
     const pdf = fd.get('pdfFile') as File | null;
 
     const createdAt = new Date().toISOString();
@@ -183,47 +289,36 @@ export default React.memo(function Eingabeform() {
         .filter(Boolean)
         .join(' ') || 'System';
 
-    const dokumentenart = (get('dokumentenart') ||
-      undefined) as Dokumentenart | undefined;
-    const vertragsumfeld = (get('vertragsumfeld') ||
-      undefined) as Vertragsumfeld | undefined;
-
     const row: LawRow = {
       id: makeId(),
-      dokumentenart,
-      vertragsumfeld,
 
-      // ✅ WICHTIG: Dokumentenart auch in das Register-Feld übernehmen (Legacy-Anzeige)
-      rechtsart: dokumentenart,
+      dokumentenart: docType || undefined,
+      vertragsumfeld: contractEnv || undefined,
 
-      kuerzel: get('kuerzel'),
-      bezeichnung: get('bezeichnung'),
-      themenfeld: get('themenfeld'),
+      // legacy
+      rechtsart: docType || undefined,
+
+      kuerzel: kuerzel.trim(),
+      bezeichnung: bezeichnung.trim(),
+      themenfeld: themenfeld.trim(),
 
       publiziert: get('publiziert'),
       frist: get('frist'),
       relevanz: (get('relevanz') || undefined) as Relevanz | undefined,
 
-      // Erfassung durch
       erfasserVorname,
       erfasserNachname,
       erfasserAbteilung,
 
-      // Quelle / URL
       dokumentUrl: get('dokumentUrl') || undefined,
 
-      // Zeitstempel + Historie
+      // ✅ Status beim Anlegen immer "erfasst"
+      status: 'erfasst',
+
       createdAt,
-      history: [
-        {
-          date: createdAt,
-          user: creator,
-          text: 'Angelegt',
-        },
-      ],
+      history: [{ date: createdAt, user: creator, text: 'Angelegt' }],
     };
 
-    // PDF anhängen
     if (pdf && pdf.size > 0) {
       row.dokumentFileName = pdf.name;
       try {
@@ -233,26 +328,36 @@ export default React.memo(function Eingabeform() {
       }
     }
 
-    // Minimalbedingung: irgendein Basisfeld gesetzt
-    if (row.dokumentenart || row.kuerzel || row.bezeichnung || row.themenfeld) {
-      add(row);
-      e.currentTarget.reset();
-      if (fileRef.current) fileRef.current.value = '';
-      setDocType('');
-      setContractEnv('');
-    }
+    add(row);
+
+    // Reset
+    e.currentTarget.reset();
+    if (fileRef.current) fileRef.current.value = '';
+    setDocType('');
+    setContractEnv('');
+    setKuerzel('');
+    setBezeichnung('');
+    setThemenfeld('');
   };
 
   return (
     <form ref={formRef} onSubmit={submit} className={`${box} p-4 sm:p-5`}>
-      {/* Reihe 1: Dokumentenart, Kürzel, Bezeichnung, Themenfeld */}
+      {/* Reihe 1 */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
         <Field labelText={t.docTypeLabel} className="md:col-span-3">
           <select
+            ref={docTypeRef}
             name="dokumentenart"
-            className={input}
+            className={inputInvalid(missing.dokumentenart)}
             value={docType}
-            onChange={(e) => setDocType(e.target.value as Dokumentenart | '')}
+            aria-invalid={missing.dokumentenart}
+            onChange={(e) => {
+              const v = e.target.value as Dokumentenart | '';
+              setDocType(v);
+              if (missing.dokumentenart && !isBlank(v)) {
+                setMissing((p) => ({ ...p, dokumentenart: false }));
+              }
+            }}
           >
             <option value="">{t.docTypePlaceholder}</option>
             <option value="Verordnung">Verordnung</option>
@@ -266,19 +371,56 @@ export default React.memo(function Eingabeform() {
         </Field>
 
         <Field labelText={t.refLabel} className="md:col-span-3">
-          <input name="kuerzel" className={input} placeholder={t.refPlaceholder} />
+          <input
+            ref={kuerzelRef}
+            name="kuerzel"
+            className={inputInvalid(missing.kuerzel)}
+            placeholder={t.refPlaceholder}
+            value={kuerzel}
+            aria-invalid={missing.kuerzel}
+            onChange={(e) => {
+              const v = e.target.value;
+              setKuerzel(v);
+              if (missing.kuerzel && !isBlank(v)) {
+                setMissing((p) => ({ ...p, kuerzel: false }));
+              }
+            }}
+          />
         </Field>
 
         <Field labelText={t.titleLabel} className="md:col-span-4">
           <input
+            ref={bezeichnungRef}
             name="bezeichnung"
-            className={input}
+            className={inputInvalid(missing.bezeichnung)}
             placeholder={t.titlePlaceholder}
+            value={bezeichnung}
+            aria-invalid={missing.bezeichnung}
+            onChange={(e) => {
+              const v = e.target.value;
+              setBezeichnung(v);
+              if (missing.bezeichnung && !isBlank(v)) {
+                setMissing((p) => ({ ...p, bezeichnung: false }));
+              }
+            }}
           />
         </Field>
 
         <Field labelText={t.topicLabel} className="md:col-span-2">
-          <select name="themenfeld" className={input} defaultValue="">
+          <select
+            ref={themenfeldRef}
+            name="themenfeld"
+            className={inputInvalid(missing.themenfeld)}
+            value={themenfeld}
+            aria-invalid={missing.themenfeld}
+            onChange={(e) => {
+              const v = e.target.value;
+              setThemenfeld(v);
+              if (missing.themenfeld && !isBlank(v)) {
+                setMissing((p) => ({ ...p, themenfeld: false }));
+              }
+            }}
+          >
             <option value="">{t.topicPlaceholder}</option>
             <option value="Sicherheit und Arbeitsschutz">{t.topicSafety}</option>
             <option value="Daten- und Informationssicherheit">{t.topicInfoSec}</option>
@@ -289,36 +431,24 @@ export default React.memo(function Eingabeform() {
         </Field>
       </div>
 
-      {/* Reihe 2: Person, Abteilung, Vertragsumfeld, Relevanz */}
+      {/* Reihe 2 */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mt-3">
         <Field labelText={t.firstNameLabel} className="md:col-span-2">
-          <input
-            name="vorname"
-            className={input}
-            placeholder={t.firstNamePlaceholder}
-          />
+          <input name="vorname" className={inputBase} placeholder={t.firstNamePlaceholder} />
         </Field>
 
         <Field labelText={t.lastNameLabel} className="md:col-span-2">
-          <input
-            name="nachname"
-            className={input}
-            placeholder={t.lastNamePlaceholder}
-          />
+          <input name="nachname" className={inputBase} placeholder={t.lastNamePlaceholder} />
         </Field>
 
         <Field labelText={t.deptLabel} className="md:col-span-3">
-          <input
-            name="abteilung"
-            className={input}
-            placeholder={t.deptPlaceholder}
-          />
+          <input name="abteilung" className={inputBase} placeholder={t.deptPlaceholder} />
         </Field>
 
         <Field labelText={t.contractEnvLabel} className="md:col-span-3">
           <select
             name="vertragsumfeld"
-            className={input}
+            className={inputBase}
             value={contractEnv}
             onChange={(e) => setContractEnv(e.target.value as Vertragsumfeld | '')}
           >
@@ -331,7 +461,7 @@ export default React.memo(function Eingabeform() {
         </Field>
 
         <Field labelText={t.relevanzLabel} className="md:col-span-2">
-          <select name="relevanz" className={input} defaultValue="">
+          <select name="relevanz" className={inputBase} defaultValue="">
             <option value="">{t.relevanzPlaceholder}</option>
             <option value="Niedrig">{t.relLow}</option>
             <option value="Mittel">{t.relMedium}</option>
@@ -340,20 +470,27 @@ export default React.memo(function Eingabeform() {
         </Field>
       </div>
 
-      {/* Reihe 3: Dokument / Publiziert / Frist */}
+      {/* Reihe 3 */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mt-3">
         <Field labelText={t.docLabel} className="md:col-span-6">
-          <input name="dokumentUrl" className={input} placeholder={t.docPlaceholder} />
+          <input name="dokumentUrl" className={inputBase} placeholder={t.docPlaceholder} />
         </Field>
 
         <Field labelText={t.publishedLabel} className="md:col-span-3">
-          <input type="date" name="publiziert" className={input} />
+          <input type="date" name="publiziert" className={inputBase} />
         </Field>
 
         <Field labelText={t.dueLabel} className="md:col-span-3">
-          <input type="date" name="frist" className={input} />
+          <input type="date" name="frist" className={inputBase} />
         </Field>
       </div>
+
+      {/* Fehlerbox */}
+      {errorText && (
+        <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          {errorText}
+        </div>
+      )}
 
       {/* Aktionen */}
       <div className="flex items-end gap-4 mt-4">

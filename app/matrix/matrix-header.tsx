@@ -1,7 +1,7 @@
 // app/matrix/matrix-header.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { useLanguage } from '../components/i18n/language';
 import { Info } from 'lucide-react';
 
@@ -9,6 +9,19 @@ export default function MatrixHeader() {
   const { language } = useLanguage();
   const isDe = language === 'de';
   const [showInfo, setShowInfo] = useState(false);
+
+  const titleId = useId();
+
+  useEffect(() => {
+    if (!showInfo) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowInfo(false);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showInfo]);
 
   return (
     <>
@@ -31,6 +44,9 @@ export default function MatrixHeader() {
             type="button"
             onClick={() => setShowInfo(true)}
             className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] text-slate-700 shadow-sm hover:bg-slate-100"
+            aria-haspopup="dialog"
+            aria-expanded={showInfo}
+            aria-controls={showInfo ? titleId : undefined}
           >
             <Info className="h-3 w-3" />
             <span>{isDe ? 'Info' : 'Info'}</span>
@@ -40,38 +56,46 @@ export default function MatrixHeader() {
 
       {/* Info-Modal */}
       {showInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          onMouseDown={(e) => {
+            // Click auf Backdrop schließt
+            if (e.target === e.currentTarget) setShowInfo(false);
+          }}
+        >
           <div className="w-full max-w-md rounded-xl bg-white p-4 text-xs shadow-xl">
-            <h2 className="mb-2 text-sm font-semibold text-slate-900">
+            <h2 id={titleId} className="mb-2 text-sm font-semibold text-slate-900">
               {isDe ? 'Compliance Matrix – Info' : 'Compliance matrix – info'}
             </h2>
+
             <p className="mb-2 text-slate-700">
               {isDe ? (
                 <>
-                  In der Compliance Matrix legst du Paragraphen/Anforderungen aus
-                  einem Regelwerk an, bewertest den Erfüllungsstatus und
-                  verknüpfst Evidence (Nachweise, Prozesse, interne Dokumente).
+                  In der Compliance Matrix legst du Paragraphen/Anforderungen aus einem Regelwerk an,
+                  bewertest den Erfüllungsstatus und verknüpfst Evidence (Nachweise, Prozesse,
+                  interne Dokumente).
                 </>
               ) : (
                 <>
-                  In the compliance matrix you create clauses/requirements from a
-                  regulation, assess their compliance status and link evidence
-                  (proof, processes, internal documents).
+                  In the compliance matrix you create clauses/requirements from a regulation, assess
+                  their compliance status and link evidence (proof, processes, internal documents).
                 </>
               )}
             </p>
+
             <p className="mb-3 text-slate-700">
               {isDe ? (
                 <>
-                  Später kann dieser Bereich um weitere Auswertungen und
-                  KI-Funktionen erweitert werden (z. B. automatische
-                  Vorschlagsbewertung, Reifegrad-Scoring, etc.).
+                  Später kann dieser Bereich um weitere Auswertungen und KI-Funktionen erweitert
+                  werden (z. B. automatische Vorschläge, Reifegrad-Scoring, etc.).
                 </>
               ) : (
                 <>
-                  Later this area can be extended with more analytics and AI
-                  features (e.g. automatic suggestion of statuses, maturity
-                  scoring, etc.).
+                  Later this area can be extended with more analytics and AI features (e.g. automatic
+                  suggestions, maturity scoring, etc.).
                 </>
               )}
             </p>

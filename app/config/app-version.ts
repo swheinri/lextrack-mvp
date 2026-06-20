@@ -1,3 +1,5 @@
 // app/config/app-version.ts
-export const APP_VERSION = 'v0.2.1';           // zentrale Versionsangabe
-export const APP_VERSION_LABEL = 'LexTrack v0.2.1';
+const raw = process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0';
+
+export const APP_VERSION = raw.startsWith('v') ? raw : `v${raw}`;
+export const APP_VERSION_LABEL = `LexTrack ${APP_VERSION}`;

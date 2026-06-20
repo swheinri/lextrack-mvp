@@ -103,8 +103,42 @@ export default function EditorPanel({ row, onClose, onSave }: Props) {
   const vertragsumfelder: Vertragsumfeld[] = ['B2B', 'B2C', 'B2G', 'Intern'];
 
   const relevanzOptions: Relevanz[] = ['Niedrig', 'Mittel', 'Hoch'];
-  const statusOptions: Status[] = ['offen', 'aktiv', 'obsolet', 'archiviert'];
+  // ✅ Status-Optionen (neuer Workflow)
+const statusOptions: Status[] = [
+  'erfasst',
+  'zugeteilt',
+  'in_pruefung',
+  'zurueckgewiesen',
+  'freigegeben',
+  'aktiv',
+  'obsolet',
+  'archiviert',
+];
 
+// ✅ Labels vollständig (sonst TS-Error bei neuen Status)
+const STATUS_LABEL_DE: Record<Status, string> = {
+  erfasst: 'erfasst',
+  zugeteilt: 'zugeteilt',
+  in_pruefung: 'in Prüfung',
+  zurueckgewiesen: 'zurückgewiesen',
+  freigegeben: 'freigegeben',
+  aktiv: 'aktiv',
+  obsolet: 'obsolet',
+  archiviert: 'archiviert',
+};
+
+const STATUS_LABEL_EN: Record<Status, string> = {
+  erfasst: 'captured',
+  zugeteilt: 'assigned',
+  in_pruefung: 'in review',
+  zurueckgewiesen: 'rejected',
+  freigegeben: 'released',
+  aktiv: 'active',
+  obsolet: 'obsolete',
+  archiviert: 'archived',
+};
+
+const statusLabel = (s: Status) => (isDe ? STATUS_LABEL_DE[s] : STATUS_LABEL_EN[s]);
   /* ---------- Render ---------- */
 
   return (
@@ -343,24 +377,28 @@ export default function EditorPanel({ row, onClose, onSave }: Props) {
                 </select>
               </Field>
 
-              <Field label={isDe ? 'Status' : 'Status'} className="md:col-span-3">
-                <select
-                  className={inputCls}
-                  value={draft.status ?? ''}
-                  onChange={(e) =>
-                    setField('status', (e.target.value || undefined) as Status | undefined)
-                  }
-                >
-                  <option value="">
-                    {isDe ? '— Status wählen —' : '— Select status —'}
-                  </option>
-                  {statusOptions.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+<Field label={isDe ? 'Status' : 'Status'} className="md:col-span-3">
+  <select
+    className={inputCls}
+    value={draft.status ?? ''}
+    onChange={(e) =>
+      setField(
+        'status',
+        (e.target.value || undefined) as Status | undefined
+      )
+    }
+  >
+    <option value="">
+      {isDe ? '— Status wählen —' : '— Select status —'}
+    </option>
+
+    {statusOptions.map((s) => (
+      <option key={s} value={s}>
+        {statusLabel(s)}
+      </option>
+    ))}
+  </select>
+</Field>
             </div>
           </section>
 

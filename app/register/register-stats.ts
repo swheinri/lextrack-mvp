@@ -3,7 +3,7 @@ import type { LawRow, Status } from './registerstore';
 
 export type StatusCounts = {
   gesamt: number;
-  offen: number;
+  erfasst: number;
   aktiv: number;
   obsolet: number;
   archiviert: number;
@@ -20,17 +20,15 @@ export function parseDate(value?: string | null): Date | null {
   const d = new Date(value);
   if (isNaN(d.getTime())) return null;
 
-  // nur Datum vergleichen, Zeit auf Mitternacht setzen
   d.setHours(0, 0, 0, 0);
   return d;
 }
 
 /**
  * Zählt die Dokumente nach Status durch.
- * Nutzt die Status-Typdefinition aus dem Registerstore.
  */
 export function computeStatusCounts(rows: LawRow[]): StatusCounts {
-  let offen = 0;
+  let erfasst = 0;
   let aktiv = 0;
   let obsolet = 0;
   let archiviert = 0;
@@ -40,8 +38,8 @@ export function computeStatusCounts(rows: LawRow[]): StatusCounts {
     const s = r.status as Status | undefined;
 
     switch (s) {
-      case 'offen':
-        offen++;
+      case 'erfasst':
+        erfasst++;
         break;
       case 'aktiv':
         aktiv++;
@@ -53,7 +51,6 @@ export function computeStatusCounts(rows: LawRow[]): StatusCounts {
         archiviert++;
         break;
       default:
-        // alles, was keinen gültigen Status hat
         ohneStatus++;
         break;
     }
@@ -61,7 +58,7 @@ export function computeStatusCounts(rows: LawRow[]): StatusCounts {
 
   return {
     gesamt: rows.length,
-    offen,
+    erfasst,
     aktiv,
     obsolet,
     archiviert,
@@ -75,12 +72,6 @@ export type DeadlineStats = {
   ueberfaellig: number;
 };
 
-/**
- * Ermittelt Frist-Kennzahlen:
- *  - wie viele Einträge haben überhaupt eine Frist,
- *  - wie viele sind in den nächsten 30 Tagen fällig,
- *  - wie viele sind bereits überfällig.
- */
 export function computeDeadlineStats(rows: LawRow[]): DeadlineStats {
   const today = new Date();
   today.setHours(0, 0, 0, 0);

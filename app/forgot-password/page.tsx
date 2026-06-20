@@ -1,4 +1,5 @@
-﻿'use client';
+﻿//app/api/auth/request-password-reset/route.ts
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';

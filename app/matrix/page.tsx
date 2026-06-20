@@ -1,7 +1,7 @@
 // app/matrix/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import MatrixDocSelector from './matrix-doc-selector';
 import MatrixDocList from './matrix-doc-list';
@@ -12,6 +12,8 @@ import { useMatrixStore } from './matrixstore';
 import { useLanguage } from '../components/i18n/language';
 import { Info, PlusCircle, X } from 'lucide-react';
 
+type Modal = 'none' | 'info' | 'link';
+
 export default function MatrixPage() {
   const { rows } = useRegisterStore();
   const { docs, createOrGetDocumentForLaw } = useMatrixStore();
@@ -20,25 +22,53 @@ export default function MatrixPage() {
 
   const [selectedLawId, setSelectedLawId] = useState<string>('');
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
-  const [showInfo, setShowInfo] = useState(false);
-  const [showDocSelector, setShowDocSelector] = useState(false);
+  const [modal, setModal] = useState<Modal>('none');
 
-  function handleCreateFromLaw() {
-    if (!selectedLawId) return;
+  const closeModal = useCallback(() => setModal('none'), []);
 
-    const law: LawRow | undefined = rows.find((r) => r.id === selectedLawId);
-    if (!law) return;
+  // ✅ Wenn der ausgewählte Doc nicht mehr existiert → Auswahl zurücksetzen
+  useEffect(() => {
+    if (!selectedDocId) return;
+    const exists = docs?.some((d: any) => d?.id === selectedDocId);
+    if (!exists) setSelectedDocId(null);
+  }, [docs, selectedDocId]);
 
-    const doc = createOrGetDocumentForLaw(law);
+  // ✅ Wenn es Docs gibt und noch keiner ausgewählt ist → ersten wählen (besseres UX)
+  useEffect(() => {
+    if (selectedDocId) return;
+    if (docs?.length) setSelectedDocId(docs[0]?.id ?? null);
+  }, [docs, selectedDocId]);
+
+  // ✅ ESC schließt Modals
+  useEffect(() => {
+    if (modal === 'none') return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeModal();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [modal, closeModal]);
+
+  const selectedLaw: LawRow | undefined = useMemo(() => {
+    if (!selectedLawId) return undefined;
+    return rows.find((r) => r.id === selectedLawId);
+  }, [rows, selectedLawId]);
+
+  const handleCreateFromLaw = useCallback(() => {
+    if (!selectedLaw) return;
+
+    const doc = createOrGetDocumentForLaw(selectedLaw);
     setSelectedDocId(doc.id);
 
     // Auswahl-Modal schließen, wenn eine Matrix angelegt/gefunden wurde
-    setShowDocSelector(false);
-  }
+    setModal('none');
+  }, [createOrGetDocumentForLaw, selectedLaw]);
 
-  function handleSelectDoc(docId: string) {
+  const handleSelectDoc = useCallback((docId: string) => {
     setSelectedDocId(docId);
-  }
+  }, []);
 
   return (
     <>
@@ -60,7 +90,7 @@ export default function MatrixPage() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => setShowDocSelector(true)}
+                onClick={() => setModal('link')}
                 className="inline-flex items-center gap-1 rounded-full bg-[#009A93] px-3 py-1.5 text-[11px] font-medium text-white shadow-sm hover:bg-[#007e78]"
               >
                 <PlusCircle className="h-3 w-3" />
@@ -69,7 +99,7 @@ export default function MatrixPage() {
 
               <button
                 type="button"
-                onClick={() => setShowInfo(true)}
+                onClick={() => setModal('info')}
                 className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] text-slate-700 shadow-sm hover:bg-slate-100"
               >
                 <Info className="h-3 w-3" />
@@ -79,7 +109,7 @@ export default function MatrixPage() {
           </div>
         </div>
 
-        {/* Bereich 2: vorhandene Matrizen (Cockpit) */}
+        {/* Bereich 2: vorhandene Matrizen */}
         <section className="space-y-3">
           <MatrixDocList
             docs={docs}
@@ -93,38 +123,56 @@ export default function MatrixPage() {
       </div>
 
       {/* Info-Modal */}
-      {showInfo && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30">
+      {modal === 'info' && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(e) => {
+            // Klick auf Backdrop schließt, Klick im Dialog nicht
+            if (e.target === e.currentTarget) closeModal();
+          }}
+        >
           <div className="w-full max-w-md rounded-xl bg-white p-4 text-xs shadow-xl">
-            <h2 className="mb-2 text-sm font-semibold text-slate-900">
-              {isDe ? 'Compliance Matrix – Info' : 'Compliance matrix – info'}
-            </h2>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-slate-900">
+                {isDe ? 'Compliance Matrix – Info' : 'Compliance matrix – info'}
+              </h2>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-full border border-slate-200 bg-slate-50 p-1 hover:bg-slate-100"
+                aria-label={isDe ? 'Schließen' : 'Close'}
+              >
+                <X className="h-3 w-3 text-slate-600" />
+              </button>
+            </div>
+
             <p className="mb-2 text-slate-700">
               {isDe ? (
                 <>
-                  In der Compliance Matrix legst du Paragraphen/Anforderungen aus
-                  einem Regelwerk an, bewertest den Erfüllungsstatus und
-                  verknüpfst Evidence (Nachweise, Prozesse, interne Dokumente).
+                  In der Compliance Matrix legst du Paragraphen/Anforderungen aus einem Regelwerk an,
+                  bewertest den Erfüllungsstatus und verknüpfst Evidence (Nachweise, Prozesse,
+                  interne Dokumente).
                 </>
               ) : (
                 <>
-                  In the compliance matrix you create clauses/requirements from a
-                  regulation, assess their status and link evidence (processes,
-                  internal documents, etc.).
+                  In the compliance matrix you create clauses/requirements from a regulation,
+                  assess their status and link evidence (processes, internal documents, etc.).
                 </>
               )}
             </p>
+
             <p className="mb-3 text-slate-700">
               {isDe ? (
                 <>
-                  Später kann dieser Bereich um weitere Auswertungen und
-                  KI-Funktionen erweitert werden (z.&nbsp;B. automatische
-                  Bewertungsvorschläge, Reifegrad-Scoring usw.).
+                  Später kann dieser Bereich um weitere Auswertungen und KI-Funktionen erweitert
+                  werden (z.&nbsp;B. automatische Bewertungsvorschläge, Reifegrad-Scoring usw.).
                 </>
               ) : (
                 <>
-                  Later this area can be extended with more analytics and AI
-                  features (e.g. automatic suggestions, maturity scoring, etc.).
+                  Later this area can be extended with more analytics and AI features (e.g.
+                  automatic suggestions, maturity scoring, etc.).
                 </>
               )}
             </p>
@@ -132,7 +180,7 @@ export default function MatrixPage() {
             <div className="flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setShowInfo(false)}
+                onClick={closeModal}
                 className="rounded-md bg-slate-100 px-3 py-1.5 text-[11px] font-medium text-slate-700 hover:bg-slate-200"
               >
                 {isDe ? 'Schließen' : 'Close'}
@@ -143,19 +191,25 @@ export default function MatrixPage() {
       )}
 
       {/* Modal: Regelwerk aus Register auswählen */}
-      {showDocSelector && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40">
+      {modal === 'link' && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeModal();
+          }}
+        >
           <div className="w-full max-w-4xl rounded-xl bg-white p-4 shadow-xl">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-900">
-                {isDe
-                  ? 'Regelwerk aus dem Register auswählen'
-                  : 'Select regulation from register'}
+                {isDe ? 'Regelwerk aus dem Register auswählen' : 'Select regulation from register'}
               </h2>
               <button
                 type="button"
-                onClick={() => setShowDocSelector(false)}
+                onClick={closeModal}
                 className="rounded-full border border-slate-300 bg-slate-50 p-1 hover:bg-slate-100"
+                aria-label={isDe ? 'Schließen' : 'Close'}
               >
                 <X className="h-3 w-3 text-slate-600" />
               </button>

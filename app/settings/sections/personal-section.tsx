@@ -133,7 +133,7 @@ export default function PersonalSection({ isDe }: { isDe: boolean }) {
   return (
     <div className="space-y-6">
       {/* Headline-Band */}
-      <div className="rounded-xl bg-[#041225] text-white px-4 py-3 shadow-sm">
+      <div className="rounded-xl bg-[#00559F] text-white px-4 py-3 shadow-sm">
         <h2 className="text-base sm:text-lg font-semibold">
           {isDe ? 'Persönliche Einstellungen' : 'Personal settings'}
         </h2>

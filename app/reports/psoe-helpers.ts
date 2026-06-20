@@ -12,29 +12,29 @@ export type NormRadarPoint = {
 
 /**
  * Baut einfache PSOE-Reifegrad-Werte je Kategorie.
- * Aktuelle Logik: Anteil "aktiv" an (aktiv + offen), skaliert auf 0..4.
+ * Aktuelle Logik: Anteil "aktiv" an (aktiv + erfasst), skaliert auf 0..4.
  * Das ist ein Platzhalter, bis wir echte PSOE-Scores je Paragraphen haben.
  */
 export function buildNormRadarData(rows: LawRow[]): NormRadarPoint[] {
-  const buckets = new Map<string, { aktiv: number; offen: number }>();
+  const buckets = new Map<string, { aktiv: number; erfasst: number }>();
 
   for (const row of rows) {
     const status = row.status;
-    if (status !== 'aktiv' && status !== 'offen') continue;
+    if (status !== 'aktiv' && status !== 'erfasst') continue;
 
     const key = row.kategorie?.trim() || 'Unkategorisiert';
-    const bucket = buckets.get(key) ?? { aktiv: 0, offen: 0 };
+    const bucket = buckets.get(key) ?? { aktiv: 0, erfasst: 0 };
 
     if (status === 'aktiv') bucket.aktiv += 1;
-    else bucket.offen += 1;
+    else bucket.erfasst += 1;
 
     buckets.set(key, bucket);
   }
 
   const points: NormRadarPoint[] = [];
 
-  for (const [label, { aktiv, offen }] of buckets) {
-    const total = aktiv + offen;
+  for (const [label, { aktiv, erfasst }] of buckets) {
+    const total = aktiv + erfasst;
     if (!total) continue;
 
     const share = aktiv / total; // 0..1

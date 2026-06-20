@@ -12,6 +12,82 @@ type Props = {
   onCreateFromLaw: () => void;
 };
 
+type DocStatus =
+  | 'erfasst'
+  | 'in_pruefung'
+  | 'freigegeben'
+  | 'aktiv'
+  | 'obsolet'
+  | 'archiviert';
+
+function isRelevantForMatrix(status: unknown): boolean {
+  // “relevant” = alles, was nicht obsolet/archiviert ist (und auch “kein Status”)
+  const v = String(status ?? '').trim().toLowerCase();
+  if (!v) return true;
+
+  // Legacy safety (falls irgendwo doch noch ein altes LS rumliegt)
+  if (v === 'offen' || v === 'open') return true; // behandeln wir wie "erfasst"
+
+  if (v === 'obsolet' || v === 'obsolete') return false;
+  if (v === 'archiviert' || v === 'archived') return false;
+
+  // neue Prozesswerte: erfasst -> in_pruefung -> freigegeben -> aktiv
+  if (v === 'erfasst') return true;
+  if (v === 'in_pruefung' || v === 'in pruefung' || v === 'in prüfung') return true;
+  if (v === 'freigegeben' || v === 'released') return true;
+  if (v === 'aktiv' || v === 'active') return true;
+
+  // unbekannt? lieber NICHT ausblenden (MVP-freundlich)
+  return true;
+}
+
+function statusLabel(s: unknown, isDe: boolean): string {
+  const v = String(s ?? '').trim().toLowerCase();
+
+  // Legacy
+  if (v === 'offen' || v === 'open') return isDe ? 'erfasst' : 'captured';
+
+  const mapDe: Record<DocStatus, string> = {
+    erfasst: 'erfasst',
+    in_pruefung: 'in Prüfung',
+    freigegeben: 'freigegeben',
+    aktiv: 'aktiv',
+    obsolet: 'obsolet',
+    archiviert: 'archiviert',
+  };
+
+  const mapEn: Record<DocStatus, string> = {
+    erfasst: 'captured',
+    in_pruefung: 'in review',
+    freigegeben: 'released',
+    aktiv: 'active',
+    obsolet: 'obsolete',
+    archiviert: 'archived',
+  };
+
+  // normalize variants
+  let key = v
+    .replace('in prüfung', 'in_pruefung')
+    .replace('in pruefung', 'in_pruefung')
+    .replace('released', 'freigegeben')
+    .replace('active', 'aktiv')
+    .replace('obsolete', 'obsolet')
+    .replace('archived', 'archiviert') as DocStatus;
+
+  if (
+    key !== 'erfasst' &&
+    key !== 'in_pruefung' &&
+    key !== 'freigegeben' &&
+    key !== 'aktiv' &&
+    key !== 'obsolet' &&
+    key !== 'archiviert'
+  ) {
+    return String(s ?? '—') || '—';
+  }
+
+  return (isDe ? mapDe : mapEn)[key];
+}
+
 export default function MatrixDocSelector({
   selectedLawId,
   onSelectedLawIdChange,
@@ -22,15 +98,13 @@ export default function MatrixDocSelector({
   const isDe = language === 'de';
 
   const [query, setQuery] = useState('');
-  const [showOnlyActive, setShowOnlyActive] = useState<boolean>(true);
+  const [showOnlyRelevant, setShowOnlyRelevant] = useState<boolean>(true);
 
   const filteredRows = useMemo(() => {
     let list = rows as LawRow[];
 
-    if (showOnlyActive) {
-      list = list.filter(
-        (r) => !r.status || r.status === 'aktiv' || r.status === 'offen',
-      );
+    if (showOnlyRelevant) {
+      list = list.filter((r) => isRelevantForMatrix(r.status));
     }
 
     if (query.trim()) {
@@ -51,9 +125,10 @@ export default function MatrixDocSelector({
       if (ak !== 0) return ak;
       return (a.bezeichnung || '').localeCompare(b.bezeichnung || '', 'de');
     });
-  }, [rows, query, showOnlyActive]);
+  }, [rows, query, showOnlyRelevant]);
 
-  const selectedLaw = filteredRows.find((r) => r.id === selectedLawId) ??
+  const selectedLaw =
+    filteredRows.find((r) => r.id === selectedLawId) ??
     rows.find((r) => r.id === selectedLawId) ??
     null;
 
@@ -63,9 +138,7 @@ export default function MatrixDocSelector({
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {isDe
-              ? 'Regelwerk aus dem Register auswählen'
-              : 'Select regulation from register'}
+            {isDe ? 'Regelwerk aus dem Register auswählen' : 'Select regulation from register'}
           </div>
           <p className="text-[11px] text-slate-600">
             {isDe
@@ -79,11 +152,11 @@ export default function MatrixDocSelector({
             <input
               type="checkbox"
               className="h-3 w-3 rounded border-slate-300"
-              checked={showOnlyActive}
-              onChange={(e) => setShowOnlyActive(e.target.checked)}
+              checked={showOnlyRelevant}
+              onChange={(e) => setShowOnlyRelevant(e.target.checked)}
             />
             <span>
-              {isDe ? 'Nur offene/aktive' : 'Only open/active'}
+              {isDe ? 'Nur relevant (nicht obsolet/archiviert)' : 'Relevant only (not obsolete/archived)'}
             </span>
           </label>
         </div>
@@ -95,11 +168,7 @@ export default function MatrixDocSelector({
         <input
           type="text"
           className="w-full bg-transparent text-xs text-slate-800 outline-none placeholder:text-slate-400"
-          placeholder={
-            isDe
-              ? 'Nach Kürzel, Bezeichnung oder Themenfeld suchen …'
-              : 'Search by code, title or topic …'
-          }
+          placeholder={isDe ? 'Nach Kürzel, Bezeichnung oder Themenfeld suchen …' : 'Search by code, title or topic …'}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -109,9 +178,7 @@ export default function MatrixDocSelector({
       <div className="max-h-52 overflow-auto rounded-lg border border-slate-200 bg-slate-50">
         {filteredRows.length === 0 ? (
           <div className="px-3 py-3 text-[11px] text-slate-400">
-            {isDe
-              ? 'Keine Regelwerke entsprechend der Filter gefunden.'
-              : 'No regulations found for the current filters.'}
+            {isDe ? 'Keine Regelwerke entsprechend der Filter gefunden.' : 'No regulations found for the current filters.'}
           </div>
         ) : (
           <ul className="divide-y divide-slate-200 text-xs">
@@ -120,34 +187,24 @@ export default function MatrixDocSelector({
               return (
                 <li
                   key={row.id}
-                  className={[
-                    'cursor-pointer px-3 py-2 hover:bg-white',
-                    active ? 'bg-white' : '',
-                  ].join(' ')}
+                  className={['cursor-pointer px-3 py-2 hover:bg-white', active ? 'bg-white' : ''].join(' ')}
                   onClick={() => onSelectedLawIdChange(row.id)}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="text-[11px] font-semibold text-slate-900">
-                        {row.rechtsart
-                          ? `${row.rechtsart} – ${row.kuerzel}`
-                          : row.kuerzel}
+                        {row.rechtsart ? `${row.rechtsart} – ${row.kuerzel}` : row.kuerzel}
                       </div>
-                      <div className="text-[11px] text-slate-700">
-                        {row.bezeichnung}
-                      </div>
+                      <div className="text-[11px] text-slate-700">{row.bezeichnung}</div>
                       {row.themenfeld && (
-                        <div className="mt-0.5 text-[10px] text-slate-500">
-                          {row.themenfeld}
-                        </div>
+                        <div className="mt-0.5 text-[10px] text-slate-500">{row.themenfeld}</div>
                       )}
                     </div>
+
                     {row.status && (
                       <span className="mt-0.5 inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] text-slate-700">
-                        {isDe ? 'Status: ' : 'Status: '}
-                        <span className="ml-1 font-medium">
-                          {row.status}
-                        </span>
+                        {isDe ? 'Status:' : 'Status:'}
+                        <span className="ml-1 font-medium">{statusLabel(row.status, isDe)}</span>
                       </span>
                     )}
                   </div>
@@ -158,7 +215,7 @@ export default function MatrixDocSelector({
         )}
       </div>
 
-      {/* Aktion: Matrix anlegen/öffnen */}
+      {/* Aktion */}
       <div className="flex flex-col gap-1 border-t border-slate-100 pt-2 text-[11px] sm:flex-row sm:items-center sm:justify-between">
         <div className="text-slate-500">
           {selectedLaw ? (
@@ -170,21 +227,18 @@ export default function MatrixDocSelector({
             </>
           ) : (
             <span className="text-slate-400">
-              {isDe
-                ? 'Bitte wähle ein Regelwerk aus der Liste aus.'
-                : 'Please select a regulation from the list.'}
+              {isDe ? 'Bitte wähle ein Regelwerk aus der Liste aus.' : 'Please select a regulation from the list.'}
             </span>
           )}
         </div>
+
         <button
           type="button"
           onClick={onCreateFromLaw}
           disabled={!selectedLawId}
           className={[
             'mt-1 inline-flex items-center justify-center rounded-full px-4 py-1.5 text-[11px] font-medium',
-            selectedLawId
-              ? 'bg-[#009A93] text-white shadow-sm hover:bg-[#007e78]'
-              : 'cursor-not-allowed bg-slate-200 text-slate-500',
+            selectedLawId ? 'bg-[#009A93] text-white shadow-sm hover:bg-[#007e78]' : 'cursor-not-allowed bg-slate-200 text-slate-500',
           ].join(' ')}
         >
           {isDe ? 'Matrix anlegen / öffnen' : 'Create / open matrix'}
