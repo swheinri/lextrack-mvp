@@ -131,7 +131,7 @@ const ROLE_OPTIONS = [
     id: 'compliance_manager',
     labelDe: 'Compliance Manager',
     labelEn: 'Compliance Manager',
-    descriptionDe: 'Verantwortlich fÃ¼r Compliance-Bewertung und Freigaben.',
+    descriptionDe: 'Verantwortlich für Compliance-Bewertung und Freigaben.',
     descriptionEn: 'Responsible for compliance assessment and approvals.',
   },
   {
@@ -145,7 +145,7 @@ const ROLE_OPTIONS = [
     id: 'auditor',
     labelDe: 'Auditor',
     labelEn: 'Auditor',
-    descriptionDe: 'PrÃ¼ft Anforderungen, Nachweise und Umsetzung nachvollziehbar.',
+    descriptionDe: 'Prüft Anforderungen, Nachweise und Umsetzung nachvollziehbar.',
     descriptionEn: 'Reviews requirements, evidence and implementation.',
   },
   {
@@ -159,20 +159,20 @@ const ROLE_OPTIONS = [
     id: 'external',
     labelDe: 'Externer Nutzer',
     labelEn: 'External user',
-    descriptionDe: 'EingeschrÃ¤nkter Zugriff fÃ¼r externe Partner oder Lieferanten.',
+    descriptionDe: 'Eingeschränkter Zugriff für externe Partner oder Lieferanten.',
     descriptionEn: 'Restricted access for external partners or suppliers.',
   },
 ] as const;
 
-const panelCls = 'rounded-xl border border-slate-700/50 bg-white shadow-sm';
+const panelCls = 'rounded-xl border border-slate-200 bg-white shadow-sm';
 
 const inputCls =
-  'w-full rounded-lg border border-slate-700/50 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#009A93] focus:ring-4 focus:ring-[#009A93]/15';
+  'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#009A93] focus:ring-4 focus:ring-[#009A93]/15';
 
 const labelCls = 'text-xs font-semibold text-slate-700';
 
 function isBlank(value: unknown): boolean {
-  return !String(value ? '').trim();
+  return !String(value ?? '').trim();
 }
 
 function makeId(): string {
@@ -220,12 +220,12 @@ function savePendingInvites(invites: PendingInvite[]) {
 }
 
 function escapeCsv(value: unknown): string {
-  const raw = String(value ? '');
+  const raw = String(value ?? '');
   return `"${raw.replaceAll('"', '""')}"`;
 }
 
 function escapeHtml(value: unknown): string {
-  return String(value ? '')
+  return String(value ?? '')
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
@@ -253,7 +253,7 @@ function mapInviteRoleToRoleCode(roleId: string): string {
 }
 
 function normalizeRoleLabel(roleId: string | null | undefined, isDe: boolean): string {
-  const id = String(roleId ? '').trim();
+  const id = String(roleId ?? '').trim();
 
   if (!id) {
     return isDe ? 'Nicht zugewiesen' : 'Not assigned';
@@ -284,7 +284,7 @@ function normalizeRoleLabel(roleId: string | null | undefined, isDe: boolean): s
 }
 
 function statusLabel(status: PersonStatus | string | undefined, isDe: boolean): string {
-  const value = String(status ? '').toUpperCase();
+  const value = String(status ?? '').toUpperCase();
 
   if (value === 'INVITED') {
     return isDe ? 'Eingeladen' : 'Invited';
@@ -298,7 +298,7 @@ function statusLabel(status: PersonStatus | string | undefined, isDe: boolean): 
 }
 
 function statusPillCls(status: PersonStatus | string | undefined): string {
-  const value = String(status ? '').toUpperCase();
+  const value = String(status ?? '').toUpperCase();
 
   if (value === 'INVITED') {
     return 'bg-sky-50 text-sky-700 ring-sky-200';
@@ -385,15 +385,15 @@ export default function UsersRolesSection({ isDe = true }: { isDe?: boolean }) {
   const [isSavingTeamLead, setIsSavingTeamLead] = useState(false);
 
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
-    storeSelectedLocationId ? null
+    storeSelectedLocationId ?? null
   );
 
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(
-    storeSelectedDepartmentId ? null
+    storeSelectedDepartmentId ?? null
   );
 
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(
-    storeSelectedTeamId ? null
+    storeSelectedTeamId ?? null
   );
 
   const [showAddLocation, setShowAddLocation] = useState(false);
@@ -460,15 +460,15 @@ export default function UsersRolesSection({ isDe = true }: { isDe?: boolean }) {
   const [uiMessage, setUiMessage] = useState<string | null>(null);
 
   const selectedLocation = selectedLocationId
-    ? locationById.get(selectedLocationId) ? null
+    ? locationById.get(selectedLocationId) ?? null
     : null;
 
   const selectedDepartment = selectedDepartmentId
-    ? departmentById.get(selectedDepartmentId) ? null
+    ? departmentById.get(selectedDepartmentId) ?? null
     : null;
 
   const selectedTeam = selectedTeamId
-    ? teamById.get(selectedTeamId) ? null
+    ? teamById.get(selectedTeamId) ?? null
     : null;
 
   const selectedLocationDepartmentCount = selectedLocationId
@@ -498,7 +498,7 @@ export default function UsersRolesSection({ isDe = true }: { isDe?: boolean }) {
 
   const selectedDepartmentTeams = useMemo(() => {
     if (!selectedDepartmentId) return [];
-    return teamsByDepartmentId.get(selectedDepartmentId) ? [];
+    return teamsByDepartmentId.get(selectedDepartmentId) ?? [];
   }, [selectedDepartmentId, teamsByDepartmentId]);
 
   const teamFilterOptions = useMemo(() => {
@@ -525,7 +525,7 @@ export default function UsersRolesSection({ isDe = true }: { isDe?: boolean }) {
     if (department?.locationId) return department.locationId;
   }
 
-  return editingUser?.person?.department?.location?.id ? '';
+  return editingUser?.person?.department?.location?.id ?? '';
 }, [editLocationId, editDepartmentId, departmentById, editingUser]);
 
 const editDepartmentOptions = useMemo(() => {
@@ -539,7 +539,7 @@ const editDepartmentOptions = useMemo(() => {
 
 const editTeamOptions = useMemo(() => {
   const list = editDepartmentId
-    ? (teamsByDepartmentId.get(editDepartmentId) ? []).slice()
+    ? (teamsByDepartmentId.get(editDepartmentId) ?? []).slice()
     : [];
 
   list.sort((a, b) => a.name.localeCompare(b.name));
@@ -583,7 +583,7 @@ useEffect(() => {
     pendingInvites.forEach((invite) => {
       const key = invite.email.toLowerCase();
       const adminUser = adminUserByEmail.get(key);
-      const personStatus = String(adminUser?.person?.status ? '').toUpperCase();
+      const personStatus = String(adminUser?.person?.status ?? '').toUpperCase();
 
       const status: PendingInviteStatus =
         personStatus === 'ACTIVE'
@@ -595,12 +595,12 @@ useEffect(() => {
       rows.push({
         id: invite.id,
         email: invite.email,
-        roleId: adminUser?.role?.code ? invite.roleId,
-        departmentId: adminUser?.person?.department?.id ? invite.departmentId,
+        roleId: adminUser?.role?.code ?? invite.roleId,
+        departmentId: adminUser?.person?.department?.id ?? invite.departmentId,
         createdAt:
-          adminUser?.person?.lastInvitedAt ?
-          adminUser?.person?.invitedAt ?
-          adminUser?.createdAt ?
+          adminUser?.person?.lastInvitedAt ??
+          adminUser?.person?.invitedAt ??
+          adminUser?.createdAt ??
           invite.createdAt,
         status,
         isLocal: true,
@@ -616,7 +616,7 @@ useEffect(() => {
       const person = user.person;
       if (!person?.invitedAt && !person?.lastInvitedAt && !person?.acceptedAt) return;
 
-      const personStatus = String(person.status ? '').toUpperCase();
+      const personStatus = String(person.status ?? '').toUpperCase();
       const status: PendingInviteStatus =
         personStatus === 'ACTIVE'
           ? 'accepted'
@@ -627,9 +627,9 @@ useEffect(() => {
       rows.push({
         id: `db-${user.id}`,
         email: user.email,
-        roleId: user.role?.code ? 'USER',
-        departmentId: person.department?.id ? null,
-        createdAt: person.lastInvitedAt ? person.invitedAt ? person.acceptedAt ? user.createdAt,
+        roleId: user.role?.code ?? 'USER',
+        departmentId: person.department?.id ?? null,
+        createdAt: person.lastInvitedAt ?? person.invitedAt ?? person.acceptedAt ?? user.createdAt,
         status,
         isLocal: false,
       });
@@ -648,22 +648,22 @@ useEffect(() => {
         firstName: user.name || user.email,
         lastName: null,
         email: user.email,
-        status: user.person?.status ? (user.isActive ? 'ACTIVE' : 'INACTIVE'),
-        departmentId: user.person?.department?.id ? null,
-        teamId: user.person?.team?.id ? null,
-        roleId: user.role?.code ? null,
+        status: user.person?.status ?? (user.isActive ? 'ACTIVE' : 'INACTIVE'),
+        departmentId: user.person?.department?.id ?? null,
+        teamId: user.person?.team?.id ?? null,
+        roleId: user.role?.code ?? null,
       }));
     }
 
     return visiblePeople.map((person) => ({
       id: person.id,
       firstName: person.firstName,
-      lastName: person.lastName ? null,
-      email: person.email ? '',
-      status: String(person.status ? 'INACTIVE'),
-      departmentId: person.departmentId ? null,
-      teamId: (person as { teamId?: string | null }).teamId ? null,
-      roleId: person.roleId ? null,
+      lastName: person.lastName ?? null,
+      email: person.email ?? '',
+      status: String(person.status ?? 'INACTIVE'),
+      departmentId: person.departmentId ?? null,
+      teamId: (person as { teamId?: string | null }).teamId ?? null,
+      roleId: person.roleId ?? null,
     }));
   }, [adminUsers, visiblePeople]);
 
@@ -698,7 +698,7 @@ useEffect(() => {
 
   const filteredPeople = useMemo<UserTableRow[]>(() => {
     return peopleInContext.filter((person) => {
-      const status = String(person.status ? '').toUpperCase();
+      const status = String(person.status ?? '').toUpperCase();
 
       if (userStatusFilter === 'active') return status === 'ACTIVE';
       if (userStatusFilter === 'inactive') return status === 'INACTIVE';
@@ -724,11 +724,11 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
 }, [adminUsers, selectedDepartmentId]);
 
   const activePeopleCount = userRowsForTable.filter(
-    (person) => String(person.status ? '').toUpperCase() === 'ACTIVE'
+    (person) => String(person.status ?? '').toUpperCase() === 'ACTIVE'
   ).length;
 
   const inactivePeopleCount = userRowsForTable.filter(
-    (person) => String(person.status ? '').toUpperCase() === 'INACTIVE'
+    (person) => String(person.status ?? '').toUpperCase() === 'INACTIVE'
   ).length;
 
   const kpiDepartmentCount = selectedLocationId ? departmentOptions.length : visibleDepartments.length;
@@ -756,7 +756,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
       id: 'users',
       labelDe: 'Personen',
       labelEn: 'Users',
-      descriptionDe: 'PersonenÃ¼bersicht, Rollen und Status.',
+      descriptionDe: 'Personenübersicht, Rollen und Status.',
       descriptionEn: 'Overview of users, roles and status.',
       icon: <Users className="h-5 w-5" />,
     },
@@ -797,7 +797,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
 
       if (!response.ok || data?.success === false) {
         throw new Error(
-          data?.message ?
+          data?.message ??
             (isDe ? 'Personen konnten nicht geladen werden.' : 'Users could not be loaded.')
         );
       }
@@ -831,7 +831,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
   const deleteAdminUser = async (user: AdminUserRow) => {
     const confirmed = confirm(
       isDe
-        ? `Personen ${user.email} wirklich lÃ¶schen? Die E-Mail-Adresse wird danach wieder fÃ¼r Einladungen frei.`
+        ? `Personen ${user.email} wirklich löschen? Die E-Mail-Adresse wird danach wieder für Einladungen frei.`
         : `Delete user ${user.email}? The email address will be available for invitations again.`
     );
 
@@ -852,8 +852,8 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
 
       if (!response.ok || data?.success === false) {
         throw new Error(
-          data?.message ?
-            (isDe ? 'Personen konnte nicht gelÃ¶scht werden.' : 'User could not be deleted.')
+          data?.message ??
+            (isDe ? 'Personen konnte nicht gelöscht werden.' : 'User could not be deleted.')
         );
       }
 
@@ -864,9 +864,9 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
       updatePendingInvites(nextInvites);
 
       setUiMessage(
-        data?.message ?
+        data?.message ??
           (isDe
-            ? 'Personen wurde gelÃ¶scht. Die E-Mail-Adresse ist wieder frei.'
+            ? 'Personen wurde gelöscht. Die E-Mail-Adresse ist wieder frei.'
             : 'User has been deleted. The email address is available again.')
       );
 
@@ -876,7 +876,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
         error instanceof Error
           ? error.message
           : isDe
-            ? 'Personen konnte nicht gelÃ¶scht werden.'
+            ? 'Personen konnte nicht gelöscht werden.'
             : 'User could not be deleted.'
       );
     } finally {
@@ -899,10 +899,10 @@ const openEditUser = (person: UserTableRow) => {
   setUiError(null);
   setUiMessage(null);
   setEditingUser(adminUser);
-  setEditLocationId(adminUser.person?.department?.location?.id ? selectedLocationId ? '');
-  setEditDepartmentId(adminUser.person?.team?.departmentId ? adminUser.person?.department?.id ? selectedDepartmentId ? '');
-  setEditTeamId(adminUser.person?.team?.id ? selectedTeamId ? '');
-  setEditRoleCode(adminUser.role?.code ? 'VIEWER');
+  setEditLocationId(adminUser.person?.department?.location?.id ?? selectedLocationId ?? '');
+  setEditDepartmentId(adminUser.person?.team?.departmentId ?? adminUser.person?.department?.id ?? selectedDepartmentId ?? '');
+  setEditTeamId(adminUser.person?.team?.id ?? selectedTeamId ?? '');
+  setEditRoleCode(adminUser.role?.code ?? 'VIEWER');
 };
 
 const saveUserAssignment = async () => {
@@ -914,7 +914,7 @@ const saveUserAssignment = async () => {
   if (editLocationId && !editDepartmentId) {
     setUiError(
       isDe
-        ? 'Bitte eine Abteilung fÃ¼r den ausgewÃ¤hlten Standort auswÃ¤hlen. Der Standort wird Ã¼ber die Abteilung gespeichert.'
+        ? 'Bitte eine Abteilung für den ausgewählten Standort auswählen. Der Standort wird über die Abteilung gespeichert.'
         : 'Please select a department for the selected location. The location is stored via the department.'
     );
     return;
@@ -939,7 +939,7 @@ const saveUserAssignment = async () => {
 
     if (!response.ok || data?.success === false) {
       throw new Error(
-        data?.message ?
+        data?.message ??
           (isDe
             ? 'Personen konnte nicht aktualisiert werden.'
             : 'User could not be updated.')
@@ -947,7 +947,7 @@ const saveUserAssignment = async () => {
     }
 
     setUiMessage(
-      data?.message ?
+      data?.message ??
         (isDe ? 'Personen wurde aktualisiert.' : 'User has been updated.')
     );
 
@@ -1051,7 +1051,7 @@ const saveUserAssignment = async () => {
 
         if (!response.ok || data?.success === false) {
           throw new Error(
-            data?.message ?
+            data?.message ??
               (isDe
                 ? 'Standortdaten konnten nicht gespeichert werden.'
                 : 'Location master data could not be saved.')
@@ -1128,7 +1128,7 @@ const saveUserAssignment = async () => {
   if (!effectiveDepartmentLocationId) {
     setUiError(
       isDe
-        ? 'Bitte einen Standort fÃ¼r die Abteilung auswÃ¤hlen.'
+        ? 'Bitte einen Standort für die Abteilung auswählen.'
         : 'Please select a location for the department.'
     );
     return;
@@ -1137,7 +1137,7 @@ const saveUserAssignment = async () => {
   if (isBlank(depName)) {
     setUiError(
       isDe
-        ? 'Bitte Abteilungsname ausfÃ¼llen.'
+        ? 'Bitte Abteilungsname ausfüllen.'
         : 'Please enter a department name.'
     );
     return;
@@ -1218,13 +1218,13 @@ const saveUserAssignment = async () => {
     if (selectedLocationDepartmentCount > 0) {
       setUiError(
         isDe
-          ? 'Der Standort kann nicht gelÃ¶scht werden, solange ihm noch Abteilungen zugeordnet sind. Bitte zuerst die Abteilungen lÃ¶schen oder verschieben.'
+          ? 'Der Standort kann nicht gelöscht werden, solange ihm noch Abteilungen zugeordnet sind. Bitte zuerst die Abteilungen löschen oder verschieben.'
           : 'The location cannot be deleted while departments are still assigned to it. Please delete or move the departments first.'
       );
       return;
     }
 
-    if (confirm(isDe ? 'Standort wirklich lÃ¶schen?' : 'Delete location?')) {
+    if (confirm(isDe ? 'Standort wirklich löschen?' : 'Delete location?')) {
       removeLocation(selectedLocation.id);
       setSelectedLocationId(null);
       setSelectedDepartmentId(null);
@@ -1240,22 +1240,22 @@ const saveUserAssignment = async () => {
     const email = inviteEmail.trim();
 
     if (!email) {
-      setUiError(isDe ? 'Bitte E-Mail-Adresse ausfÃ¼llen.' : 'Please enter an email address.');
+      setUiError(isDe ? 'Bitte E-Mail-Adresse ausfüllen.' : 'Please enter an email address.');
       return;
     }
 
     if (!email.includes('@')) {
-      setUiError(isDe ? 'E-Mail-Adresse wirkt ungÃ¼ltig.' : 'Email address looks invalid.');
+      setUiError(isDe ? 'E-Mail-Adresse wirkt ungültig.' : 'Email address looks invalid.');
       return;
     }
 
     if (!inviteRoleId) {
-      setUiError(isDe ? 'Bitte Rolle auswÃ¤hlen.' : 'Please select a role.');
+      setUiError(isDe ? 'Bitte Rolle auswählen.' : 'Please select a role.');
       return;
     }
 
     if (!effectiveInviteDepartmentId) {
-      setUiError(isDe ? 'Bitte Abteilung auswÃ¤hlen.' : 'Please select a department.');
+      setUiError(isDe ? 'Bitte Abteilung auswählen.' : 'Please select a department.');
       return;
     }
 
@@ -1277,7 +1277,7 @@ const saveUserAssignment = async () => {
 
       if (!response.ok || data?.success === false) {
         throw new Error(
-          data?.message ?
+          data?.message ??
             (isDe ? 'Einladung konnte nicht gesendet werden.' : 'Invitation could not be sent.')
         );
       }
@@ -1328,20 +1328,20 @@ const saveUserAssignment = async () => {
   };
 
   const userDisplayName = (person: UserTableRow) => {
-    return [person.firstName, person.lastName].filter(Boolean).join(' ') || person.email || 'â€”';
+    return [person.firstName, person.lastName].filter(Boolean).join(' ') || person.email || '—';
   };
 
   const orgLeadUserDisplayName = (user: any) => {
     if (!user) return isDe ? 'Noch nicht zugewiesen' : 'Not assigned yet';
 
-    const person = user.person ? {};
+    const person = user.person ?? {};
 
     const isEmailLike = (value: unknown) => {
-      return String(value ? '').includes('@');
+      return String(value ?? '').includes('@');
     };
 
     const clean = (value: unknown) => {
-      const textValue = String(value ? '').trim();
+      const textValue = String(value ?? '').trim();
       return textValue && !isEmailLike(textValue) ? textValue : '';
     };
 
@@ -1357,7 +1357,7 @@ const saveUserAssignment = async () => {
 
     const displayName = clean(user.name);
 
-    const email = String(person.email ? user.email ? '').trim();
+    const email = String(person.email ?? user.email ?? '').trim();
 
     const nameFromEmail = email
       ? email
@@ -1394,7 +1394,7 @@ const saveUserAssignment = async () => {
     const department = departmentById.get(departmentId);
     if (!department) return isDe ? 'Unbekannte Abteilung' : 'Unknown department';
 
-    return department.kuerzel ? `${department.kuerzel} â€” ${department.name}` : department.name;
+    return department.kuerzel ? `${department.kuerzel} — ${department.name}` : department.name;
   };
 
   const teamDisplayName = (teamId: string | null | undefined) => {
@@ -1417,7 +1417,7 @@ const saveUserAssignment = async () => {
   const location = locationById.get(department.locationId);
   if (!location) return isDe ? 'Unbekannter Standort' : 'Unknown location';
 
-  return location.kuerzel ? `${location.kuerzel} â€” ${location.name}` : location.name;
+  return location.kuerzel ? `${location.kuerzel} — ${location.name}` : location.name;
 };
 
   const statusFilterLabel = () => {
@@ -1445,9 +1445,9 @@ const saveUserAssignment = async () => {
 
       return [
         userDisplayName(person),
-        person.email ? '',
+        person.email ?? '',
         normalizeRoleLabel(person.roleId, isDe),
-        location?.name ? '',
+        location?.name ?? '',
         departmentDisplayName(person.departmentId),
         statusLabel(person.status, isDe),
       ];
@@ -1483,14 +1483,14 @@ const saveUserAssignment = async () => {
     if (!printWindow) {
       setUiError(
         isDe
-          ? 'Druckfenster konnte nicht geÃ¶ffnet werden. Bitte Popup-Blocker prÃ¼fen.'
+          ? 'Druckfenster konnte nicht geöffnet werden. Bitte Popup-Blocker prüfen.'
           : 'Print window could not be opened. Please check your popup blocker.'
       );
       return;
     }
 
-    const locationLabel = selectedLocation?.name ? (isDe ? 'Alle Standorte' : 'All locations');
-    const departmentLabel = selectedDepartment?.name ? (isDe ? 'Alle Abteilungen' : 'All departments');
+    const locationLabel = selectedLocation?.name ?? (isDe ? 'Alle Standorte' : 'All locations');
+    const departmentLabel = selectedDepartment?.name ?? (isDe ? 'Alle Abteilungen' : 'All departments');
 
     const tableRows = filteredPeople
       .map((person) => {
@@ -1500,9 +1500,9 @@ const saveUserAssignment = async () => {
         return `
           <tr>
             <td>${escapeHtml(userDisplayName(person))}</td>
-            <td>${escapeHtml(person.email ? '')}</td>
+            <td>${escapeHtml(person.email ?? '')}</td>
             <td>${escapeHtml(normalizeRoleLabel(person.roleId, isDe))}</td>
-            <td>${escapeHtml(location?.name ? '')}</td>
+            <td>${escapeHtml(location?.name ?? '')}</td>
             <td>${escapeHtml(departmentDisplayName(person.departmentId))}</td>
             <td>${escapeHtml(statusLabel(person.status, isDe))}</td>
           </tr>
@@ -1563,7 +1563,7 @@ const saveUserAssignment = async () => {
         <div className={labelCls}>{isDe ? 'Standort' : 'Location'}</div>
         <select
           className={inputCls}
-          value={selectedLocationId ? ''}
+          value={selectedLocationId ?? ''}
           onChange={(event) => {
             const nextLocationId = event.target.value || null;
             setSelectedLocationId(nextLocationId);
@@ -1575,7 +1575,7 @@ const saveUserAssignment = async () => {
           <option value="">{isDe ? 'Alle Standorte' : 'All locations'}</option>
           {locationOptions.map((location) => (
             <option key={location.id} value={location.id}>
-              {location.kuerzel ? `${location.kuerzel} â€” ${location.name}` : location.name}
+              {location.kuerzel ? `${location.kuerzel} — ${location.name}` : location.name}
             </option>
           ))}
         </select>
@@ -1585,18 +1585,18 @@ const saveUserAssignment = async () => {
         <div className={labelCls}>{isDe ? 'Abteilung' : 'Department'}</div>
         <select
           className={inputCls}
-          value={selectedDepartmentId ? ''}
+          value={selectedDepartmentId ?? ''}
           onChange={(event) => {
             const nextDepartmentId = event.target.value || null;
             setSelectedDepartmentId(nextDepartmentId);
             setSelectedTeamId(null);
-            setInviteDepartmentId(nextDepartmentId ? '');
+            setInviteDepartmentId(nextDepartmentId ?? '');
           }}
         >
           <option value="">{isDe ? 'Alle Abteilungen' : 'All departments'}</option>
           {departmentOptions.map((department) => (
             <option key={department.id} value={department.id}>
-              {department.kuerzel ? `${department.kuerzel} â€” ${department.name}` : department.name}
+              {department.kuerzel ? `${department.kuerzel} — ${department.name}` : department.name}
             </option>
           ))}
         </select>
@@ -1606,10 +1606,10 @@ const saveUserAssignment = async () => {
         <div className={labelCls}>Team</div>
         <select
           className={inputCls}
-          value={selectedTeamId ? ''}
+          value={selectedTeamId ?? ''}
           onChange={(event) => {
             const nextTeamId = event.target.value || null;
-            const team = nextTeamId ? teamById.get(nextTeamId) ? null : null;
+            const team = nextTeamId ? teamById.get(nextTeamId) ?? null : null;
 
             setSelectedTeamId(nextTeamId);
 
@@ -1654,7 +1654,7 @@ const saveUserAssignment = async () => {
         <button
           type="button"
           onClick={exportFilteredUsersCsv}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700/50 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
         >
           <Download className="h-4 w-4" />
           Excel
@@ -1665,7 +1665,7 @@ const saveUserAssignment = async () => {
         <button
           type="button"
           onClick={printFilteredUsers}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700/50 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
         >
           <Printer className="h-4 w-4" />
           {isDe ? 'Drucken' : 'Print'}
@@ -1736,7 +1736,7 @@ const renderOrganisationPanel = () => {
 
     return (
       <aside className={panelCls + ' overflow-hidden'}>
-        <div className="border-b border-slate-700/40 px-5 py-4">
+        <div className="border-b border-slate-200 px-5 py-4">
           <div className="flex items-center gap-3">
             <Building2 className="h-5 w-5 text-slate-600" />
             <div>
@@ -1795,7 +1795,7 @@ const renderOrganisationPanel = () => {
                 isLocationActive && !selectedDepartmentId && !selectedTeamId;
 
               const locationTeamCount = locationDepartments.reduce((sum, department) => {
-                return sum + (teamsByDepartmentId.get(department.id)?.length ? 0);
+                return sum + (teamsByDepartmentId.get(department.id)?.length ?? 0);
               }, 0);
 
               return (
@@ -1820,7 +1820,7 @@ setDepLocationId(location.id);
                         ? 'border-[#00559F] bg-[#00559F]/10 shadow-sm'
                         : isLocationActive
                           ? 'border-[#00559F]/50 bg-white'
-                          : 'border-slate-700/50 bg-white hover:bg-slate-50',
+                          : 'border-slate-200 bg-white hover:bg-slate-50',
                     ].join(' ')}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -1848,7 +1848,7 @@ setDepLocationId(location.id);
                   </button>
 
                   {isLocationActive && (
-                    <div className="ml-3 space-y-3 border-l border-slate-700/50 pl-3">
+                    <div className="ml-3 space-y-3 border-l border-slate-200 pl-3">
                       <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-400">
                         <span>{isDe ? 'Abteilungen' : 'Departments'}</span>
                         <span>{locationDepartments.length}</span>
@@ -1862,7 +1862,7 @@ setDepLocationId(location.id);
                         </div>
                       ) : (
                         locationDepartments.map((department) => {
-                          const departmentTeams = teamsByDepartmentId.get(department.id) ? [];
+                          const departmentTeams = teamsByDepartmentId.get(department.id) ?? [];
                           const isDepartmentActive = selectedDepartmentId === department.id;
                           const isDepartmentOnlySelected = isDepartmentActive && !selectedTeamId;
 
@@ -1890,7 +1890,7 @@ setInviteDepartmentId(department.id);
                                     ? 'border-[#009A93] bg-[#009A93]/10 shadow-sm'
                                     : isDepartmentActive
                                       ? 'border-[#009A93]/50 bg-white'
-                                      : 'border-slate-700/50 bg-slate-50 hover:bg-white',
+                                      : 'border-slate-200 bg-slate-50 hover:bg-white',
                                 ].join(' ')}
                               >
                                 <div className="flex items-start justify-between gap-3">
@@ -1918,7 +1918,7 @@ setInviteDepartmentId(department.id);
                               </button>
 
                               {isDepartmentActive && (
-                                <div className="ml-3 space-y-2 border-l border-slate-700/50 pl-3">
+                                <div className="ml-3 space-y-2 border-l border-slate-200 pl-3">
                                   <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-400">
                                     <span>{isDe ? 'Teams' : 'Teams'}</span>
                                     <span>{departmentTeams.length}</span>
@@ -1956,7 +1956,7 @@ setInviteDepartmentId(department.id);
                                             'flex w-full items-center justify-between rounded-xl border px-3 py-3 text-left transition',
                                             isTeamActive
                                               ? 'border-[#00559F] bg-[#00559F]/10 shadow-sm'
-                                              : 'border-slate-700/50 bg-white hover:bg-slate-50',
+                                              : 'border-slate-200 bg-white hover:bg-slate-50',
                                           ].join(' ')}
                                         >
                                           <span className="flex min-w-0 items-center gap-3">
@@ -2004,9 +2004,9 @@ setInviteDepartmentId(department.id);
   };
 
 const renderTeamsPanel = () => {
-  const teamDepartment = selectedTeam ? departmentById.get(selectedTeam.departmentId) ? null : null;
+  const teamDepartment = selectedTeam ? departmentById.get(selectedTeam.departmentId) ?? null : null;
   const teamLocation = teamDepartment?.locationId
-    ? locationById.get(teamDepartment.locationId) ? null
+    ? locationById.get(teamDepartment.locationId) ?? null
     : null;
 
   const activeDepartment = selectedTeam ? teamDepartment : selectedDepartment;
@@ -2014,11 +2014,11 @@ const renderTeamsPanel = () => {
   const activeLocation = selectedTeam
     ? teamLocation
     : activeDepartment?.locationId
-      ? locationById.get(activeDepartment.locationId) ? null
+      ? locationById.get(activeDepartment.locationId) ?? null
       : selectedLocation;
 
   const activeDepartmentTeams = activeDepartment
-    ? teamsByDepartmentId.get(activeDepartment.id) ? []
+    ? teamsByDepartmentId.get(activeDepartment.id) ?? []
     : [];
 
   const activeLocationDepartments = activeLocation
@@ -2026,17 +2026,17 @@ const renderTeamsPanel = () => {
     : [];
 
   const activeLocationTeamCount = activeLocationDepartments.reduce((sum, department) => {
-    return sum + (teamsByDepartmentId.get(department.id)?.length ? 0);
+    return sum + (teamsByDepartmentId.get(department.id)?.length ?? 0);
   }, 0);
 
   const activeLocationAny = activeLocation as any;
   const primaryLocationAddress =
     Array.isArray(activeLocationAny?.addresses) && activeLocationAny.addresses.length > 0
-      ? activeLocationAny.addresses.find((address: any) => address?.isPrimary) ?
+      ? activeLocationAny.addresses.find((address: any) => address?.isPrimary) ??
         activeLocationAny.addresses[0]
       : null;
 
-  const cleanDetailValue = (value: unknown) => String(value ? '').trim();
+  const cleanDetailValue = (value: unknown) => String(value ?? '').trim();
 
   const displayDetailValue = (value: unknown) => {
     const cleaned = cleanDetailValue(value);
@@ -2078,15 +2078,15 @@ const renderTeamsPanel = () => {
 
   const selectedTeamDescription =
     selectedTeam && 'description' in selectedTeam
-      ? String((selectedTeam as { description?: string | null }).description ? '').trim()
+      ? String((selectedTeam as { description?: string | null }).description ?? '').trim()
       : '';
 
-  const currentLocationLeadPerson = activeLocationAny?.leadPerson ? null;
+  const currentLocationLeadPerson = activeLocationAny?.leadPerson ?? null;
 
   const currentLocationLeadUser = currentLocationLeadPerson
     ? adminUsers.find((user) => {
-        return String((user as any).person?.id ? '') === String(currentLocationLeadPerson.id ? '');
-      }) ?
+        return String((user as any).person?.id ?? '') === String(currentLocationLeadPerson.id ?? '');
+      }) ??
       ({
         person: currentLocationLeadPerson,
         email: currentLocationLeadPerson.email,
@@ -2099,7 +2099,7 @@ const renderTeamsPanel = () => {
 
   const currentOrgLeadUser =
     selectedTeam || activeDepartment
-      ? findOrgLeadUser(activeDepartment?.id ? null, selectedTeam?.id ? null)
+      ? findOrgLeadUser(activeDepartment?.id ?? null, selectedTeam?.id ?? null)
       : currentLocationLeadUser;
 
   const activeDepartmentUserCount = activeDepartment
@@ -2121,10 +2121,10 @@ const renderTeamsPanel = () => {
           const person = (user as any).person;
           if (!person?.id) return false;
 
-          const directDepartmentId = person.department?.id ? person.departmentId ? null;
+          const directDepartmentId = person.department?.id ?? person.departmentId ?? null;
           const teamDepartmentId =
-            person.team?.department?.id ?
-            person.team?.departmentId ?
+            person.team?.department?.id ??
+            person.team?.departmentId ??
             null;
 
           const directDepartment = directDepartmentId
@@ -2136,10 +2136,10 @@ const renderTeamsPanel = () => {
             : null;
 
           const personLocationId =
-            person.team?.department?.locationId ?
-            teamDepartment?.locationId ?
-            person.department?.locationId ?
-            directDepartment?.locationId ?
+            person.team?.department?.locationId ??
+            teamDepartment?.locationId ??
+            person.department?.locationId ??
+            directDepartment?.locationId ??
             null;
 
           return personLocationId === activeLocation.id;
@@ -2219,9 +2219,9 @@ const renderTeamsPanel = () => {
         : '';
 
   const openDepartmentLeadDialog = (departmentId: string) => {
-    const currentLead = departmentLeadById[departmentId] ? null;
+    const currentLead = departmentLeadById[departmentId] ?? null;
 
-    setDepartmentLeadPersonId(currentLead?.id ? '');
+    setDepartmentLeadPersonId(currentLead?.id ?? '');
     setIsDepartmentLeadOpen(true);
     setUiError(null);
     setUiMessage(null);
@@ -2238,7 +2238,7 @@ const renderTeamsPanel = () => {
       return person?.team?.id === selectedTeam.id && person?.orgFunction === 'LEAD';
     });
 
-    setTeamLeadPersonId(String((currentLeadUser as any)?.person?.id ? ''));
+    setTeamLeadPersonId(String((currentLeadUser as any)?.person?.id ?? ''));
     setIsTeamLeadOpen(true);
     setUiError(null);
     setUiMessage(null);
@@ -2266,7 +2266,7 @@ const renderTeamsPanel = () => {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok || data?.success === false) {
-        throw new Error(data?.message ? 'Team Lead konnte nicht gespeichert werden.');
+        throw new Error(data?.message ?? 'Team Lead konnte nicht gespeichert werden.');
       }
 
       setIsTeamLeadOpen(false);
@@ -2275,7 +2275,7 @@ const renderTeamsPanel = () => {
       await loadAdminUsers();
 
       setUiMessage(
-        data?.message ?
+        data?.message ??
           (isDe ? 'Team Lead wurde gespeichert.' : 'Team lead has been saved.')
       );
     } catch (error) {
@@ -2306,7 +2306,7 @@ const renderTeamsPanel = () => {
     }
 
     if (activeLocation) {
-      setLocationLeadPersonId(String(currentLocationLeadPerson?.id ? ''));
+      setLocationLeadPersonId(String(currentLocationLeadPerson?.id ?? ''));
       setIsLocationLeadOpen(true);
     }
   };
@@ -2331,7 +2331,7 @@ const renderTeamsPanel = () => {
 
       if (!response.ok || data?.success === false) {
         throw new Error(
-          data?.message ?
+          data?.message ??
             (isDe
               ? 'Standort Lead konnte nicht gespeichert werden.'
               : 'Location lead could not be saved.')
@@ -2424,7 +2424,7 @@ const renderTeamsPanel = () => {
   };
 
   const openCreateDepartment = () => {
-    setDepLocationId(activeLocation?.id ? selectedLocationId ? '');
+    setDepLocationId(activeLocation?.id ?? selectedLocationId ?? '');
     setCreateMode('department');
     setShowAddLocation(false);
     setShowAddDepartment(false);
@@ -2432,7 +2432,7 @@ const renderTeamsPanel = () => {
   };
 
   const openCreateTeam = () => {
-    setTeamDepartmentId(activeDepartment?.id ? selectedDepartmentId ? '');
+    setTeamDepartmentId(activeDepartment?.id ?? selectedDepartmentId ?? '');
     setCreateMode('team');
     setShowAddLocation(false);
     setShowAddDepartment(false);
@@ -2509,27 +2509,27 @@ const renderTeamsPanel = () => {
     const location = activeLocation as any;
     const address = primaryLocationAddress as any;
 
-    setLocName(String(location?.name ? ''));
-    setLocKuerzel(String(location?.kuerzel ? ''));
-    setLocDescription(String(location?.description ? ''));
-    setLocOrganisationName(String(location?.organisationName ? ''));
-    setLocOrganisationalUnit(String(location?.organisationalUnit ? ''));
-    setLocContactName(String(location?.contactName ? ''));
-    setLocContactPhone(String(location?.contactPhone ? ''));
-    setLocContactMobile(String(location?.contactMobile ? ''));
-    setLocContactEmail(String(location?.contactEmail ? ''));
+    setLocName(String(location?.name ?? ''));
+    setLocKuerzel(String(location?.kuerzel ?? ''));
+    setLocDescription(String(location?.description ?? ''));
+    setLocOrganisationName(String(location?.organisationName ?? ''));
+    setLocOrganisationalUnit(String(location?.organisationalUnit ?? ''));
+    setLocContactName(String(location?.contactName ?? ''));
+    setLocContactPhone(String(location?.contactPhone ?? ''));
+    setLocContactMobile(String(location?.contactMobile ?? ''));
+    setLocContactEmail(String(location?.contactEmail ?? ''));
 
-    setLocStreet(String(address?.street ? ''));
-    setLocHouseNumber(String(address?.houseNumber ? ''));
-    setLocPostalCode(String(address?.postalCode ? ''));
-    setLocCity(String(address?.city ? ''));
-    setLocState(String(address?.state ? ''));
-    setLocCountry(String(address?.country ? ''));
-    setLocBuilding(String(address?.building ? ''));
-    setLocFloor(String(address?.floor ? ''));
-    setLocRoom(String(address?.room ? ''));
-    setLocArea(String(address?.area ? ''));
-    setLocAdditionalInfo(String(address?.additionalInfo ? ''));
+    setLocStreet(String(address?.street ?? ''));
+    setLocHouseNumber(String(address?.houseNumber ?? ''));
+    setLocPostalCode(String(address?.postalCode ?? ''));
+    setLocCity(String(address?.city ?? ''));
+    setLocState(String(address?.state ?? ''));
+    setLocCountry(String(address?.country ?? ''));
+    setLocBuilding(String(address?.building ?? ''));
+    setLocFloor(String(address?.floor ?? ''));
+    setLocRoom(String(address?.room ?? ''));
+    setLocArea(String(address?.area ?? ''));
+    setLocAdditionalInfo(String(address?.additionalInfo ?? ''));
 
     setEditingLocationId(activeLocation.id);
     setCreateMode('location');
@@ -2540,7 +2540,7 @@ const renderTeamsPanel = () => {
 
   return (
     <section className={panelCls + ' overflow-hidden'}>
-      <div className="border-b border-slate-700/40 px-5 py-4">
+      <div className="border-b border-slate-200 px-5 py-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold text-slate-900">
@@ -2563,7 +2563,7 @@ const renderTeamsPanel = () => {
       </div>
 
       <div className="space-y-5 px-5 py-5">
-        <div className="rounded-xl border border-slate-700/50 bg-slate-50 px-4 py-4">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
             {detailType}
           </div>
@@ -2584,7 +2584,7 @@ const renderTeamsPanel = () => {
         </div>
 
         {activeLocation && !activeDepartment ? (
-          <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-4">
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h4 className="text-sm font-semibold text-slate-900">
@@ -2641,7 +2641,7 @@ const renderTeamsPanel = () => {
                 <button
                   type="button"
                   onClick={openLeadAssignmentHint}
-                  className="mt-2 rounded-lg border border-slate-700/50 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   {currentOrgLeadUser
                     ? isDe
@@ -2654,7 +2654,7 @@ const renderTeamsPanel = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3">
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {isDe ? 'Standort' : 'Location'}
               </div>
@@ -2663,7 +2663,7 @@ const renderTeamsPanel = () => {
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3">
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {isDe ? 'Abteilung' : 'Department'}
               </div>
@@ -2672,7 +2672,7 @@ const renderTeamsPanel = () => {
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3">
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {isDe ? 'Teams' : 'Teams'}
               </div>
@@ -2684,8 +2684,8 @@ const renderTeamsPanel = () => {
         )}
 
         {activeLocation && !activeDepartment && (
-          <div className="rounded-xl border border-slate-700/50 bg-white">
-            <div className="border-b border-slate-700/40 px-4 py-3">
+          <div className="rounded-xl border border-slate-200 bg-white">
+            <div className="border-b border-slate-200 px-4 py-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h4 className="text-sm font-semibold text-slate-900">
@@ -2709,7 +2709,7 @@ const renderTeamsPanel = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-3 p-4 xl:grid-cols-2">
-              <div className="rounded-xl border border-slate-700/50 bg-slate-50/70 px-4 py-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {isDe ? 'Allgemein' : 'General'}
                 </div>
@@ -2738,7 +2738,7 @@ const renderTeamsPanel = () => {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-700/50 bg-slate-50/70 px-4 py-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {isDe ? 'Organisation' : 'Organisation'}
                 </div>
@@ -2760,7 +2760,7 @@ const renderTeamsPanel = () => {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3">
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {isDe ? 'Adresse / Lage' : 'Address / location'}
                 </div>
@@ -2798,7 +2798,7 @@ const renderTeamsPanel = () => {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3">
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {isDe ? 'Kontakt' : 'Contact'}
                 </div>
@@ -2841,7 +2841,7 @@ const renderTeamsPanel = () => {
 
         {activeLocation && (activeDepartment || selectedTeam) && (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3">
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -2874,14 +2874,14 @@ const renderTeamsPanel = () => {
                 <button
                   type="button"
                   onClick={openLeadAssignmentHint}
-                  className="shrink-0 rounded-lg border border-slate-700/50 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                 >
-                  {currentOrgLeadUser ? (isDe ? 'Lead Ã¤ndern' : 'Change lead') : responsibleActionLabel}
+                  {currentOrgLeadUser ? (isDe ? 'Lead ändern' : 'Change lead') : responsibleActionLabel}
                 </button>
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3">
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {userCountLabel}
               </div>
@@ -2898,7 +2898,7 @@ const renderTeamsPanel = () => {
             </div>
 
             {selectedTeam && (
-              <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3 md:col-span-2">
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 md:col-span-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {isDe ? 'Beschreibung' : 'Description'}
                 </div>
@@ -2912,7 +2912,7 @@ const renderTeamsPanel = () => {
           </div>
         )}
 
-        <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-4">
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
               <h4 className="text-sm font-semibold text-slate-900">
@@ -2953,7 +2953,7 @@ const renderTeamsPanel = () => {
                   <button
                     type="button"
                     onClick={onDeleteSelectedLocation}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
                   >
                     <Trash2 className="h-4 w-4" />
                     {isDe ? 'Standort loeschen' : 'Delete location'}
@@ -2975,7 +2975,7 @@ const renderTeamsPanel = () => {
                   <button
                     type="button"
                     onClick={deleteActiveDepartment}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
                   >
                     <Trash2 className="h-4 w-4" />
                     {isDe ? 'Abteilung loeschen' : 'Delete department'}
@@ -2997,7 +2997,7 @@ const renderTeamsPanel = () => {
                   <button
                     type="button"
                     onClick={deleteActiveTeam}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
                   >
                     <Trash2 className="h-4 w-4" />
                     {isDe ? 'Team loeschen' : 'Delete team'}
@@ -3008,7 +3008,7 @@ const renderTeamsPanel = () => {
           </div>
 
           {showAddLocation && !activeLocation && (
-            <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-700/50 bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
+            <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
               <div className="space-y-1">
                 <div className={labelCls}>{isDe ? 'Standortname' : 'Location name'}</div>
                 <input
@@ -3042,7 +3042,7 @@ const renderTeamsPanel = () => {
           )}
 
           {showAddDepartment && activeLocation && !activeDepartment && (
-            <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-700/50 bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
+            <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
               <div className="space-y-1">
                 <div className={labelCls}>{isDe ? 'Abteilungsname' : 'Department name'}</div>
                 <input
@@ -3076,7 +3076,7 @@ const renderTeamsPanel = () => {
           )}
 
           {showAddTeam && activeDepartment && !selectedTeam && (
-            <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-700/50 bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
+            <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
               <div className="space-y-1">
                 <div className={labelCls}>{isDe ? 'Teamname' : 'Team name'}</div>
                 <input
@@ -3113,8 +3113,8 @@ const renderTeamsPanel = () => {
 
       {isLocationLeadOpen && activeLocation && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-[1px]">
-          <div className="w-full max-w-xl overflow-hidden rounded-xl border border-slate-700/50 bg-white shadow-2xl">
-            <div className="border-b border-slate-700/40 px-5 py-4">
+          <div className="w-full max-w-xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
+            <div className="border-b border-slate-200 px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900">
@@ -3129,7 +3129,7 @@ const renderTeamsPanel = () => {
                   type="button"
                   onClick={() => setIsLocationLeadOpen(false)}
                   aria-label={isDe ? 'Schliessen' : 'Close'}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700/50 bg-white text-slate-600 hover:bg-slate-50"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                 >
                   <X className="h-4 w-4" aria-hidden="true" />
                 </button>
@@ -3152,7 +3152,7 @@ const renderTeamsPanel = () => {
                   </option>
 
                   {locationLeadCandidateUsers.map((user) => (
-                    <option key={(user as any).person?.id ? user.id} value={(user as any).person?.id ? ''}>
+                    <option key={(user as any).person?.id ?? user.id} value={(user as any).person?.id ?? ''}>
                       {orgLeadUserDisplayName(user)}
                     </option>
                   ))}
@@ -3176,11 +3176,11 @@ const renderTeamsPanel = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3 border-t border-slate-700/40 bg-slate-50 px-5 py-4">
+            <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4">
               <button
                 type="button"
                 onClick={() => setIsLocationLeadOpen(false)}
-                className="rounded-lg border border-slate-700/50 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 {isDe ? 'Abbrechen' : 'Cancel'}
               </button>
@@ -3253,7 +3253,7 @@ const renderDepartmentAssignmentPanel = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: user.id,
-          roleCode: user.role?.code ? 'VIEWER',
+          roleCode: user.role?.code ?? 'VIEWER',
           departmentId: selectedDepartmentId,
         }),
       });
@@ -3262,7 +3262,7 @@ const renderDepartmentAssignmentPanel = () => {
 
       if (!response.ok || data?.success === false) {
         throw new Error(
-          data?.message ?
+          data?.message ??
             (isDe
               ? 'Personen konnte der Abteilung nicht zugeordnet werden.'
               : 'User could not be assigned to the department.')
@@ -3293,7 +3293,7 @@ const renderDepartmentAssignmentPanel = () => {
 
   return (
     <section className={`${panelCls} overflow-hidden`}>
-      <div className="border-b border-slate-700/40 px-5 py-4">
+      <div className="border-b border-slate-200 px-5 py-4">
         <div className="flex flex-col gap-1">
           <h3 className="text-lg font-semibold text-slate-900">
             {isDe ? 'Personen zuordnen' : 'Assign users'}
@@ -3317,14 +3317,14 @@ const renderDepartmentAssignmentPanel = () => {
             onChange={(event) => setAssignUserId(event.target.value)}
           >
             <option value="">
-              {isDe ? 'Personen auswÃ¤hlen' : 'Select user'}
+              {isDe ? 'Personen auswählen' : 'Select user'}
             </option>
 
             {usersAssignableToSelectedDepartment.map((user) => {
               const currentDepartment = user.person?.department;
               const currentLabel = currentDepartment
                 ? currentDepartment.kuerzel
-                  ? `${currentDepartment.kuerzel} â€” ${currentDepartment.name}`
+                  ? `${currentDepartment.kuerzel} — ${currentDepartment.name}`
                   : currentDepartment.name
                 : isDe
                   ? 'Keine Abteilung'
@@ -3332,7 +3332,7 @@ const renderDepartmentAssignmentPanel = () => {
 
               return (
                 <option key={user.id} value={user.id}>
-                  {user.name || user.email} Â· {user.email} Â· {currentLabel}
+                  {user.name || user.email} · {user.email} · {currentLabel}
                 </option>
               );
             })}
@@ -3353,7 +3353,7 @@ const renderDepartmentAssignmentPanel = () => {
           >
             {isAssigningUser
               ? isDe
-                ? 'Zuordnung lÃ¤uft ...'
+                ? 'Zuordnung läuft ...'
                 : 'Assigning ...'
               : isDe
                 ? 'Der Abteilung zuordnen'
@@ -3378,7 +3378,7 @@ const renderDepartmentAssignmentPanel = () => {
             {usersAssignedToSelectedDepartment.map((user) => (
               <div
                 key={user.id}
-                className="rounded-lg border border-slate-700/50 bg-slate-50 px-3 py-3"
+                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
               >
                 <div className="font-semibold text-slate-900">
                   {user.name || user.email}
@@ -3400,7 +3400,7 @@ const renderDepartmentAssignmentPanel = () => {
 
   const renderUsersTable = () => (
     <section className={`${panelCls} overflow-hidden`}>
-      <div className="flex flex-col gap-3 border-b border-slate-700/40 px-5 py-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">
             {isDe ? 'Personen' : 'Users'}
@@ -3419,7 +3419,7 @@ const renderDepartmentAssignmentPanel = () => {
                   ? `Gefiltert nach Standort: ${selectedLocation.name}`
                   : `Filtered by location: ${selectedLocation.name}`
                 : isDe
-                  ? 'Alle Personen anzeigen oder Ã¼ber die Kontextzeile filtern.'
+                  ? 'Alle Personen anzeigen oder über die Kontextzeile filtern.'
                   : 'Show all users or filter via the context line.'}
           </p>
         </div>
@@ -3439,7 +3439,7 @@ const renderDepartmentAssignmentPanel = () => {
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-slate-700/40">
+          <tbody className="divide-y divide-slate-200">
             {isLoadingAdminUsers && (
               <tr>
                 <td colSpan={7} className="px-5 py-8 text-center text-sm text-slate-500">
@@ -3472,7 +3472,7 @@ const renderDepartmentAssignmentPanel = () => {
                           {userDisplayName(person)}
                         </div>
                         <div className="truncate text-xs text-slate-500">
-                          {person.email ? 'â€”'}
+                          {person.email ?? '—'}
                         </div>
                       </div>
                     </div>
@@ -3542,7 +3542,7 @@ const renderDepartmentAssignmentPanel = () => {
                               role="dialog"
                               aria-modal="true"
                               aria-label={isDe ? 'Personenaktionen' : 'Person actions'}
-                              className="flex h-full w-screen max-w-xl flex-col overflow-hidden border-l border-slate-700/50 bg-white shadow-[0_24px_90px_rgba(15,23,42,0.38)]"
+                              className="flex h-full w-screen max-w-xl flex-col overflow-hidden border-l border-slate-200 bg-white shadow-[0_24px_90px_rgba(15,23,42,0.38)]"
                               onClick={(event) => event.stopPropagation()}
                             >
                               <div className="bg-gradient-to-r from-[#00559F] via-[#0067B1] to-[#009A93] px-6 py-5 text-white">
@@ -3560,16 +3560,16 @@ const renderDepartmentAssignmentPanel = () => {
                                         {userDisplayName(person)}
                                       </div>
                                       <div className="truncate text-xs text-teal-50/85">
-                                        {person.email ? String.fromCharCode(0x2014)}
+                                        {person.email ?? String.fromCharCode(0x2014)}
                                       </div>
                                       <div className="mt-2 flex flex-wrap items-center gap-2">
                                         <span className="inline-flex items-center rounded-full bg-white/14 px-2.5 py-1 text-[11px] font-semibold text-white ring-1 ring-white/25">
-                                          {String(person.status ? '').toUpperCase() === 'INACTIVE'
+                                          {String(person.status ?? '').toUpperCase() === 'INACTIVE'
                                             ? isDe ? 'Inaktiv' : 'Inactive'
                                             : isDe ? 'Aktiviert' : 'Active'}
                                         </span>
                                         <span className="inline-flex items-center rounded-full bg-white/14 px-2.5 py-1 text-[11px] font-semibold text-white ring-1 ring-white/25">
-                                          {((person as any).roleName ? (person as any).roleCode ? (person as any).role ? (isDe ? 'Keine Rolle' : 'No role'))}
+                                          {((person as any).roleName ?? (person as any).roleCode ?? (person as any).role ?? (isDe ? 'Keine Rolle' : 'No role'))}
                                         </span>
                                       </div>
                                     </div>
@@ -3586,7 +3586,7 @@ const renderDepartmentAssignmentPanel = () => {
                                 </div>
                               </div>
 
-                              <div className="border-b border-slate-700/40 bg-slate-50 px-6 py-4">
+                              <div className="border-b border-slate-200 bg-slate-50 px-6 py-4">
                                 <h3 className="text-sm font-semibold text-slate-900">
                                   {isDe ? 'Kontextsensitives Action-Panel' : 'Context-sensitive action panel'}
                                 </h3>
@@ -3617,7 +3617,7 @@ const renderDepartmentAssignmentPanel = () => {
                                     <div className="space-y-2">
                                       <button
                                         type="button"
-                                        className="group flex w-full items-start gap-3 rounded-2xl border border-slate-700/50 bg-white px-4 py-3 text-left shadow-sm transition hover:border-[#00559F]/35 hover:bg-[#00559F]/[0.04]"
+                                        className="group flex w-full items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-[#00559F]/35 hover:bg-[#00559F]/[0.04]"
                                         onClick={() => {
                                           setOpenPersonActionMenuId(null);
                                           setUiError(null);
@@ -3645,7 +3645,7 @@ const renderDepartmentAssignmentPanel = () => {
 
                                       <button
                                         type="button"
-                                        className="group flex w-full items-start gap-3 rounded-2xl border border-slate-700/50 bg-white px-4 py-3 text-left shadow-sm transition hover:border-[#00559F]/35 hover:bg-[#00559F]/[0.04]"
+                                        className="group flex w-full items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-[#00559F]/35 hover:bg-[#00559F]/[0.04]"
                                         onClick={() => {
                                           setOpenPersonActionMenuId(null);
                                           openEditUser(person);
@@ -3710,7 +3710,7 @@ const renderDepartmentAssignmentPanel = () => {
 
                                       <button
                                         type="button"
-                                        className="group flex w-full items-start gap-3 rounded-2xl border border-slate-700/50 bg-white px-4 py-3 text-left shadow-sm transition hover:border-[#009A93]/40 hover:bg-[#009A93]/[0.05]"
+                                        className="group flex w-full items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-[#009A93]/40 hover:bg-[#009A93]/[0.05]"
                                         onClick={() => {
                                           setOpenPersonActionMenuId(null);
                                           openEditUser(person);
@@ -3752,7 +3752,7 @@ const renderDepartmentAssignmentPanel = () => {
                                         className={[
                                           'group flex w-full items-start gap-3 rounded-2xl border px-4 py-3 text-left shadow-sm transition hover:bg-slate-50',
                                           ((person as any).roleName || (person as any).roleCode || (person as any).role)
-                                            ? 'border-slate-700/50 bg-white hover:border-slate-400'
+                                            ? 'border-slate-200 bg-white hover:border-slate-400'
                                             : 'border-[#00559F]/35 bg-[#00559F]/[0.05] ring-1 ring-[#00559F]/10 hover:border-[#00559F]/55',
                                         ].join(' ')}
                                         onClick={() => {
@@ -3775,7 +3775,7 @@ const renderDepartmentAssignmentPanel = () => {
 
                                       <button
                                         type="button"
-                                        className="group flex w-full items-start gap-3 rounded-2xl border border-slate-700/50 bg-white px-4 py-3 text-left shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
+                                        className="group flex w-full items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
                                         onClick={() => {
                                           setOpenPersonActionMenuId(null);
                                           setUiError(null);
@@ -3791,7 +3791,7 @@ const renderDepartmentAssignmentPanel = () => {
                                         </span>
                                         <span>
                                           <span className="block text-sm font-semibold text-slate-900">
-                                            {String(person.status ? '').toUpperCase() === 'INACTIVE'
+                                            {String(person.status ?? '').toUpperCase() === 'INACTIVE'
                                               ? isDe ? 'Zugang entsperren (Login reaktivieren)' : 'Unlock access (reactivate login)'
                                               : isDe ? 'Zugang sperren (Login deaktivieren)' : 'Lock access (deactivate login)'}
                                           </span>
@@ -3824,7 +3824,7 @@ const renderDepartmentAssignmentPanel = () => {
                                       className={[
                                         'group flex w-full items-start gap-3 rounded-2xl border px-4 py-3 text-left shadow-sm transition',
                                         isDeletingUserId === person.id
-                                          ? 'cursor-wait border-slate-700/50 bg-slate-50 text-slate-400'
+                                          ? 'cursor-wait border-slate-200 bg-slate-50 text-slate-400'
                                           : 'border-rose-200 bg-rose-50/60 text-rose-800 hover:border-rose-300 hover:bg-rose-100',
                                       ].join(' ')}
                                       onClick={() => {
@@ -3860,14 +3860,14 @@ const renderDepartmentAssignmentPanel = () => {
                                 </div>
                               </div>
 
-                              <div className="flex items-center justify-between gap-4 border-t border-slate-700/40 bg-white px-6 py-4">
+                              <div className="flex items-center justify-between gap-4 border-t border-slate-200 bg-white px-6 py-4">
                                 <p className="text-[11px] leading-relaxed text-slate-500">
                                   {isDe ? 'Dieses Panel ist der Arbeitsbereich fuer die ausgewaehlte Person.' : 'This panel is the workspace for the selected person.'}
                                 </p>
                                 <button
                                   type="button"
                                   onClick={() => setOpenPersonActionMenuId(null)}
-                                  className="shrink-0 rounded-xl border border-slate-700/50 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                                  className="shrink-0 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
                                 >
                                   {isDe ? 'Schliessen' : 'Close'}
                                 </button>
@@ -3888,7 +3888,7 @@ const renderDepartmentAssignmentPanel = () => {
 
   const renderInviteForm = () => (
     <section className={`${panelCls} overflow-hidden`}>
-      <div className="border-b border-slate-700/40 px-5 py-4">
+      <div className="border-b border-slate-200 px-5 py-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-900">
             {isDe ? 'Einladung senden' : 'Send invitation'}
@@ -3910,7 +3910,7 @@ const renderDepartmentAssignmentPanel = () => {
         </div>
 
         <div className="space-y-1">
-          <div className={labelCls}>{isDe ? 'Rolle auswÃ¤hlen' : 'Select role'}</div>
+          <div className={labelCls}>{isDe ? 'Rolle auswählen' : 'Select role'}</div>
           <select
             className={inputCls}
             value={inviteRoleId}
@@ -3925,16 +3925,16 @@ const renderDepartmentAssignmentPanel = () => {
         </div>
 
         <div className="space-y-1">
-          <div className={labelCls}>{isDe ? 'Abteilung auswÃ¤hlen' : 'Select department'}</div>
+          <div className={labelCls}>{isDe ? 'Abteilung auswählen' : 'Select department'}</div>
           <select
             className={inputCls}
             value={effectiveInviteDepartmentId}
             onChange={(event) => setInviteDepartmentId(event.target.value)}
           >
-            <option value="">{isDe ? 'Abteilung auswÃ¤hlen' : 'Select department'}</option>
+            <option value="">{isDe ? 'Abteilung auswählen' : 'Select department'}</option>
             {allDepartmentOptions.map((department) => (
               <option key={department.id} value={department.id}>
-                {department.kuerzel ? `${department.kuerzel} â€” ${department.name}` : department.name}
+                {department.kuerzel ? `${department.kuerzel} — ${department.name}` : department.name}
               </option>
             ))}
           </select>
@@ -3970,7 +3970,7 @@ const renderDepartmentAssignmentPanel = () => {
 
   const renderPendingInvites = () => (
     <section className={`${panelCls} overflow-hidden`}>
-      <div className="border-b border-slate-700/40 px-5 py-4">
+      <div className="border-b border-slate-200 px-5 py-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-900">
             {isDe ? 'Einladungsverlauf' : 'Invitation history'}
@@ -3993,7 +3993,7 @@ const renderDepartmentAssignmentPanel = () => {
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-slate-700/40">
+          <tbody className="divide-y divide-slate-200">
             {invitationRows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-5 py-8 text-center text-sm text-slate-500">
@@ -4030,7 +4030,7 @@ const renderDepartmentAssignmentPanel = () => {
                       <button
                         type="button"
                         onClick={() => onResendInvite(invite.id)}
-                        className="rounded-md border border-slate-700/50 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                        className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
                       >
                         {isDe ? 'Erneut senden' : 'Resend'}
                       </button>
@@ -4040,12 +4040,12 @@ const renderDepartmentAssignmentPanel = () => {
                       <button
                         type="button"
                         onClick={() => onDeleteInvite(invite.id)}
-                        className="rounded-md border border-slate-700/50 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+                        className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-rose-50 hover:text-rose-700"
                       >
-                        {isDe ? 'LÃ¶schen' : 'Delete'}
+                        {isDe ? 'Löschen' : 'Delete'}
                       </button>
                     ) : (
-                      <span className="text-xs text-slate-400">â€”</span>
+                      <span className="text-xs text-slate-400">—</span>
                     )}
                   </div>
                 </td>
@@ -4059,7 +4059,7 @@ const renderDepartmentAssignmentPanel = () => {
 
   const renderRolesPanel = () => (
     <section className={`${panelCls} overflow-hidden`}>
-      <div className="border-b border-slate-700/40 px-5 py-4">
+      <div className="border-b border-slate-200 px-5 py-4">
         <div className="flex items-center gap-3">
           <ShieldCheck className="h-5 w-5 text-slate-600" />
           <div>
@@ -4068,7 +4068,7 @@ const renderDepartmentAssignmentPanel = () => {
             </h3>
             <p className="mt-1 text-xs text-slate-500">
               {isDe
-                ? 'Vorbereitete Rollenprofile fÃ¼r den spÃ¤teren Berechtigungsaufbau.'
+                ? 'Vorbereitete Rollenprofile für den späteren Berechtigungsaufbau.'
                 : 'Prepared role profiles for the later permission model.'}
             </p>
           </div>
@@ -4077,7 +4077,7 @@ const renderDepartmentAssignmentPanel = () => {
 
       <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
         {ROLE_OPTIONS.map((role) => (
-          <div key={role.id} className="rounded-xl border border-slate-700/50 bg-slate-50 p-4">
+          <div key={role.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h4 className="font-semibold text-slate-900">
@@ -4100,13 +4100,13 @@ const renderDepartmentAssignmentPanel = () => {
     const locationName = selectedLocation
       ? selectedLocation.name
       : isDe
-        ? 'Kein Standort ausgewÃ¤hlt'
+        ? 'Kein Standort ausgewählt'
         : 'No location selected';
 
     const departmentName = selectedDepartment
       ? selectedDepartment.name
       : isDe
-        ? 'Keine Abteilung ausgewÃ¤hlt'
+        ? 'Keine Abteilung ausgewählt'
         : 'No department selected';
 
     const contextPath = selectedDepartment
@@ -4120,7 +4120,7 @@ const renderDepartmentAssignmentPanel = () => {
       organization: {
         titleDe: 'Organisationspfad',
         titleEn: 'Organisation path',
-        descriptionDe: 'Der ausgewÃ¤hlte Standort steuert, welche Abteilungen und Personen angezeigt werden.',
+        descriptionDe: 'Der ausgewählte Standort steuert, welche Abteilungen und Personen angezeigt werden.',
         descriptionEn: 'The selected location controls which departments and users are shown.',
         metricDe: `${selectedLocationDepartmentCount} Abteilungen`,
         metricEn: `${selectedLocationDepartmentCount} departments`,
@@ -4128,7 +4128,7 @@ const renderDepartmentAssignmentPanel = () => {
       users: {
         titleDe: 'Personenkontext',
         titleEn: 'User context',
-        descriptionDe: 'Die Personenliste wird anhand des ausgewÃ¤hlten Standorts und der ausgewÃ¤hlten Abteilung gefiltert.',
+        descriptionDe: 'Die Personenliste wird anhand des ausgewählten Standorts und der ausgewählten Abteilung gefiltert.',
         descriptionEn: 'The user list is filtered by the selected location and department.',
         metricDe: `${filteredPeople.length} Personen im Filter`,
         metricEn: `${filteredPeople.length} users in filter`,
@@ -4144,7 +4144,7 @@ const renderDepartmentAssignmentPanel = () => {
       roles: {
         titleDe: 'Rollen- und Rechtekontext',
         titleEn: 'Roles and permissions context',
-        descriptionDe: 'Rollenprofile sind systemweit vorbereitet und werden spÃ¤ter mit konkreten Berechtigungen verknÃ¼pft.',
+        descriptionDe: 'Rollenprofile sind systemweit vorbereitet und werden später mit konkreten Berechtigungen verknüpft.',
         descriptionEn: 'Role profiles are prepared system-wide and will later be linked to concrete permissions.',
         metricDe: `${ROLE_OPTIONS.length} Rollenprofile`,
         metricEn: `${ROLE_OPTIONS.length} role profiles`,
@@ -4180,7 +4180,7 @@ const renderDepartmentAssignmentPanel = () => {
         .join(arrowChar);
 
       return (
-        <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3 text-slate-900 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm">
           <div className="text-sm font-semibold">
             {isDe ? 'Organisationspfad' : 'Organisation path'}
           </div>
@@ -4198,7 +4198,7 @@ const renderDepartmentAssignmentPanel = () => {
     }
 
     return (
-      <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3 text-slate-900 shadow-sm">
+      <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="text-sm font-semibold">
@@ -4207,7 +4207,7 @@ const renderDepartmentAssignmentPanel = () => {
 
             <div className="mt-1 text-xs text-slate-500">
               <span className="font-medium text-slate-700">{contextPath}</span>
-              <span className="mx-2 text-slate-300">Â·</span>
+              <span className="mx-2 text-slate-300">·</span>
               <span>{isDe ? context.descriptionDe : context.descriptionEn}</span>
             </div>
           </div>
@@ -4217,7 +4217,7 @@ const renderDepartmentAssignmentPanel = () => {
               {isDe ? context.metricDe : context.metricEn}
             </span>
             <span>
-              {isDe ? 'Inaktive ZugÃ¤nge:' : 'Inactive users:'} {inactivePeopleCount}
+              {isDe ? 'Inaktive Zugänge:' : 'Inactive users:'} {inactivePeopleCount}
             </span>
           </div>
         </div>
@@ -4231,10 +4231,10 @@ const renderTeamLeadModal = () => {
   if (!isTeamLeadOpen || !selectedTeam) return null;
 
   const displayTeamLeadUserName = (user: any) => {
-    const person = user.person ? {};
+    const person = user.person ?? {};
 
     const clean = (value: unknown) => {
-      const textValue = String(value ? '').trim();
+      const textValue = String(value ?? '').trim();
       if (!textValue) return '';
       if (textValue.includes('@')) return '';
       return textValue;
@@ -4252,7 +4252,7 @@ const renderTeamLeadModal = () => {
 
     const displayName = clean(user.name);
 
-    const email = String(person.email ? user.email ? '').trim();
+    const email = String(person.email ?? user.email ?? '').trim();
 
     const nameFromEmail = email
       ? email
@@ -4277,8 +4277,8 @@ const renderTeamLeadModal = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
-      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-700/50 bg-white shadow-xl">
-        <div className="border-b border-slate-700/40 px-5 py-4">
+      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+        <div className="border-b border-slate-200 px-5 py-4">
           <h3 className="text-lg font-semibold text-slate-900">
             {isDe ? 'Team Lead festlegen' : 'Set team lead'}
           </h3>
@@ -4304,7 +4304,7 @@ const renderTeamLeadModal = () => {
               </option>
 
               {usersInTeam.map((user) => (
-                <option key={(user as any).person?.id ? user.id} value={(user as any).person?.id ? ''}>
+                <option key={(user as any).person?.id ?? user.id} value={(user as any).person?.id ?? ''}>
                   {displayTeamLeadUserName(user)}
                 </option>
               ))}
@@ -4326,7 +4326,7 @@ const renderTeamLeadModal = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-slate-700/40 bg-slate-50 px-5 py-4">
+        <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4">
           <button
             type="button"
             onClick={() => {
@@ -4334,7 +4334,7 @@ const renderTeamLeadModal = () => {
               setTeamLeadPersonId('');
             }}
             disabled={isSavingTeamLead}
-            className="rounded-lg border border-slate-700/50 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isDe ? 'Abbrechen' : 'Cancel'}
           </button>
@@ -4363,7 +4363,7 @@ const renderTeamLeadModal = () => {
                 const data = await response.json().catch(() => ({}));
 
                 if (!response.ok || data?.success === false) {
-                  throw new Error(data?.message ? 'Team Lead konnte nicht gespeichert werden.');
+                  throw new Error(data?.message ?? 'Team Lead konnte nicht gespeichert werden.');
                 }
 
                 setIsTeamLeadOpen(false);
@@ -4372,7 +4372,7 @@ const renderTeamLeadModal = () => {
                 await loadAdminUsers();
 
                 setUiMessage(
-                  data?.message ?
+                  data?.message ??
                     (isDe ? 'Team Lead wurde gespeichert.' : 'Team lead has been saved.')
                 );
               } catch (error) {
@@ -4410,14 +4410,14 @@ const renderTeamLeadModal = () => {
 const renderStructureCreateSlideOver = () => {
   if (!createMode) return null;
 
-  const teamDepartment = selectedTeam ? departmentById.get(selectedTeam.departmentId) ? null : null;
-  const teamLocation = teamDepartment?.locationId ? locationById.get(teamDepartment.locationId) ? null : null;
+  const teamDepartment = selectedTeam ? departmentById.get(selectedTeam.departmentId) ?? null : null;
+  const teamLocation = teamDepartment?.locationId ? locationById.get(teamDepartment.locationId) ?? null : null;
 
   const activeDepartment = selectedTeam ? teamDepartment : selectedDepartment;
   const activeLocation = selectedTeam
     ? teamLocation
     : activeDepartment?.locationId
-      ? locationById.get(activeDepartment.locationId) ? null
+      ? locationById.get(activeDepartment.locationId) ?? null
       : selectedLocation;
 
   const title =
@@ -4500,7 +4500,7 @@ const renderStructureCreateSlideOver = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: user.id,
-          roleCode: user.role?.code ? 'VIEWER',
+          roleCode: user.role?.code ?? 'VIEWER',
           departmentId: selectedTeam.departmentId,
           teamId: selectedTeam.id,
         }),
@@ -4510,7 +4510,7 @@ const renderStructureCreateSlideOver = () => {
 
       if (!response.ok || data?.success === false) {
         throw new Error(
-          data?.message ?
+          data?.message ??
             (isDe
               ? 'Personen konnte dem Team nicht zugeordnet werden.'
               : 'User could not be assigned to the team.')
@@ -4557,8 +4557,8 @@ const renderStructureCreateSlideOver = () => {
       />
 
       <div className="pointer-events-none fixed inset-0 z-[1001] flex items-start justify-center overflow-y-auto px-6 py-8">
-<aside className="pointer-events-auto flex max-h-[calc(100vh-4rem)] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-slate-700/50 bg-white shadow-2xl">
-        <div className="border-b border-slate-700/40 px-6 py-5">
+<aside className="pointer-events-auto flex max-h-[calc(100vh-4rem)] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
+        <div className="border-b border-slate-200 px-6 py-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
@@ -4569,7 +4569,7 @@ const renderStructureCreateSlideOver = () => {
               type="button"
               onClick={closeSlideOver}
               aria-label={isDe ? 'Schliessen' : 'Close'}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700/50 bg-white text-slate-600 hover:bg-slate-50"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -4579,7 +4579,7 @@ const renderStructureCreateSlideOver = () => {
         <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
           {(createMode === 'location' || createMode === 'department' || createMode === 'team') && (
             <section className="space-y-3">
-              <div className="overflow-hidden rounded-lg border border-slate-700/50">
+              <div className="overflow-hidden rounded-lg border border-slate-200">
                 <div className="bg-[#0B2A55] px-4 py-2 text-sm font-semibold text-white">
                   {isDe ? 'Allgemein' : 'General'}
                 </div>
@@ -4623,7 +4623,7 @@ const renderStructureCreateSlideOver = () => {
                     />
                   </div>
 
-                  <div className="overflow-hidden rounded-lg border border-slate-700/50">
+                  <div className="overflow-hidden rounded-lg border border-slate-200">
                     <div className="bg-[#0B2A55] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white">
                       {isDe ? 'Organisation' : 'Organisation'}
                     </div>
@@ -4649,7 +4649,7 @@ const renderStructureCreateSlideOver = () => {
                     </div>
                   </div>
 
-                  <div className="overflow-hidden rounded-lg border border-slate-700/50">
+                  <div className="overflow-hidden rounded-lg border border-slate-200">
                     <div className="bg-[#0B2A55] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white">
                       {isDe ? 'Adresse / Lage' : 'Address / location'}
                     </div>
@@ -4719,13 +4719,13 @@ const renderStructureCreateSlideOver = () => {
                       <input
                         className={inputCls}
                         value={[locFloor, locRoom]
-                          .map((part) => String(part ? '').trim())
+                          .map((part) => String(part ?? '').trim())
                           .filter(Boolean)
                           .join(' / ')}
                         onChange={(event) => {
                           const parts = event.target.value.split('/');
-                          setLocFloor(String(parts[0] ? '').trim());
-                          setLocRoom(String(parts.slice(1).join('/') ? '').trim());
+                          setLocFloor(String(parts[0] ?? '').trim());
+                          setLocRoom(String(parts.slice(1).join('/') ?? '').trim());
                         }}
                         placeholder={isDe ? 'z. B. 2 / 205' : 'e.g. 2 / 205'}
                       />
@@ -4751,7 +4751,7 @@ const renderStructureCreateSlideOver = () => {
                     />
                   </div>
 
-                  <div className="overflow-hidden rounded-lg border border-slate-700/50">
+                  <div className="overflow-hidden rounded-lg border border-slate-200">
                     <div className="bg-[#0B2A55] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white">
                       {isDe ? 'Kontakt' : 'Contact'}
                     </div>
@@ -4861,7 +4861,7 @@ const renderStructureCreateSlideOver = () => {
               {(createMode === 'department' || createMode === 'team' || createMode === 'user') && (
                 <div className="space-y-1">
                   <div className={labelCls}>{isDe ? 'Standort' : 'Location'}</div>
-                  <div className="rounded-lg border border-slate-700/50 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
                     {activeLocation
                       ? activeLocation.kuerzel
                         ? activeLocation.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + activeLocation.name
@@ -4876,7 +4876,7 @@ const renderStructureCreateSlideOver = () => {
               {(createMode === 'team' || createMode === 'user') && (
                 <div className="space-y-1">
                   <div className={labelCls}>{isDe ? 'Abteilung' : 'Department'}</div>
-                  <div className="rounded-lg border border-slate-700/50 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
                     {activeDepartment
                       ? activeDepartment.kuerzel
                         ? activeDepartment.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + activeDepartment.name
@@ -4891,7 +4891,7 @@ const renderStructureCreateSlideOver = () => {
               {createMode === 'user' && selectedTeam && (
                 <div className="space-y-1">
                   <div className={labelCls}>Team</div>
-                  <div className="rounded-lg border border-slate-700/50 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
                     {selectedTeam.kuerzel
                       ? selectedTeam.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + selectedTeam.name
                       : selectedTeam.name}
@@ -4936,12 +4936,12 @@ const renderStructureCreateSlideOver = () => {
           )}
         </div>
 
-                <div className="border-t border-slate-700/40 bg-white px-6 py-4">
+                <div className="border-t border-slate-200 bg-white px-6 py-4">
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="button"
               onClick={closeSlideOver}
-              className="rounded-lg border border-slate-700/50 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               {isDe ? 'Abbrechen' : 'Cancel'}
             </button>
@@ -4954,7 +4954,7 @@ const renderStructureCreateSlideOver = () => {
                     onClick={() => onAddLocation(false)}
                     disabled={isSavingLocationMasterdata}
                     className={[
-                      'rounded-lg border border-slate-700/50 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50',
+                      'rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50',
                       isSavingLocationMasterdata ? 'cursor-wait opacity-70' : '',
                     ].join(' ')}
                   >
@@ -5060,8 +5060,8 @@ const renderEditUserModal = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
-      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-700/50 bg-white shadow-xl">
-        <div className="border-b border-slate-700/40 px-5 py-4">
+      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+        <div className="border-b border-slate-200 px-5 py-4">
           <h3 className="text-lg font-semibold text-slate-900">
             {isDe ? 'Person bearbeiten' : 'Edit user'}
           </h3>
@@ -5103,7 +5103,7 @@ const renderEditUserModal = () => {
 
     {locationOptions.map((location) => (
       <option key={location.id} value={location.id}>
-        {location.kuerzel ? `${location.kuerzel} â€” ${location.name}` : location.name}
+        {location.kuerzel ? `${location.kuerzel} — ${location.name}` : location.name}
       </option>
     ))}
   </select>
@@ -5122,7 +5122,7 @@ const renderEditUserModal = () => {
     <option value="">
   {editLocationId
     ? isDe
-      ? 'Abteilung auswÃ¤hlen'
+      ? 'Abteilung auswählen'
       : 'Select department'
     : isDe
       ? 'Keine Abteilung'
@@ -5132,7 +5132,7 @@ const renderEditUserModal = () => {
     {editDepartmentOptions.map((department) => (
       <option key={department.id} value={department.id}>
         {department.kuerzel
-          ? `${department.kuerzel} â€” ${department.name}`
+          ? `${department.kuerzel} — ${department.name}`
           : department.name}
       </option>
     ))}
@@ -5221,12 +5221,12 @@ const renderEditUserModal = () => {
 
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-slate-700/40 bg-slate-50 px-5 py-4">
+        <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4">
           <button
             type="button"
             onClick={() => setEditingUser(null)}
             disabled={isSavingUser}
-            className="rounded-lg border border-slate-700/50 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isDe ? 'Abbrechen' : 'Cancel'}
           </button>
@@ -5255,7 +5255,7 @@ const renderEditUserModal = () => {
 };
 
   const renderOrganisationViewSwitch = () => (
-    <div className="flex flex-col gap-3 rounded-xl border border-slate-700/50 bg-white px-4 py-3 shadow-sm md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm md:flex-row md:items-center md:justify-between">
       <div>
         <div className="text-sm font-semibold text-slate-900">
           {isDe ? 'Organisationsansicht' : 'Organisation view'}
@@ -5267,7 +5267,7 @@ const renderEditUserModal = () => {
         </div>
       </div>
 
-      <div className="inline-flex rounded-lg border border-slate-700/50 bg-slate-50 p-1">
+      <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
         <button
           type="button"
           onClick={() => setOrganisationViewMode('structure')}
@@ -5320,10 +5320,10 @@ const renderEditUserModal = () => {
     const dot = String.fromCharCode(0x00b7);
 
     const displayUserName = (user: any) => {
-      const person = user?.person ? {};
+      const person = user?.person ?? {};
 
       const clean = (value: unknown) => {
-        const textValue = String(value ? '').trim();
+        const textValue = String(value ?? '').trim();
         if (!textValue) return '';
         if (textValue.includes('@')) return '';
         return textValue;
@@ -5340,7 +5340,7 @@ const renderEditUserModal = () => {
         .join(' ');
 
       const displayName = clean(user?.name);
-      const email = String(person.email ? user?.email ? '').trim();
+      const email = String(person.email ?? user?.email ?? '').trim();
 
       const nameFromEmail = email
         ? email
@@ -5404,7 +5404,7 @@ const renderEditUserModal = () => {
           ? 'border-sky-200 bg-gradient-to-r from-sky-50 to-cyan-50'
           : variant === 'department'
             ? 'border-teal-200 bg-gradient-to-r from-teal-50 to-cyan-50'
-            : 'border-slate-700/50 bg-white';
+            : 'border-slate-200 bg-white';
 
       return (
         <div
@@ -5435,7 +5435,7 @@ const renderEditUserModal = () => {
 
     return (
       <section className={panelCls + ' overflow-hidden'}>
-        <div className="border-b border-slate-700/40 px-5 py-4">
+        <div className="border-b border-slate-200 px-5 py-4">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <h3 className="text-lg font-semibold text-slate-900">
@@ -5481,7 +5481,7 @@ const renderEditUserModal = () => {
             return (
               <div
                 key={location.id}
-                className="min-w-[1120px] rounded-2xl border border-slate-700/50 bg-white px-8 py-8 shadow-sm"
+                className="min-w-[1120px] rounded-2xl border border-slate-200 bg-white px-8 py-8 shadow-sm"
               >
                 <div className="flex justify-center">
                   <div
@@ -5587,7 +5587,7 @@ setShowAddTeam(false);
                       }}
                     >
                       {locationDepartments.map((department) => {
-                        const teams = (teamsByDepartmentId.get(department.id) ? [])
+                        const teams = (teamsByDepartmentId.get(department.id) ?? [])
                           .slice()
                           .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -5808,7 +5808,7 @@ const renderMainContent = () => {
 
           <p className="mt-1 text-xs text-white/80">
             {isDe
-              ? 'Verwalte Organisationsstruktur, PersonenzugÃ¤nge und Rollenprofile.'
+              ? 'Verwalte Organisationsstruktur, Personenzugänge und Rollenprofile.'
               : 'Manage organisation structure, user access and role profiles.'}
           </p>
         </div>
@@ -5826,7 +5826,7 @@ const renderMainContent = () => {
                   'rounded-xl border bg-white px-4 py-4 text-left shadow-sm transition',
                   isActive
                     ? 'border-[#00559F] ring-2 ring-[#00559F]/15'
-                    : 'border-slate-700/50 hover:border-slate-300 hover:bg-slate-50',
+                    : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50',
                 ].join(' ')}
               >
                 <div className="flex items-start gap-3">
