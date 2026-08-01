@@ -301,7 +301,7 @@ function statusPillCls(status: PersonStatus | string | undefined): string {
   const value = String(status ?? '').toUpperCase();
 
   if (value === 'INVITED') {
-    return 'bg-sky-50 text-sky-700 ring-sky-200';
+    return 'bg-white text-sky-700 ring-sky-200';
   }
 
   if (value === 'INACTIVE') {
@@ -332,7 +332,7 @@ function inviteStatusPillCls(status: PendingInviteStatus): string {
     return 'bg-amber-50 text-amber-800 ring-amber-200';
   }
 
-  return 'bg-sky-50 text-sky-800 ring-sky-200';
+  return 'bg-white text-sky-800 ring-sky-200';
 }
 
 function formatRelativeDate(isoDate: string, isDe: boolean): string {
@@ -1676,7 +1676,7 @@ const saveUserAssignment = async () => {
 
   const renderKpis = () => (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-      <div className="rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-5 py-4 shadow-sm">
+      <div className="rounded-lg border border-cyan-400/20 bg-white0/10 px-5 py-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-3xl font-semibold text-slate-50">{activePeopleCount}</div>
@@ -1688,7 +1688,7 @@ const saveUserAssignment = async () => {
         </div>
       </div>
 
-      <div className="rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-5 py-4 shadow-sm">
+      <div className="rounded-lg border border-cyan-400/20 bg-white0/10 px-5 py-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-3xl font-semibold text-slate-50">{kpiDepartmentCount}</div>
@@ -1700,7 +1700,7 @@ const saveUserAssignment = async () => {
         </div>
       </div>
 
-      <div className="rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-5 py-4 shadow-sm">
+      <div className="rounded-lg border border-cyan-400/20 bg-white0/10 px-5 py-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-3xl font-semibold text-slate-50">{openInviteCount}</div>
@@ -1778,7 +1778,7 @@ const renderOrganisationPanel = () => {
 
         <div className="space-y-4 px-5 py-5">
           {structureIsEmpty ? (
-            <div className="rounded-xl border border-dashed border-cyan-300/30 bg-cyan-500/5 px-4 py-5 text-sm text-slate-500">
+            <div className="rounded-xl border border-dashed border-cyan-300/30 bg-white0/5 px-4 py-5 text-sm text-slate-500">
               {isDe
                 ? 'Noch keine Standorte angelegt. Lege rechts im Detailpanel den ersten Standort an.'
                 : 'No locations created yet. Create the first location in the detail panel on the right.'}
@@ -1817,10 +1817,10 @@ setDepLocationId(location.id);
                     className={[
                       'w-full rounded-xl border px-4 py-3 text-left transition',
                       isLocationOnlySelected
-                        ? 'border-cyan-400/30 bg-cyan-500/10 shadow-sm'
+                        ? 'border-cyan-400/30 bg-white0/10 shadow-sm'
                         : isLocationActive
-                          ? 'border-cyan-400/25 bg-cyan-500/10'
-                          : 'border-cyan-400/20 bg-cyan-500/5 hover:bg-cyan-500/10',
+                          ? 'border-cyan-400/25 bg-white0/10'
+                          : 'border-cyan-400/20 bg-white0/5 hover:bg-white0/10',
                     ].join(' ')}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -1855,7 +1855,7 @@ setDepLocationId(location.id);
                       </div>
 
                       {locationDepartments.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-cyan-300/30 bg-cyan-500/5 px-3 py-4 text-sm text-slate-500">
+                        <div className="rounded-xl border border-dashed border-cyan-300/30 bg-white0/5 px-3 py-4 text-sm text-slate-500">
                           {isDe
                             ? 'Fuer diesen Standort sind noch keine Abteilungen angelegt.'
                             : 'No departments have been created for this location yet.'}
@@ -1887,10 +1887,10 @@ setInviteDepartmentId(department.id);
                                 className={[
                                   'w-full rounded-xl border px-3 py-3 text-left transition',
                                   isDepartmentOnlySelected
-                                    ? 'border-cyan-400/30 bg-cyan-500/10 shadow-sm'
+                                    ? 'border-cyan-400/30 bg-white0/10 shadow-sm'
                                     : isDepartmentActive
-                                      ? 'border-cyan-400/25 bg-cyan-500/10'
-                                      : 'border-cyan-400/20 bg-cyan-500/5 hover:bg-cyan-500/10',
+                                      ? 'border-cyan-400/25 bg-white0/10'
+                                      : 'border-cyan-400/20 bg-white0/5 hover:bg-white0/10',
                                 ].join(' ')}
                               >
                                 <div className="flex items-start justify-between gap-3">
@@ -1925,7 +1925,7 @@ setInviteDepartmentId(department.id);
                                   </div>
 
                                   {departmentTeams.length === 0 ? (
-                                    <div className="rounded-xl border border-dashed border-cyan-300/30 bg-cyan-500/5 px-3 py-3 text-xs text-slate-500">
+                                    <div className="rounded-xl border border-dashed border-cyan-300/30 bg-white0/5 px-3 py-3 text-xs text-slate-500">
                                       {isDe
                                         ? 'Noch keine Teams angelegt. Nutze rechts die Aktion Team hinzufuegen.'
                                         : 'No teams created yet. Use the action Add team on the right.'}
@@ -1955,8 +1955,8 @@ setInviteDepartmentId(department.id);
                                           className={[
                                             'flex w-full items-center justify-between rounded-xl border px-3 py-3 text-left transition',
                                             isTeamActive
-                                              ? 'border-cyan-400/30 bg-cyan-500/10 shadow-sm'
-                                              : 'border-cyan-400/20 bg-cyan-500/5 hover:bg-cyan-500/10',
+                                              ? 'border-cyan-400/30 bg-white0/10 shadow-sm'
+                                              : 'border-cyan-400/20 bg-white0/5 hover:bg-white0/10',
                                           ].join(' ')}
                                         >
                                           <span className="flex min-w-0 items-center gap-3">
@@ -2563,7 +2563,7 @@ const renderTeamsPanel = () => {
       </div>
 
       <div className="space-y-5 px-5 py-5">
-        <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-4">
+        <div className="rounded-xl border border-cyan-400/20 bg-white0/10 px-4 py-4">
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
             {detailType}
           </div>
@@ -2584,7 +2584,7 @@ const renderTeamsPanel = () => {
         </div>
 
         {activeLocation && !activeDepartment ? (
-          <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 px-4 py-4">
+          <div className="rounded-xl border border-cyan-400/20 bg-white0/5 px-4 py-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h4 className="text-sm font-semibold text-slate-900">
@@ -2641,7 +2641,7 @@ const renderTeamsPanel = () => {
                 <button
                   type="button"
                   onClick={openLeadAssignmentHint}
-                  className="mt-2 rounded-lg border border-cyan-400/20 bg-cyan-500/5 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="mt-2 rounded-lg border border-cyan-400/20 bg-white0/5 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   {currentOrgLeadUser
                     ? isDe
@@ -2654,7 +2654,7 @@ const renderTeamsPanel = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 px-4 py-3">
+            <div className="rounded-xl border border-cyan-400/20 bg-white0/5 px-4 py-3">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {isDe ? 'Standort' : 'Location'}
               </div>
@@ -2663,7 +2663,7 @@ const renderTeamsPanel = () => {
               </div>
             </div>
 
-            <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 px-4 py-3">
+            <div className="rounded-xl border border-cyan-400/20 bg-white0/5 px-4 py-3">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {isDe ? 'Abteilung' : 'Department'}
               </div>
@@ -2672,7 +2672,7 @@ const renderTeamsPanel = () => {
               </div>
             </div>
 
-            <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 px-4 py-3">
+            <div className="rounded-xl border border-cyan-400/20 bg-white0/5 px-4 py-3">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {isDe ? 'Teams' : 'Teams'}
               </div>
@@ -2684,7 +2684,7 @@ const renderTeamsPanel = () => {
         )}
 
         {activeLocation && !activeDepartment && (
-          <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5">
+          <div className="rounded-xl border border-cyan-400/20 bg-white0/5">
             <div className="border-b border-slate-700/40 px-4 py-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
@@ -2709,7 +2709,7 @@ const renderTeamsPanel = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-3 p-4 xl:grid-cols-2">
-              <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3">
+              <div className="rounded-xl border border-cyan-400/20 bg-white0/10 px-4 py-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {isDe ? 'Allgemein' : 'General'}
                 </div>
@@ -2738,7 +2738,7 @@ const renderTeamsPanel = () => {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3">
+              <div className="rounded-xl border border-cyan-400/20 bg-white0/10 px-4 py-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {isDe ? 'Organisation' : 'Organisation'}
                 </div>
@@ -2760,7 +2760,7 @@ const renderTeamsPanel = () => {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 px-4 py-3">
+              <div className="rounded-xl border border-cyan-400/20 bg-white0/5 px-4 py-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {isDe ? 'Adresse / Lage' : 'Address / location'}
                 </div>
@@ -2798,7 +2798,7 @@ const renderTeamsPanel = () => {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 px-4 py-3">
+              <div className="rounded-xl border border-cyan-400/20 bg-white0/5 px-4 py-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {isDe ? 'Kontakt' : 'Contact'}
                 </div>
@@ -2841,7 +2841,7 @@ const renderTeamsPanel = () => {
 
         {activeLocation && (activeDepartment || selectedTeam) && (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 px-4 py-3">
+            <div className="rounded-xl border border-cyan-400/20 bg-white0/5 px-4 py-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -2874,14 +2874,14 @@ const renderTeamsPanel = () => {
                 <button
                   type="button"
                   onClick={openLeadAssignmentHint}
-                  className="shrink-0 rounded-lg border border-cyan-400/20 bg-cyan-500/5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="shrink-0 rounded-lg border border-cyan-400/20 bg-white0/5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   {currentOrgLeadUser ? (isDe ? 'Lead ändern' : 'Change lead') : responsibleActionLabel}
                 </button>
               </div>
             </div>
 
-            <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 px-4 py-3">
+            <div className="rounded-xl border border-cyan-400/20 bg-white0/5 px-4 py-3">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {userCountLabel}
               </div>
@@ -2898,7 +2898,7 @@ const renderTeamsPanel = () => {
             </div>
 
             {selectedTeam && (
-              <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 px-4 py-3 md:col-span-2">
+              <div className="rounded-xl border border-cyan-400/20 bg-white0/5 px-4 py-3 md:col-span-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {isDe ? 'Beschreibung' : 'Description'}
                 </div>
@@ -2912,7 +2912,7 @@ const renderTeamsPanel = () => {
           </div>
         )}
 
-        <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 px-4 py-4">
+        <div className="rounded-xl border border-cyan-400/20 bg-white0/5 px-4 py-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
               <h4 className="text-sm font-semibold text-slate-900">
@@ -2953,7 +2953,7 @@ const renderTeamsPanel = () => {
                   <button
                     type="button"
                     onClick={onDeleteSelectedLocation}
-                    className="inline-flex items-center gap-2 rounded-lg border border-cyan-400/20 bg-cyan-500/5 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+                    className="inline-flex items-center gap-2 rounded-lg border border-cyan-400/20 bg-white0/5 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
                   >
                     <Trash2 className="h-4 w-4" />
                     {isDe ? 'Standort loeschen' : 'Delete location'}
@@ -2975,7 +2975,7 @@ const renderTeamsPanel = () => {
                   <button
                     type="button"
                     onClick={deleteActiveDepartment}
-                    className="inline-flex items-center gap-2 rounded-lg border border-cyan-400/20 bg-cyan-500/5 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+                    className="inline-flex items-center gap-2 rounded-lg border border-cyan-400/20 bg-white0/5 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
                   >
                     <Trash2 className="h-4 w-4" />
                     {isDe ? 'Abteilung loeschen' : 'Delete department'}
@@ -2997,7 +2997,7 @@ const renderTeamsPanel = () => {
                   <button
                     type="button"
                     onClick={deleteActiveTeam}
-                    className="inline-flex items-center gap-2 rounded-lg border border-cyan-400/20 bg-cyan-500/5 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+                    className="inline-flex items-center gap-2 rounded-lg border border-cyan-400/20 bg-white0/5 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
                   >
                     <Trash2 className="h-4 w-4" />
                     {isDe ? 'Team loeschen' : 'Delete team'}
@@ -3113,7 +3113,7 @@ const renderTeamsPanel = () => {
 
       {isLocationLeadOpen && activeLocation && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-[1px]">
-          <div className="w-full max-w-xl overflow-hidden rounded-xl border border-cyan-400/20 bg-cyan-500/5 shadow-2xl">
+          <div className="w-full max-w-xl overflow-hidden rounded-xl border border-cyan-400/20 bg-white0/5 shadow-2xl">
             <div className="border-b border-slate-700/40 px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -3129,7 +3129,7 @@ const renderTeamsPanel = () => {
                   type="button"
                   onClick={() => setIsLocationLeadOpen(false)}
                   aria-label={isDe ? 'Schliessen' : 'Close'}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-cyan-400/20 bg-cyan-500/5 text-slate-600 hover:bg-slate-50"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-cyan-400/20 bg-white0/5 text-slate-600 hover:bg-slate-50"
                 >
                   <X className="h-4 w-4" aria-hidden="true" />
                 </button>
@@ -3180,7 +3180,7 @@ const renderTeamsPanel = () => {
               <button
                 type="button"
                 onClick={() => setIsLocationLeadOpen(false)}
-                className="rounded-lg border border-cyan-400/20 bg-cyan-500/5 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded-lg border border-cyan-400/20 bg-white0/5 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 {isDe ? 'Abbrechen' : 'Cancel'}
               </button>
@@ -5401,10 +5401,10 @@ const renderEditUserModal = () => {
     }) => {
       const variantClass =
         variant === 'root'
-          ? 'border-sky-200 bg-gradient-to-r from-sky-50 to-cyan-50 dark:border-cyan-400/20 dark:bg-cyan-500/10 dark:bg-none'
+          ? 'border-sky-200 bg-gradient-to-r from-sky-50 to-cyan-50 dark:border-cyan-400/20 dark:bg-white0/10 dark:bg-none'
           : variant === 'department'
-            ? 'border-sky-200 bg-gradient-to-r from-sky-50 to-cyan-50 dark:border-cyan-400/20 dark:bg-cyan-500/10 dark:bg-none'
-            : 'border-slate-200 bg-white dark:border-cyan-400/20 dark:bg-cyan-500/10';
+            ? 'border-sky-200 bg-gradient-to-r from-sky-50 to-cyan-50 dark:border-cyan-400/20 dark:bg-white0/10 dark:bg-none'
+            : 'border-slate-200 bg-white dark:border-cyan-400/20 dark:bg-white0/10';
 
       return (
         <div
@@ -5457,7 +5457,7 @@ const renderEditUserModal = () => {
 
         <div className="space-y-8 overflow-x-auto bg-slate-50 px-5 py-6 dark:bg-slate-950/20">
           {locationsForChart.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-sm text-slate-500 dark:border-cyan-300/30 dark:bg-cyan-500/5 dark:text-cyan-100/85">
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-sm text-slate-500 dark:border-cyan-300/30 dark:bg-white0/5 dark:text-cyan-100/85">
               {isDe
                 ? 'Noch keine Organisationsstruktur vorhanden.'
                 : 'No organisation structure available yet.'}
@@ -5525,7 +5525,7 @@ setShowAddTeam(false);
 
                 {locationDepartments.length === 0 ? (
                   <div className="mt-6 flex justify-center">
-                    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-500 dark:border-cyan-300/30 dark:bg-cyan-500/5 dark:text-cyan-100/85">
+                    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-500 dark:border-cyan-300/30 dark:bg-white0/5 dark:text-cyan-100/85">
                       {isDe ? 'Noch keine Abteilungen angelegt.' : 'No departments created yet.'}
                     </div>
                   </div>
@@ -5722,7 +5722,7 @@ setShowAddTeam(false);
                               <div className="flex flex-col items-center">
                                 <div className="h-8 w-[3px] bg-[#CBD5E1] dark:w-[2px] dark:bg-cyan-400/25" />
 
-                                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-xs text-slate-500 dark:border-cyan-300/30 dark:bg-cyan-500/5 dark:text-cyan-100/85">
+                                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-xs text-slate-500 dark:border-cyan-300/30 dark:bg-white0/5 dark:text-cyan-100/85">
                                   {isDe ? 'Noch keine Teams' : 'No teams yet'}
                                 </div>
                               </div>
