@@ -172,7 +172,7 @@ const inputCls =
 const labelCls = 'text-xs font-semibold text-slate-700';
 
 function isBlank(value: unknown): boolean {
-  return !String(value ?? '').trim();
+  return !String(value ? '').trim();
 }
 
 function makeId(): string {
@@ -220,12 +220,12 @@ function savePendingInvites(invites: PendingInvite[]) {
 }
 
 function escapeCsv(value: unknown): string {
-  const raw = String(value ?? '');
+  const raw = String(value ? '');
   return `"${raw.replaceAll('"', '""')}"`;
 }
 
 function escapeHtml(value: unknown): string {
-  return String(value ?? '')
+  return String(value ? '')
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
@@ -253,7 +253,7 @@ function mapInviteRoleToRoleCode(roleId: string): string {
 }
 
 function normalizeRoleLabel(roleId: string | null | undefined, isDe: boolean): string {
-  const id = String(roleId ?? '').trim();
+  const id = String(roleId ? '').trim();
 
   if (!id) {
     return isDe ? 'Nicht zugewiesen' : 'Not assigned';
@@ -284,7 +284,7 @@ function normalizeRoleLabel(roleId: string | null | undefined, isDe: boolean): s
 }
 
 function statusLabel(status: PersonStatus | string | undefined, isDe: boolean): string {
-  const value = String(status ?? '').toUpperCase();
+  const value = String(status ? '').toUpperCase();
 
   if (value === 'INVITED') {
     return isDe ? 'Eingeladen' : 'Invited';
@@ -298,7 +298,7 @@ function statusLabel(status: PersonStatus | string | undefined, isDe: boolean): 
 }
 
 function statusPillCls(status: PersonStatus | string | undefined): string {
-  const value = String(status ?? '').toUpperCase();
+  const value = String(status ? '').toUpperCase();
 
   if (value === 'INVITED') {
     return 'bg-sky-50 text-sky-700 ring-sky-200';
@@ -385,15 +385,15 @@ export default function UsersRolesSection({ isDe = true }: { isDe?: boolean }) {
   const [isSavingTeamLead, setIsSavingTeamLead] = useState(false);
 
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
-    storeSelectedLocationId ?? null
+    storeSelectedLocationId ? null
   );
 
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(
-    storeSelectedDepartmentId ?? null
+    storeSelectedDepartmentId ? null
   );
 
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(
-    storeSelectedTeamId ?? null
+    storeSelectedTeamId ? null
   );
 
   const [showAddLocation, setShowAddLocation] = useState(false);
@@ -460,15 +460,15 @@ export default function UsersRolesSection({ isDe = true }: { isDe?: boolean }) {
   const [uiMessage, setUiMessage] = useState<string | null>(null);
 
   const selectedLocation = selectedLocationId
-    ? locationById.get(selectedLocationId) ?? null
+    ? locationById.get(selectedLocationId) ? null
     : null;
 
   const selectedDepartment = selectedDepartmentId
-    ? departmentById.get(selectedDepartmentId) ?? null
+    ? departmentById.get(selectedDepartmentId) ? null
     : null;
 
   const selectedTeam = selectedTeamId
-    ? teamById.get(selectedTeamId) ?? null
+    ? teamById.get(selectedTeamId) ? null
     : null;
 
   const selectedLocationDepartmentCount = selectedLocationId
@@ -498,7 +498,7 @@ export default function UsersRolesSection({ isDe = true }: { isDe?: boolean }) {
 
   const selectedDepartmentTeams = useMemo(() => {
     if (!selectedDepartmentId) return [];
-    return teamsByDepartmentId.get(selectedDepartmentId) ?? [];
+    return teamsByDepartmentId.get(selectedDepartmentId) ? [];
   }, [selectedDepartmentId, teamsByDepartmentId]);
 
   const teamFilterOptions = useMemo(() => {
@@ -525,7 +525,7 @@ export default function UsersRolesSection({ isDe = true }: { isDe?: boolean }) {
     if (department?.locationId) return department.locationId;
   }
 
-  return editingUser?.person?.department?.location?.id ?? '';
+  return editingUser?.person?.department?.location?.id ? '';
 }, [editLocationId, editDepartmentId, departmentById, editingUser]);
 
 const editDepartmentOptions = useMemo(() => {
@@ -539,7 +539,7 @@ const editDepartmentOptions = useMemo(() => {
 
 const editTeamOptions = useMemo(() => {
   const list = editDepartmentId
-    ? (teamsByDepartmentId.get(editDepartmentId) ?? []).slice()
+    ? (teamsByDepartmentId.get(editDepartmentId) ? []).slice()
     : [];
 
   list.sort((a, b) => a.name.localeCompare(b.name));
@@ -583,7 +583,7 @@ useEffect(() => {
     pendingInvites.forEach((invite) => {
       const key = invite.email.toLowerCase();
       const adminUser = adminUserByEmail.get(key);
-      const personStatus = String(adminUser?.person?.status ?? '').toUpperCase();
+      const personStatus = String(adminUser?.person?.status ? '').toUpperCase();
 
       const status: PendingInviteStatus =
         personStatus === 'ACTIVE'
@@ -595,12 +595,12 @@ useEffect(() => {
       rows.push({
         id: invite.id,
         email: invite.email,
-        roleId: adminUser?.role?.code ?? invite.roleId,
-        departmentId: adminUser?.person?.department?.id ?? invite.departmentId,
+        roleId: adminUser?.role?.code ? invite.roleId,
+        departmentId: adminUser?.person?.department?.id ? invite.departmentId,
         createdAt:
-          adminUser?.person?.lastInvitedAt ??
-          adminUser?.person?.invitedAt ??
-          adminUser?.createdAt ??
+          adminUser?.person?.lastInvitedAt ?
+          adminUser?.person?.invitedAt ?
+          adminUser?.createdAt ?
           invite.createdAt,
         status,
         isLocal: true,
@@ -616,7 +616,7 @@ useEffect(() => {
       const person = user.person;
       if (!person?.invitedAt && !person?.lastInvitedAt && !person?.acceptedAt) return;
 
-      const personStatus = String(person.status ?? '').toUpperCase();
+      const personStatus = String(person.status ? '').toUpperCase();
       const status: PendingInviteStatus =
         personStatus === 'ACTIVE'
           ? 'accepted'
@@ -627,9 +627,9 @@ useEffect(() => {
       rows.push({
         id: `db-${user.id}`,
         email: user.email,
-        roleId: user.role?.code ?? 'USER',
-        departmentId: person.department?.id ?? null,
-        createdAt: person.lastInvitedAt ?? person.invitedAt ?? person.acceptedAt ?? user.createdAt,
+        roleId: user.role?.code ? 'USER',
+        departmentId: person.department?.id ? null,
+        createdAt: person.lastInvitedAt ? person.invitedAt ? person.acceptedAt ? user.createdAt,
         status,
         isLocal: false,
       });
@@ -648,22 +648,22 @@ useEffect(() => {
         firstName: user.name || user.email,
         lastName: null,
         email: user.email,
-        status: user.person?.status ?? (user.isActive ? 'ACTIVE' : 'INACTIVE'),
-        departmentId: user.person?.department?.id ?? null,
-        teamId: user.person?.team?.id ?? null,
-        roleId: user.role?.code ?? null,
+        status: user.person?.status ? (user.isActive ? 'ACTIVE' : 'INACTIVE'),
+        departmentId: user.person?.department?.id ? null,
+        teamId: user.person?.team?.id ? null,
+        roleId: user.role?.code ? null,
       }));
     }
 
     return visiblePeople.map((person) => ({
       id: person.id,
       firstName: person.firstName,
-      lastName: person.lastName ?? null,
-      email: person.email ?? '',
-      status: String(person.status ?? 'INACTIVE'),
-      departmentId: person.departmentId ?? null,
-      teamId: (person as { teamId?: string | null }).teamId ?? null,
-      roleId: person.roleId ?? null,
+      lastName: person.lastName ? null,
+      email: person.email ? '',
+      status: String(person.status ? 'INACTIVE'),
+      departmentId: person.departmentId ? null,
+      teamId: (person as { teamId?: string | null }).teamId ? null,
+      roleId: person.roleId ? null,
     }));
   }, [adminUsers, visiblePeople]);
 
@@ -698,7 +698,7 @@ useEffect(() => {
 
   const filteredPeople = useMemo<UserTableRow[]>(() => {
     return peopleInContext.filter((person) => {
-      const status = String(person.status ?? '').toUpperCase();
+      const status = String(person.status ? '').toUpperCase();
 
       if (userStatusFilter === 'active') return status === 'ACTIVE';
       if (userStatusFilter === 'inactive') return status === 'INACTIVE';
@@ -724,11 +724,11 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
 }, [adminUsers, selectedDepartmentId]);
 
   const activePeopleCount = userRowsForTable.filter(
-    (person) => String(person.status ?? '').toUpperCase() === 'ACTIVE'
+    (person) => String(person.status ? '').toUpperCase() === 'ACTIVE'
   ).length;
 
   const inactivePeopleCount = userRowsForTable.filter(
-    (person) => String(person.status ?? '').toUpperCase() === 'INACTIVE'
+    (person) => String(person.status ? '').toUpperCase() === 'INACTIVE'
   ).length;
 
   const kpiDepartmentCount = selectedLocationId ? departmentOptions.length : visibleDepartments.length;
@@ -797,7 +797,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
 
       if (!response.ok || data?.success === false) {
         throw new Error(
-          data?.message ??
+          data?.message ?
             (isDe ? 'Personen konnten nicht geladen werden.' : 'Users could not be loaded.')
         );
       }
@@ -852,7 +852,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
 
       if (!response.ok || data?.success === false) {
         throw new Error(
-          data?.message ??
+          data?.message ?
             (isDe ? 'Personen konnte nicht gelÃ¶scht werden.' : 'User could not be deleted.')
         );
       }
@@ -864,7 +864,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
       updatePendingInvites(nextInvites);
 
       setUiMessage(
-        data?.message ??
+        data?.message ?
           (isDe
             ? 'Personen wurde gelÃ¶scht. Die E-Mail-Adresse ist wieder frei.'
             : 'User has been deleted. The email address is available again.')
@@ -899,10 +899,10 @@ const openEditUser = (person: UserTableRow) => {
   setUiError(null);
   setUiMessage(null);
   setEditingUser(adminUser);
-  setEditLocationId(adminUser.person?.department?.location?.id ?? selectedLocationId ?? '');
-  setEditDepartmentId(adminUser.person?.team?.departmentId ?? adminUser.person?.department?.id ?? selectedDepartmentId ?? '');
-  setEditTeamId(adminUser.person?.team?.id ?? selectedTeamId ?? '');
-  setEditRoleCode(adminUser.role?.code ?? 'VIEWER');
+  setEditLocationId(adminUser.person?.department?.location?.id ? selectedLocationId ? '');
+  setEditDepartmentId(adminUser.person?.team?.departmentId ? adminUser.person?.department?.id ? selectedDepartmentId ? '');
+  setEditTeamId(adminUser.person?.team?.id ? selectedTeamId ? '');
+  setEditRoleCode(adminUser.role?.code ? 'VIEWER');
 };
 
 const saveUserAssignment = async () => {
@@ -939,7 +939,7 @@ const saveUserAssignment = async () => {
 
     if (!response.ok || data?.success === false) {
       throw new Error(
-        data?.message ??
+        data?.message ?
           (isDe
             ? 'Personen konnte nicht aktualisiert werden.'
             : 'User could not be updated.')
@@ -947,7 +947,7 @@ const saveUserAssignment = async () => {
     }
 
     setUiMessage(
-      data?.message ??
+      data?.message ?
         (isDe ? 'Personen wurde aktualisiert.' : 'User has been updated.')
     );
 
@@ -1051,7 +1051,7 @@ const saveUserAssignment = async () => {
 
         if (!response.ok || data?.success === false) {
           throw new Error(
-            data?.message ??
+            data?.message ?
               (isDe
                 ? 'Standortdaten konnten nicht gespeichert werden.'
                 : 'Location master data could not be saved.')
@@ -1277,7 +1277,7 @@ const saveUserAssignment = async () => {
 
       if (!response.ok || data?.success === false) {
         throw new Error(
-          data?.message ??
+          data?.message ?
             (isDe ? 'Einladung konnte nicht gesendet werden.' : 'Invitation could not be sent.')
         );
       }
@@ -1334,14 +1334,14 @@ const saveUserAssignment = async () => {
   const orgLeadUserDisplayName = (user: any) => {
     if (!user) return isDe ? 'Noch nicht zugewiesen' : 'Not assigned yet';
 
-    const person = user.person ?? {};
+    const person = user.person ? {};
 
     const isEmailLike = (value: unknown) => {
-      return String(value ?? '').includes('@');
+      return String(value ? '').includes('@');
     };
 
     const clean = (value: unknown) => {
-      const textValue = String(value ?? '').trim();
+      const textValue = String(value ? '').trim();
       return textValue && !isEmailLike(textValue) ? textValue : '';
     };
 
@@ -1357,7 +1357,7 @@ const saveUserAssignment = async () => {
 
     const displayName = clean(user.name);
 
-    const email = String(person.email ?? user.email ?? '').trim();
+    const email = String(person.email ? user.email ? '').trim();
 
     const nameFromEmail = email
       ? email
@@ -1445,9 +1445,9 @@ const saveUserAssignment = async () => {
 
       return [
         userDisplayName(person),
-        person.email ?? '',
+        person.email ? '',
         normalizeRoleLabel(person.roleId, isDe),
-        location?.name ?? '',
+        location?.name ? '',
         departmentDisplayName(person.departmentId),
         statusLabel(person.status, isDe),
       ];
@@ -1489,8 +1489,8 @@ const saveUserAssignment = async () => {
       return;
     }
 
-    const locationLabel = selectedLocation?.name ?? (isDe ? 'Alle Standorte' : 'All locations');
-    const departmentLabel = selectedDepartment?.name ?? (isDe ? 'Alle Abteilungen' : 'All departments');
+    const locationLabel = selectedLocation?.name ? (isDe ? 'Alle Standorte' : 'All locations');
+    const departmentLabel = selectedDepartment?.name ? (isDe ? 'Alle Abteilungen' : 'All departments');
 
     const tableRows = filteredPeople
       .map((person) => {
@@ -1500,9 +1500,9 @@ const saveUserAssignment = async () => {
         return `
           <tr>
             <td>${escapeHtml(userDisplayName(person))}</td>
-            <td>${escapeHtml(person.email ?? '')}</td>
+            <td>${escapeHtml(person.email ? '')}</td>
             <td>${escapeHtml(normalizeRoleLabel(person.roleId, isDe))}</td>
-            <td>${escapeHtml(location?.name ?? '')}</td>
+            <td>${escapeHtml(location?.name ? '')}</td>
             <td>${escapeHtml(departmentDisplayName(person.departmentId))}</td>
             <td>${escapeHtml(statusLabel(person.status, isDe))}</td>
           </tr>
@@ -1563,7 +1563,7 @@ const saveUserAssignment = async () => {
         <div className={labelCls}>{isDe ? 'Standort' : 'Location'}</div>
         <select
           className={inputCls}
-          value={selectedLocationId ?? ''}
+          value={selectedLocationId ? ''}
           onChange={(event) => {
             const nextLocationId = event.target.value || null;
             setSelectedLocationId(nextLocationId);
@@ -1585,12 +1585,12 @@ const saveUserAssignment = async () => {
         <div className={labelCls}>{isDe ? 'Abteilung' : 'Department'}</div>
         <select
           className={inputCls}
-          value={selectedDepartmentId ?? ''}
+          value={selectedDepartmentId ? ''}
           onChange={(event) => {
             const nextDepartmentId = event.target.value || null;
             setSelectedDepartmentId(nextDepartmentId);
             setSelectedTeamId(null);
-            setInviteDepartmentId(nextDepartmentId ?? '');
+            setInviteDepartmentId(nextDepartmentId ? '');
           }}
         >
           <option value="">{isDe ? 'Alle Abteilungen' : 'All departments'}</option>
@@ -1606,10 +1606,10 @@ const saveUserAssignment = async () => {
         <div className={labelCls}>Team</div>
         <select
           className={inputCls}
-          value={selectedTeamId ?? ''}
+          value={selectedTeamId ? ''}
           onChange={(event) => {
             const nextTeamId = event.target.value || null;
-            const team = nextTeamId ? teamById.get(nextTeamId) ?? null : null;
+            const team = nextTeamId ? teamById.get(nextTeamId) ? null : null;
 
             setSelectedTeamId(nextTeamId);
 
@@ -1795,7 +1795,7 @@ const renderOrganisationPanel = () => {
                 isLocationActive && !selectedDepartmentId && !selectedTeamId;
 
               const locationTeamCount = locationDepartments.reduce((sum, department) => {
-                return sum + (teamsByDepartmentId.get(department.id)?.length ?? 0);
+                return sum + (teamsByDepartmentId.get(department.id)?.length ? 0);
               }, 0);
 
               return (
@@ -1862,7 +1862,7 @@ setDepLocationId(location.id);
                         </div>
                       ) : (
                         locationDepartments.map((department) => {
-                          const departmentTeams = teamsByDepartmentId.get(department.id) ?? [];
+                          const departmentTeams = teamsByDepartmentId.get(department.id) ? [];
                           const isDepartmentActive = selectedDepartmentId === department.id;
                           const isDepartmentOnlySelected = isDepartmentActive && !selectedTeamId;
 
@@ -2004,9 +2004,9 @@ setInviteDepartmentId(department.id);
   };
 
 const renderTeamsPanel = () => {
-  const teamDepartment = selectedTeam ? departmentById.get(selectedTeam.departmentId) ?? null : null;
+  const teamDepartment = selectedTeam ? departmentById.get(selectedTeam.departmentId) ? null : null;
   const teamLocation = teamDepartment?.locationId
-    ? locationById.get(teamDepartment.locationId) ?? null
+    ? locationById.get(teamDepartment.locationId) ? null
     : null;
 
   const activeDepartment = selectedTeam ? teamDepartment : selectedDepartment;
@@ -2014,11 +2014,11 @@ const renderTeamsPanel = () => {
   const activeLocation = selectedTeam
     ? teamLocation
     : activeDepartment?.locationId
-      ? locationById.get(activeDepartment.locationId) ?? null
+      ? locationById.get(activeDepartment.locationId) ? null
       : selectedLocation;
 
   const activeDepartmentTeams = activeDepartment
-    ? teamsByDepartmentId.get(activeDepartment.id) ?? []
+    ? teamsByDepartmentId.get(activeDepartment.id) ? []
     : [];
 
   const activeLocationDepartments = activeLocation
@@ -2026,17 +2026,17 @@ const renderTeamsPanel = () => {
     : [];
 
   const activeLocationTeamCount = activeLocationDepartments.reduce((sum, department) => {
-    return sum + (teamsByDepartmentId.get(department.id)?.length ?? 0);
+    return sum + (teamsByDepartmentId.get(department.id)?.length ? 0);
   }, 0);
 
   const activeLocationAny = activeLocation as any;
   const primaryLocationAddress =
     Array.isArray(activeLocationAny?.addresses) && activeLocationAny.addresses.length > 0
-      ? activeLocationAny.addresses.find((address: any) => address?.isPrimary) ??
+      ? activeLocationAny.addresses.find((address: any) => address?.isPrimary) ?
         activeLocationAny.addresses[0]
       : null;
 
-  const cleanDetailValue = (value: unknown) => String(value ?? '').trim();
+  const cleanDetailValue = (value: unknown) => String(value ? '').trim();
 
   const displayDetailValue = (value: unknown) => {
     const cleaned = cleanDetailValue(value);
@@ -2078,15 +2078,15 @@ const renderTeamsPanel = () => {
 
   const selectedTeamDescription =
     selectedTeam && 'description' in selectedTeam
-      ? String((selectedTeam as { description?: string | null }).description ?? '').trim()
+      ? String((selectedTeam as { description?: string | null }).description ? '').trim()
       : '';
 
-  const currentLocationLeadPerson = activeLocationAny?.leadPerson ?? null;
+  const currentLocationLeadPerson = activeLocationAny?.leadPerson ? null;
 
   const currentLocationLeadUser = currentLocationLeadPerson
     ? adminUsers.find((user) => {
-        return String((user as any).person?.id ?? '') === String(currentLocationLeadPerson.id ?? '');
-      }) ??
+        return String((user as any).person?.id ? '') === String(currentLocationLeadPerson.id ? '');
+      }) ?
       ({
         person: currentLocationLeadPerson,
         email: currentLocationLeadPerson.email,
@@ -2099,7 +2099,7 @@ const renderTeamsPanel = () => {
 
   const currentOrgLeadUser =
     selectedTeam || activeDepartment
-      ? findOrgLeadUser(activeDepartment?.id ?? null, selectedTeam?.id ?? null)
+      ? findOrgLeadUser(activeDepartment?.id ? null, selectedTeam?.id ? null)
       : currentLocationLeadUser;
 
   const activeDepartmentUserCount = activeDepartment
@@ -2121,10 +2121,10 @@ const renderTeamsPanel = () => {
           const person = (user as any).person;
           if (!person?.id) return false;
 
-          const directDepartmentId = person.department?.id ?? person.departmentId ?? null;
+          const directDepartmentId = person.department?.id ? person.departmentId ? null;
           const teamDepartmentId =
-            person.team?.department?.id ??
-            person.team?.departmentId ??
+            person.team?.department?.id ?
+            person.team?.departmentId ?
             null;
 
           const directDepartment = directDepartmentId
@@ -2136,10 +2136,10 @@ const renderTeamsPanel = () => {
             : null;
 
           const personLocationId =
-            person.team?.department?.locationId ??
-            teamDepartment?.locationId ??
-            person.department?.locationId ??
-            directDepartment?.locationId ??
+            person.team?.department?.locationId ?
+            teamDepartment?.locationId ?
+            person.department?.locationId ?
+            directDepartment?.locationId ?
             null;
 
           return personLocationId === activeLocation.id;
@@ -2219,9 +2219,9 @@ const renderTeamsPanel = () => {
         : '';
 
   const openDepartmentLeadDialog = (departmentId: string) => {
-    const currentLead = departmentLeadById[departmentId] ?? null;
+    const currentLead = departmentLeadById[departmentId] ? null;
 
-    setDepartmentLeadPersonId(currentLead?.id ?? '');
+    setDepartmentLeadPersonId(currentLead?.id ? '');
     setIsDepartmentLeadOpen(true);
     setUiError(null);
     setUiMessage(null);
@@ -2238,7 +2238,7 @@ const renderTeamsPanel = () => {
       return person?.team?.id === selectedTeam.id && person?.orgFunction === 'LEAD';
     });
 
-    setTeamLeadPersonId(String((currentLeadUser as any)?.person?.id ?? ''));
+    setTeamLeadPersonId(String((currentLeadUser as any)?.person?.id ? ''));
     setIsTeamLeadOpen(true);
     setUiError(null);
     setUiMessage(null);
@@ -2266,7 +2266,7 @@ const renderTeamsPanel = () => {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok || data?.success === false) {
-        throw new Error(data?.message ?? 'Team Lead konnte nicht gespeichert werden.');
+        throw new Error(data?.message ? 'Team Lead konnte nicht gespeichert werden.');
       }
 
       setIsTeamLeadOpen(false);
@@ -2275,7 +2275,7 @@ const renderTeamsPanel = () => {
       await loadAdminUsers();
 
       setUiMessage(
-        data?.message ??
+        data?.message ?
           (isDe ? 'Team Lead wurde gespeichert.' : 'Team lead has been saved.')
       );
     } catch (error) {
@@ -2306,7 +2306,7 @@ const renderTeamsPanel = () => {
     }
 
     if (activeLocation) {
-      setLocationLeadPersonId(String(currentLocationLeadPerson?.id ?? ''));
+      setLocationLeadPersonId(String(currentLocationLeadPerson?.id ? ''));
       setIsLocationLeadOpen(true);
     }
   };
@@ -2331,7 +2331,7 @@ const renderTeamsPanel = () => {
 
       if (!response.ok || data?.success === false) {
         throw new Error(
-          data?.message ??
+          data?.message ?
             (isDe
               ? 'Standort Lead konnte nicht gespeichert werden.'
               : 'Location lead could not be saved.')
@@ -2424,7 +2424,7 @@ const renderTeamsPanel = () => {
   };
 
   const openCreateDepartment = () => {
-    setDepLocationId(activeLocation?.id ?? selectedLocationId ?? '');
+    setDepLocationId(activeLocation?.id ? selectedLocationId ? '');
     setCreateMode('department');
     setShowAddLocation(false);
     setShowAddDepartment(false);
@@ -2432,7 +2432,7 @@ const renderTeamsPanel = () => {
   };
 
   const openCreateTeam = () => {
-    setTeamDepartmentId(activeDepartment?.id ?? selectedDepartmentId ?? '');
+    setTeamDepartmentId(activeDepartment?.id ? selectedDepartmentId ? '');
     setCreateMode('team');
     setShowAddLocation(false);
     setShowAddDepartment(false);
@@ -2509,27 +2509,27 @@ const renderTeamsPanel = () => {
     const location = activeLocation as any;
     const address = primaryLocationAddress as any;
 
-    setLocName(String(location?.name ?? ''));
-    setLocKuerzel(String(location?.kuerzel ?? ''));
-    setLocDescription(String(location?.description ?? ''));
-    setLocOrganisationName(String(location?.organisationName ?? ''));
-    setLocOrganisationalUnit(String(location?.organisationalUnit ?? ''));
-    setLocContactName(String(location?.contactName ?? ''));
-    setLocContactPhone(String(location?.contactPhone ?? ''));
-    setLocContactMobile(String(location?.contactMobile ?? ''));
-    setLocContactEmail(String(location?.contactEmail ?? ''));
+    setLocName(String(location?.name ? ''));
+    setLocKuerzel(String(location?.kuerzel ? ''));
+    setLocDescription(String(location?.description ? ''));
+    setLocOrganisationName(String(location?.organisationName ? ''));
+    setLocOrganisationalUnit(String(location?.organisationalUnit ? ''));
+    setLocContactName(String(location?.contactName ? ''));
+    setLocContactPhone(String(location?.contactPhone ? ''));
+    setLocContactMobile(String(location?.contactMobile ? ''));
+    setLocContactEmail(String(location?.contactEmail ? ''));
 
-    setLocStreet(String(address?.street ?? ''));
-    setLocHouseNumber(String(address?.houseNumber ?? ''));
-    setLocPostalCode(String(address?.postalCode ?? ''));
-    setLocCity(String(address?.city ?? ''));
-    setLocState(String(address?.state ?? ''));
-    setLocCountry(String(address?.country ?? ''));
-    setLocBuilding(String(address?.building ?? ''));
-    setLocFloor(String(address?.floor ?? ''));
-    setLocRoom(String(address?.room ?? ''));
-    setLocArea(String(address?.area ?? ''));
-    setLocAdditionalInfo(String(address?.additionalInfo ?? ''));
+    setLocStreet(String(address?.street ? ''));
+    setLocHouseNumber(String(address?.houseNumber ? ''));
+    setLocPostalCode(String(address?.postalCode ? ''));
+    setLocCity(String(address?.city ? ''));
+    setLocState(String(address?.state ? ''));
+    setLocCountry(String(address?.country ? ''));
+    setLocBuilding(String(address?.building ? ''));
+    setLocFloor(String(address?.floor ? ''));
+    setLocRoom(String(address?.room ? ''));
+    setLocArea(String(address?.area ? ''));
+    setLocAdditionalInfo(String(address?.additionalInfo ? ''));
 
     setEditingLocationId(activeLocation.id);
     setCreateMode('location');
@@ -3152,7 +3152,7 @@ const renderTeamsPanel = () => {
                   </option>
 
                   {locationLeadCandidateUsers.map((user) => (
-                    <option key={(user as any).person?.id ?? user.id} value={(user as any).person?.id ?? ''}>
+                    <option key={(user as any).person?.id ? user.id} value={(user as any).person?.id ? ''}>
                       {orgLeadUserDisplayName(user)}
                     </option>
                   ))}
@@ -3253,7 +3253,7 @@ const renderDepartmentAssignmentPanel = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: user.id,
-          roleCode: user.role?.code ?? 'VIEWER',
+          roleCode: user.role?.code ? 'VIEWER',
           departmentId: selectedDepartmentId,
         }),
       });
@@ -3262,7 +3262,7 @@ const renderDepartmentAssignmentPanel = () => {
 
       if (!response.ok || data?.success === false) {
         throw new Error(
-          data?.message ??
+          data?.message ?
             (isDe
               ? 'Personen konnte der Abteilung nicht zugeordnet werden.'
               : 'User could not be assigned to the department.')
@@ -3472,7 +3472,7 @@ const renderDepartmentAssignmentPanel = () => {
                           {userDisplayName(person)}
                         </div>
                         <div className="truncate text-xs text-slate-500">
-                          {person.email ?? 'â€”'}
+                          {person.email ? 'â€”'}
                         </div>
                       </div>
                     </div>
@@ -3560,16 +3560,16 @@ const renderDepartmentAssignmentPanel = () => {
                                         {userDisplayName(person)}
                                       </div>
                                       <div className="truncate text-xs text-teal-50/85">
-                                        {person.email ?? String.fromCharCode(0x2014)}
+                                        {person.email ? String.fromCharCode(0x2014)}
                                       </div>
                                       <div className="mt-2 flex flex-wrap items-center gap-2">
                                         <span className="inline-flex items-center rounded-full bg-white/14 px-2.5 py-1 text-[11px] font-semibold text-white ring-1 ring-white/25">
-                                          {String(person.status ?? '').toUpperCase() === 'INACTIVE'
+                                          {String(person.status ? '').toUpperCase() === 'INACTIVE'
                                             ? isDe ? 'Inaktiv' : 'Inactive'
                                             : isDe ? 'Aktiviert' : 'Active'}
                                         </span>
                                         <span className="inline-flex items-center rounded-full bg-white/14 px-2.5 py-1 text-[11px] font-semibold text-white ring-1 ring-white/25">
-                                          {((person as any).roleName ?? (person as any).roleCode ?? (person as any).role ?? (isDe ? 'Keine Rolle' : 'No role'))}
+                                          {((person as any).roleName ? (person as any).roleCode ? (person as any).role ? (isDe ? 'Keine Rolle' : 'No role'))}
                                         </span>
                                       </div>
                                     </div>
@@ -3791,7 +3791,7 @@ const renderDepartmentAssignmentPanel = () => {
                                         </span>
                                         <span>
                                           <span className="block text-sm font-semibold text-slate-900">
-                                            {String(person.status ?? '').toUpperCase() === 'INACTIVE'
+                                            {String(person.status ? '').toUpperCase() === 'INACTIVE'
                                               ? isDe ? 'Zugang entsperren (Login reaktivieren)' : 'Unlock access (reactivate login)'
                                               : isDe ? 'Zugang sperren (Login deaktivieren)' : 'Lock access (deactivate login)'}
                                           </span>
@@ -4231,10 +4231,10 @@ const renderTeamLeadModal = () => {
   if (!isTeamLeadOpen || !selectedTeam) return null;
 
   const displayTeamLeadUserName = (user: any) => {
-    const person = user.person ?? {};
+    const person = user.person ? {};
 
     const clean = (value: unknown) => {
-      const textValue = String(value ?? '').trim();
+      const textValue = String(value ? '').trim();
       if (!textValue) return '';
       if (textValue.includes('@')) return '';
       return textValue;
@@ -4252,7 +4252,7 @@ const renderTeamLeadModal = () => {
 
     const displayName = clean(user.name);
 
-    const email = String(person.email ?? user.email ?? '').trim();
+    const email = String(person.email ? user.email ? '').trim();
 
     const nameFromEmail = email
       ? email
@@ -4304,7 +4304,7 @@ const renderTeamLeadModal = () => {
               </option>
 
               {usersInTeam.map((user) => (
-                <option key={(user as any).person?.id ?? user.id} value={(user as any).person?.id ?? ''}>
+                <option key={(user as any).person?.id ? user.id} value={(user as any).person?.id ? ''}>
                   {displayTeamLeadUserName(user)}
                 </option>
               ))}
@@ -4363,7 +4363,7 @@ const renderTeamLeadModal = () => {
                 const data = await response.json().catch(() => ({}));
 
                 if (!response.ok || data?.success === false) {
-                  throw new Error(data?.message ?? 'Team Lead konnte nicht gespeichert werden.');
+                  throw new Error(data?.message ? 'Team Lead konnte nicht gespeichert werden.');
                 }
 
                 setIsTeamLeadOpen(false);
@@ -4372,7 +4372,7 @@ const renderTeamLeadModal = () => {
                 await loadAdminUsers();
 
                 setUiMessage(
-                  data?.message ??
+                  data?.message ?
                     (isDe ? 'Team Lead wurde gespeichert.' : 'Team lead has been saved.')
                 );
               } catch (error) {
@@ -4410,14 +4410,14 @@ const renderTeamLeadModal = () => {
 const renderStructureCreateSlideOver = () => {
   if (!createMode) return null;
 
-  const teamDepartment = selectedTeam ? departmentById.get(selectedTeam.departmentId) ?? null : null;
-  const teamLocation = teamDepartment?.locationId ? locationById.get(teamDepartment.locationId) ?? null : null;
+  const teamDepartment = selectedTeam ? departmentById.get(selectedTeam.departmentId) ? null : null;
+  const teamLocation = teamDepartment?.locationId ? locationById.get(teamDepartment.locationId) ? null : null;
 
   const activeDepartment = selectedTeam ? teamDepartment : selectedDepartment;
   const activeLocation = selectedTeam
     ? teamLocation
     : activeDepartment?.locationId
-      ? locationById.get(activeDepartment.locationId) ?? null
+      ? locationById.get(activeDepartment.locationId) ? null
       : selectedLocation;
 
   const title =
@@ -4500,7 +4500,7 @@ const renderStructureCreateSlideOver = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: user.id,
-          roleCode: user.role?.code ?? 'VIEWER',
+          roleCode: user.role?.code ? 'VIEWER',
           departmentId: selectedTeam.departmentId,
           teamId: selectedTeam.id,
         }),
@@ -4510,7 +4510,7 @@ const renderStructureCreateSlideOver = () => {
 
       if (!response.ok || data?.success === false) {
         throw new Error(
-          data?.message ??
+          data?.message ?
             (isDe
               ? 'Personen konnte dem Team nicht zugeordnet werden.'
               : 'User could not be assigned to the team.')
@@ -4719,13 +4719,13 @@ const renderStructureCreateSlideOver = () => {
                       <input
                         className={inputCls}
                         value={[locFloor, locRoom]
-                          .map((part) => String(part ?? '').trim())
+                          .map((part) => String(part ? '').trim())
                           .filter(Boolean)
                           .join(' / ')}
                         onChange={(event) => {
                           const parts = event.target.value.split('/');
-                          setLocFloor(String(parts[0] ?? '').trim());
-                          setLocRoom(String(parts.slice(1).join('/') ?? '').trim());
+                          setLocFloor(String(parts[0] ? '').trim());
+                          setLocRoom(String(parts.slice(1).join('/') ? '').trim());
                         }}
                         placeholder={isDe ? 'z. B. 2 / 205' : 'e.g. 2 / 205'}
                       />
@@ -5320,10 +5320,10 @@ const renderEditUserModal = () => {
     const dot = String.fromCharCode(0x00b7);
 
     const displayUserName = (user: any) => {
-      const person = user?.person ?? {};
+      const person = user?.person ? {};
 
       const clean = (value: unknown) => {
-        const textValue = String(value ?? '').trim();
+        const textValue = String(value ? '').trim();
         if (!textValue) return '';
         if (textValue.includes('@')) return '';
         return textValue;
@@ -5340,7 +5340,7 @@ const renderEditUserModal = () => {
         .join(' ');
 
       const displayName = clean(user?.name);
-      const email = String(person.email ?? user?.email ?? '').trim();
+      const email = String(person.email ? user?.email ? '').trim();
 
       const nameFromEmail = email
         ? email
@@ -5587,7 +5587,7 @@ setShowAddTeam(false);
                       }}
                     >
                       {locationDepartments.map((department) => {
-                        const teams = (teamsByDepartmentId.get(department.id) ?? [])
+                        const teams = (teamsByDepartmentId.get(department.id) ? [])
                           .slice()
                           .sort((a, b) => a.name.localeCompare(b.name));
 
