@@ -131,7 +131,7 @@ const ROLE_OPTIONS = [
     id: 'compliance_manager',
     labelDe: 'Compliance Manager',
     labelEn: 'Compliance Manager',
-    descriptionDe: 'Verantwortlich fÃƒÂ¼r Compliance-Bewertung und Freigaben.',
+    descriptionDe: 'Verantwortlich für Compliance-Bewertung und Freigaben.',
     descriptionEn: 'Responsible for compliance assessment and approvals.',
   },
   {
@@ -145,7 +145,7 @@ const ROLE_OPTIONS = [
     id: 'auditor',
     labelDe: 'Auditor',
     labelEn: 'Auditor',
-    descriptionDe: 'PrÃƒÂ¼ft Anforderungen, Nachweise und Umsetzung nachvollziehbar.',
+    descriptionDe: 'Prüft Anforderungen, Nachweise und Umsetzung nachvollziehbar.',
     descriptionEn: 'Reviews requirements, evidence and implementation.',
   },
   {
@@ -159,7 +159,7 @@ const ROLE_OPTIONS = [
     id: 'external',
     labelDe: 'Externer Nutzer',
     labelEn: 'External user',
-    descriptionDe: 'EingeschrÃƒÂ¤nkter Zugriff fÃƒÂ¼r externe Partner oder Lieferanten.',
+    descriptionDe: 'Eingeschränkter Zugriff für externe Partner oder Lieferanten.',
     descriptionEn: 'Restricted access for external partners or suppliers.',
   },
 ] as const;
@@ -756,7 +756,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
       id: 'users',
       labelDe: 'Personen',
       labelEn: 'Users',
-      descriptionDe: 'PersonenÃƒÂ¼bersicht, Rollen und Status.',
+      descriptionDe: 'Personenübersicht, Rollen und Status.',
       descriptionEn: 'Overview of users, roles and status.',
       icon: <Users className="h-5 w-5" />,
     },
@@ -831,7 +831,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
   const deleteAdminUser = async (user: AdminUserRow) => {
     const confirmed = confirm(
       isDe
-        ? `Personen ${user.email} wirklich lÃƒÂ¶schen? Die E-Mail-Adresse wird danach wieder fÃƒÂ¼r Einladungen frei.`
+        ? `Personen ${user.email} wirklich löschen? Die E-Mail-Adresse wird danach wieder für Einladungen frei.`
         : `Delete user ${user.email}? The email address will be available for invitations again.`
     );
 
@@ -853,7 +853,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
       if (!response.ok || data?.success === false) {
         throw new Error(
           data?.message ??
-            (isDe ? 'Personen konnte nicht gelÃƒÂ¶scht werden.' : 'User could not be deleted.')
+            (isDe ? 'Personen konnte nicht gelöscht werden.' : 'User could not be deleted.')
         );
       }
 
@@ -866,7 +866,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
       setUiMessage(
         data?.message ??
           (isDe
-            ? 'Personen wurde gelÃƒÂ¶scht. Die E-Mail-Adresse ist wieder frei.'
+            ? 'Personen wurde gelöscht. Die E-Mail-Adresse ist wieder frei.'
             : 'User has been deleted. The email address is available again.')
       );
 
@@ -876,7 +876,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
         error instanceof Error
           ? error.message
           : isDe
-            ? 'Personen konnte nicht gelÃƒÂ¶scht werden.'
+            ? 'Personen konnte nicht gelöscht werden.'
             : 'User could not be deleted.'
       );
     } finally {
@@ -914,7 +914,7 @@ const saveUserAssignment = async () => {
   if (editLocationId && !editDepartmentId) {
     setUiError(
       isDe
-        ? 'Bitte eine Abteilung fÃƒÂ¼r den ausgewÃƒÂ¤hlten Standort auswÃƒÂ¤hlen. Der Standort wird ÃƒÂ¼ber die Abteilung gespeichert.'
+        ? 'Bitte eine Abteilung für den ausgewählten Standort auswählen. Der Standort wird über die Abteilung gespeichert.'
         : 'Please select a department for the selected location. The location is stored via the department.'
     );
     return;
@@ -1128,7 +1128,7 @@ const saveUserAssignment = async () => {
   if (!effectiveDepartmentLocationId) {
     setUiError(
       isDe
-        ? 'Bitte einen Standort fÃƒÂ¼r die Abteilung auswÃƒÂ¤hlen.'
+        ? 'Bitte einen Standort für die Abteilung auswählen.'
         : 'Please select a location for the department.'
     );
     return;
@@ -1137,7 +1137,7 @@ const saveUserAssignment = async () => {
   if (isBlank(depName)) {
     setUiError(
       isDe
-        ? 'Bitte Abteilungsname ausfÃƒÂ¼llen.'
+        ? 'Bitte Abteilungsname ausfüllen.'
         : 'Please enter a department name.'
     );
     return;
@@ -1218,13 +1218,13 @@ const saveUserAssignment = async () => {
     if (selectedLocationDepartmentCount > 0) {
       setUiError(
         isDe
-          ? 'Der Standort kann nicht gelÃƒÂ¶scht werden, solange ihm noch Abteilungen zugeordnet sind. Bitte zuerst die Abteilungen lÃƒÂ¶schen oder verschieben.'
+          ? 'Der Standort kann nicht gelöscht werden, solange ihm noch Abteilungen zugeordnet sind. Bitte zuerst die Abteilungen löschen oder verschieben.'
           : 'The location cannot be deleted while departments are still assigned to it. Please delete or move the departments first.'
       );
       return;
     }
 
-    if (confirm(isDe ? 'Standort wirklich lÃƒÂ¶schen?' : 'Delete location?')) {
+    if (confirm(isDe ? 'Standort wirklich löschen?' : 'Delete location?')) {
       removeLocation(selectedLocation.id);
       setSelectedLocationId(null);
       setSelectedDepartmentId(null);
@@ -1240,22 +1240,22 @@ const saveUserAssignment = async () => {
     const email = inviteEmail.trim();
 
     if (!email) {
-      setUiError(isDe ? 'Bitte E-Mail-Adresse ausfÃƒÂ¼llen.' : 'Please enter an email address.');
+      setUiError(isDe ? 'Bitte E-Mail-Adresse ausfüllen.' : 'Please enter an email address.');
       return;
     }
 
     if (!email.includes('@')) {
-      setUiError(isDe ? 'E-Mail-Adresse wirkt ungÃƒÂ¼ltig.' : 'Email address looks invalid.');
+      setUiError(isDe ? 'E-Mail-Adresse wirkt ungültig.' : 'Email address looks invalid.');
       return;
     }
 
     if (!inviteRoleId) {
-      setUiError(isDe ? 'Bitte Rolle auswÃƒÂ¤hlen.' : 'Please select a role.');
+      setUiError(isDe ? 'Bitte Rolle auswählen.' : 'Please select a role.');
       return;
     }
 
     if (!effectiveInviteDepartmentId) {
-      setUiError(isDe ? 'Bitte Abteilung auswÃƒÂ¤hlen.' : 'Please select a department.');
+      setUiError(isDe ? 'Bitte Abteilung auswählen.' : 'Please select a department.');
       return;
     }
 
@@ -1328,7 +1328,7 @@ const saveUserAssignment = async () => {
   };
 
   const userDisplayName = (person: UserTableRow) => {
-    return [person.firstName, person.lastName].filter(Boolean).join(' ') || person.email || 'Ã¢â‚¬â€';
+    return [person.firstName, person.lastName].filter(Boolean).join(' ') || person.email || '—';
   };
 
   const orgLeadUserDisplayName = (user: any) => {
@@ -1394,7 +1394,7 @@ const saveUserAssignment = async () => {
     const department = departmentById.get(departmentId);
     if (!department) return isDe ? 'Unbekannte Abteilung' : 'Unknown department';
 
-    return department.kuerzel ? `${department.kuerzel} Ã¢â‚¬â€ ${department.name}` : department.name;
+    return department.kuerzel ? `${department.kuerzel} — ${department.name}` : department.name;
   };
 
   const teamDisplayName = (teamId: string | null | undefined) => {
@@ -1417,7 +1417,7 @@ const saveUserAssignment = async () => {
   const location = locationById.get(department.locationId);
   if (!location) return isDe ? 'Unbekannter Standort' : 'Unknown location';
 
-  return location.kuerzel ? `${location.kuerzel} Ã¢â‚¬â€ ${location.name}` : location.name;
+  return location.kuerzel ? `${location.kuerzel} — ${location.name}` : location.name;
 };
 
   const statusFilterLabel = () => {
@@ -1483,7 +1483,7 @@ const saveUserAssignment = async () => {
     if (!printWindow) {
       setUiError(
         isDe
-          ? 'Druckfenster konnte nicht geÃƒÂ¶ffnet werden. Bitte Popup-Blocker prÃƒÂ¼fen.'
+          ? 'Druckfenster konnte nicht geöffnet werden. Bitte Popup-Blocker prüfen.'
           : 'Print window could not be opened. Please check your popup blocker.'
       );
       return;
@@ -1575,7 +1575,7 @@ const saveUserAssignment = async () => {
           <option value="">{isDe ? 'Alle Standorte' : 'All locations'}</option>
           {locationOptions.map((location) => (
             <option key={location.id} value={location.id}>
-              {location.kuerzel ? `${location.kuerzel} Ã¢â‚¬â€ ${location.name}` : location.name}
+              {location.kuerzel ? `${location.kuerzel} — ${location.name}` : location.name}
             </option>
           ))}
         </select>
@@ -1596,7 +1596,7 @@ const saveUserAssignment = async () => {
           <option value="">{isDe ? 'Alle Abteilungen' : 'All departments'}</option>
           {departmentOptions.map((department) => (
             <option key={department.id} value={department.id}>
-              {department.kuerzel ? `${department.kuerzel} Ã¢â‚¬â€ ${department.name}` : department.name}
+              {department.kuerzel ? `${department.kuerzel} — ${department.name}` : department.name}
             </option>
           ))}
         </select>
@@ -1676,27 +1676,27 @@ const saveUserAssignment = async () => {
 
   const renderKpis = () => (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-      <div className="rounded-lg border border-slate-700/70 bg-slate-950/40 px-5 py-4 shadow-sm">
+      <div className="rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-5 py-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-3xl font-semibold text-slate-50">{activePeopleCount}</div>
-            <div className="mt-1 text-sm font-medium text-slate-300">
+            <div className="mt-1 text-sm font-medium text-cyan-100/80">
               {isDe ? 'Aktive Personen' : 'Active users'}
             </div>
           </div>
-          <Users className="h-5 w-5 text-slate-500" />
+          <Users className="h-5 w-5 text-cyan-200/50" />
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-700/70 bg-slate-950/40 px-5 py-4 shadow-sm">
+      <div className="rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-5 py-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-3xl font-semibold text-slate-50">{kpiDepartmentCount}</div>
-            <div className="mt-1 text-sm font-medium text-slate-300">
+            <div className="mt-1 text-sm font-medium text-cyan-100/80">
               {isDe ? 'Abteilungen' : 'Departments'}
             </div>
           </div>
-          <Building2 className="h-5 w-5 text-slate-500" />
+          <Building2 className="h-5 w-5 text-cyan-200/50" />
         </div>
       </div>
 
@@ -2876,7 +2876,7 @@ const renderTeamsPanel = () => {
                   onClick={openLeadAssignmentHint}
                   className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                 >
-                  {currentOrgLeadUser ? (isDe ? 'Lead ÃƒÂ¤ndern' : 'Change lead') : responsibleActionLabel}
+                  {currentOrgLeadUser ? (isDe ? 'Lead ändern' : 'Change lead') : responsibleActionLabel}
                 </button>
               </div>
             </div>
@@ -3317,14 +3317,14 @@ const renderDepartmentAssignmentPanel = () => {
             onChange={(event) => setAssignUserId(event.target.value)}
           >
             <option value="">
-              {isDe ? 'Personen auswÃƒÂ¤hlen' : 'Select user'}
+              {isDe ? 'Personen auswählen' : 'Select user'}
             </option>
 
             {usersAssignableToSelectedDepartment.map((user) => {
               const currentDepartment = user.person?.department;
               const currentLabel = currentDepartment
                 ? currentDepartment.kuerzel
-                  ? `${currentDepartment.kuerzel} Ã¢â‚¬â€ ${currentDepartment.name}`
+                  ? `${currentDepartment.kuerzel} — ${currentDepartment.name}`
                   : currentDepartment.name
                 : isDe
                   ? 'Keine Abteilung'
@@ -3332,7 +3332,7 @@ const renderDepartmentAssignmentPanel = () => {
 
               return (
                 <option key={user.id} value={user.id}>
-                  {user.name || user.email} Ã‚Â· {user.email} Ã‚Â· {currentLabel}
+                  {user.name || user.email} · {user.email} · {currentLabel}
                 </option>
               );
             })}
@@ -3353,7 +3353,7 @@ const renderDepartmentAssignmentPanel = () => {
           >
             {isAssigningUser
               ? isDe
-                ? 'Zuordnung lÃƒÂ¤uft ...'
+                ? 'Zuordnung läuft ...'
                 : 'Assigning ...'
               : isDe
                 ? 'Der Abteilung zuordnen'
@@ -3419,7 +3419,7 @@ const renderDepartmentAssignmentPanel = () => {
                   ? `Gefiltert nach Standort: ${selectedLocation.name}`
                   : `Filtered by location: ${selectedLocation.name}`
                 : isDe
-                  ? 'Alle Personen anzeigen oder ÃƒÂ¼ber die Kontextzeile filtern.'
+                  ? 'Alle Personen anzeigen oder über die Kontextzeile filtern.'
                   : 'Show all users or filter via the context line.'}
           </p>
         </div>
@@ -3472,7 +3472,7 @@ const renderDepartmentAssignmentPanel = () => {
                           {userDisplayName(person)}
                         </div>
                         <div className="truncate text-xs text-slate-500">
-                          {person.email ?? 'Ã¢â‚¬â€'}
+                          {person.email ?? '—'}
                         </div>
                       </div>
                     </div>
@@ -3910,7 +3910,7 @@ const renderDepartmentAssignmentPanel = () => {
         </div>
 
         <div className="space-y-1">
-          <div className={labelCls}>{isDe ? 'Rolle auswÃƒÂ¤hlen' : 'Select role'}</div>
+          <div className={labelCls}>{isDe ? 'Rolle auswählen' : 'Select role'}</div>
           <select
             className={inputCls}
             value={inviteRoleId}
@@ -3925,16 +3925,16 @@ const renderDepartmentAssignmentPanel = () => {
         </div>
 
         <div className="space-y-1">
-          <div className={labelCls}>{isDe ? 'Abteilung auswÃƒÂ¤hlen' : 'Select department'}</div>
+          <div className={labelCls}>{isDe ? 'Abteilung auswählen' : 'Select department'}</div>
           <select
             className={inputCls}
             value={effectiveInviteDepartmentId}
             onChange={(event) => setInviteDepartmentId(event.target.value)}
           >
-            <option value="">{isDe ? 'Abteilung auswÃƒÂ¤hlen' : 'Select department'}</option>
+            <option value="">{isDe ? 'Abteilung auswählen' : 'Select department'}</option>
             {allDepartmentOptions.map((department) => (
               <option key={department.id} value={department.id}>
-                {department.kuerzel ? `${department.kuerzel} Ã¢â‚¬â€ ${department.name}` : department.name}
+                {department.kuerzel ? `${department.kuerzel} — ${department.name}` : department.name}
               </option>
             ))}
           </select>
@@ -4042,10 +4042,10 @@ const renderDepartmentAssignmentPanel = () => {
                         onClick={() => onDeleteInvite(invite.id)}
                         className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-rose-50 hover:text-rose-700"
                       >
-                        {isDe ? 'LÃƒÂ¶schen' : 'Delete'}
+                        {isDe ? 'Löschen' : 'Delete'}
                       </button>
                     ) : (
-                      <span className="text-xs text-slate-400">Ã¢â‚¬â€</span>
+                      <span className="text-xs text-slate-400">—</span>
                     )}
                   </div>
                 </td>
@@ -4068,7 +4068,7 @@ const renderDepartmentAssignmentPanel = () => {
             </h3>
             <p className="mt-1 text-xs text-slate-500">
               {isDe
-                ? 'Vorbereitete Rollenprofile fÃƒÂ¼r den spÃƒÂ¤teren Berechtigungsaufbau.'
+                ? 'Vorbereitete Rollenprofile für den späteren Berechtigungsaufbau.'
                 : 'Prepared role profiles for the later permission model.'}
             </p>
           </div>
@@ -4100,13 +4100,13 @@ const renderDepartmentAssignmentPanel = () => {
     const locationName = selectedLocation
       ? selectedLocation.name
       : isDe
-        ? 'Kein Standort ausgewÃƒÂ¤hlt'
+        ? 'Kein Standort ausgewählt'
         : 'No location selected';
 
     const departmentName = selectedDepartment
       ? selectedDepartment.name
       : isDe
-        ? 'Keine Abteilung ausgewÃƒÂ¤hlt'
+        ? 'Keine Abteilung ausgewählt'
         : 'No department selected';
 
     const contextPath = selectedDepartment
@@ -4120,7 +4120,7 @@ const renderDepartmentAssignmentPanel = () => {
       organization: {
         titleDe: 'Organisationspfad',
         titleEn: 'Organisation path',
-        descriptionDe: 'Der ausgewÃƒÂ¤hlte Standort steuert, welche Abteilungen und Personen angezeigt werden.',
+        descriptionDe: 'Der ausgewählte Standort steuert, welche Abteilungen und Personen angezeigt werden.',
         descriptionEn: 'The selected location controls which departments and users are shown.',
         metricDe: `${selectedLocationDepartmentCount} Abteilungen`,
         metricEn: `${selectedLocationDepartmentCount} departments`,
@@ -4128,7 +4128,7 @@ const renderDepartmentAssignmentPanel = () => {
       users: {
         titleDe: 'Personenkontext',
         titleEn: 'User context',
-        descriptionDe: 'Die Personenliste wird anhand des ausgewÃƒÂ¤hlten Standorts und der ausgewÃƒÂ¤hlten Abteilung gefiltert.',
+        descriptionDe: 'Die Personenliste wird anhand des ausgewählten Standorts und der ausgewählten Abteilung gefiltert.',
         descriptionEn: 'The user list is filtered by the selected location and department.',
         metricDe: `${filteredPeople.length} Personen im Filter`,
         metricEn: `${filteredPeople.length} users in filter`,
@@ -4144,7 +4144,7 @@ const renderDepartmentAssignmentPanel = () => {
       roles: {
         titleDe: 'Rollen- und Rechtekontext',
         titleEn: 'Roles and permissions context',
-        descriptionDe: 'Rollenprofile sind systemweit vorbereitet und werden spÃƒÂ¤ter mit konkreten Berechtigungen verknÃƒÂ¼pft.',
+        descriptionDe: 'Rollenprofile sind systemweit vorbereitet und werden später mit konkreten Berechtigungen verknüpft.',
         descriptionEn: 'Role profiles are prepared system-wide and will later be linked to concrete permissions.',
         metricDe: `${ROLE_OPTIONS.length} Rollenprofile`,
         metricEn: `${ROLE_OPTIONS.length} role profiles`,
@@ -4207,7 +4207,7 @@ const renderDepartmentAssignmentPanel = () => {
 
             <div className="mt-1 text-xs text-slate-500">
               <span className="font-medium text-slate-700">{contextPath}</span>
-              <span className="mx-2 text-slate-300">Ã‚Â·</span>
+              <span className="mx-2 text-slate-300">·</span>
               <span>{isDe ? context.descriptionDe : context.descriptionEn}</span>
             </div>
           </div>
@@ -4217,7 +4217,7 @@ const renderDepartmentAssignmentPanel = () => {
               {isDe ? context.metricDe : context.metricEn}
             </span>
             <span>
-              {isDe ? 'Inaktive ZugÃƒÂ¤nge:' : 'Inactive users:'} {inactivePeopleCount}
+              {isDe ? 'Inaktive Zugänge:' : 'Inactive users:'} {inactivePeopleCount}
             </span>
           </div>
         </div>
@@ -5103,7 +5103,7 @@ const renderEditUserModal = () => {
 
     {locationOptions.map((location) => (
       <option key={location.id} value={location.id}>
-        {location.kuerzel ? `${location.kuerzel} Ã¢â‚¬â€ ${location.name}` : location.name}
+        {location.kuerzel ? `${location.kuerzel} — ${location.name}` : location.name}
       </option>
     ))}
   </select>
@@ -5122,7 +5122,7 @@ const renderEditUserModal = () => {
     <option value="">
   {editLocationId
     ? isDe
-      ? 'Abteilung auswÃƒÂ¤hlen'
+      ? 'Abteilung auswählen'
       : 'Select department'
     : isDe
       ? 'Keine Abteilung'
@@ -5132,7 +5132,7 @@ const renderEditUserModal = () => {
     {editDepartmentOptions.map((department) => (
       <option key={department.id} value={department.id}>
         {department.kuerzel
-          ? `${department.kuerzel} Ã¢â‚¬â€ ${department.name}`
+          ? `${department.kuerzel} — ${department.name}`
           : department.name}
       </option>
     ))}
@@ -5808,7 +5808,7 @@ const renderMainContent = () => {
 
           <p className="mt-1 text-xs text-white/80">
             {isDe
-              ? 'Verwalte Organisationsstruktur, PersonenzugÃƒÂ¤nge und Rollenprofile.'
+              ? 'Verwalte Organisationsstruktur, Personenzugänge und Rollenprofile.'
               : 'Manage organisation structure, user access and role profiles.'}
           </p>
         </div>
