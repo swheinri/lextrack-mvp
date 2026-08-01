@@ -1848,7 +1848,7 @@ setDepLocationId(location.id);
                   </button>
 
                   {isLocationActive && (
-                    <div className="ml-3 space-y-3 border-l border-cyan-400/20 pl-3">
+                    <div className="ml-3 space-y-3 border-l border-slate-200 dark:border-cyan-400/20 pl-3">
                       <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-400">
                         <span>{isDe ? 'Abteilungen' : 'Departments'}</span>
                         <span>{locationDepartments.length}</span>
@@ -1918,7 +1918,7 @@ setInviteDepartmentId(department.id);
                               </button>
 
                               {isDepartmentActive && (
-                                <div className="ml-3 space-y-2 border-l border-cyan-400/20 pl-3">
+                                <div className="ml-3 space-y-2 border-l border-slate-200 dark:border-cyan-400/20 pl-3">
                                   <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-400">
                                     <span>{isDe ? 'Teams' : 'Teams'}</span>
                                     <span>{departmentTeams.length}</span>
