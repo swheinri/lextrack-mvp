@@ -1,4 +1,4 @@
-﻿// app/settings/sections/users-roles-section.tsx
+// app/settings/sections/users-roles-section.tsx
 'use client';
 
 import dynamic from 'next/dynamic';
@@ -1676,39 +1676,39 @@ const saveUserAssignment = async () => {
 
   const renderKpis = () => (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-      <div className="rounded-lg border border-slate-200 bg-slate-50 px-5 py-4">
+      <div className="rounded-lg border border-slate-700/70 bg-slate-950/40 px-5 py-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-3xl font-semibold text-slate-800">{activePeopleCount}</div>
-            <div className="mt-1 text-sm font-medium text-slate-700">
+            <div className="text-3xl font-semibold text-slate-50">{activePeopleCount}</div>
+            <div className="mt-1 text-sm font-medium text-slate-300">
               {isDe ? 'Aktive Personen' : 'Active users'}
             </div>
           </div>
-          <Users className="h-5 w-5 text-slate-400" />
+          <Users className="h-5 w-5 text-slate-500" />
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-orange-50/50 px-5 py-4">
+      <div className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-5 py-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-3xl font-semibold text-slate-800">{kpiDepartmentCount}</div>
-            <div className="mt-1 text-sm font-medium text-slate-700">
+            <div className="text-3xl font-semibold text-slate-50">{kpiDepartmentCount}</div>
+            <div className="mt-1 text-sm font-medium text-amber-100/80">
               {isDe ? 'Abteilungen' : 'Departments'}
             </div>
           </div>
-          <Building2 className="h-5 w-5 text-slate-400" />
+          <Building2 className="h-5 w-5 text-amber-200/50" />
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-emerald-50/50 px-5 py-4">
+      <div className="rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-5 py-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-3xl font-semibold text-slate-800">{openInviteCount}</div>
-            <div className="mt-1 text-sm font-medium text-slate-700">
+            <div className="text-3xl font-semibold text-slate-50">{openInviteCount}</div>
+            <div className="mt-1 text-sm font-medium text-cyan-100/80">
               {isDe ? 'Offene Einladungen' : 'Open invitations'}
             </div>
           </div>
-          <Mail className="h-5 w-5 text-slate-400" />
+          <Mail className="h-5 w-5 text-cyan-200/50" />
         </div>
       </div>
     </div>
