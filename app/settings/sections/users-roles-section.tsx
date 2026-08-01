@@ -1558,7 +1558,7 @@ const saveUserAssignment = async () => {
   };
 
   const renderUserFilterControls = () => (
-    <div className="mt-3 grid grid-cols-1 gap-2 border-t border-slate-100 pt-3 sm:grid-cols-2 lg:grid-cols-6">
+    <div className="mt-3 grid grid-cols-1 gap-2 border-t border-slate-700/20 pt-3 sm:grid-cols-2 lg:grid-cols-6">
       <div className="space-y-1">
         <div className={labelCls}>{isDe ? 'Standort' : 'Location'}</div>
         <select
