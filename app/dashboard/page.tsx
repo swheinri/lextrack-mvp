@@ -419,7 +419,7 @@ export default function DashboardPage() {
             </div>
 
             {/* geplanter Ausblick wie im Screenshot */}
-            <div className="mt-4 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300">
+            <div className="mt-4 rounded-lg border border-dashed border-cyan-300/30 bg-cyan-500/5 px-4 py-3 text-xs text-cyan-100/85 shadow-sm">
               <p className="mb-1 font-semibold">{t.cmPlannedTitle}</p>
               <ul className="list-disc space-y-0.5 pl-4">
                 <li>{t.cmPlanned1}</li>
