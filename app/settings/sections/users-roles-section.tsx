@@ -5315,7 +5315,7 @@ const renderEditUserModal = () => {
   const renderOrgChartPanel = () => {
     const locationsForChart = locationOptions;
 
-    const connectorColor = '#155E75';
+    const connectorColor = '#CBD5E1';
     const dash = String.fromCharCode(0x2014);
     const dot = String.fromCharCode(0x00b7);
 
@@ -5401,10 +5401,10 @@ const renderEditUserModal = () => {
     }) => {
       const variantClass =
         variant === 'root'
-          ? 'border-cyan-400/20 bg-cyan-500/10'
+          ? 'border-sky-200 bg-gradient-to-r from-sky-50 to-cyan-50 dark:border-cyan-400/20 dark:bg-cyan-500/10 dark:bg-none'
           : variant === 'department'
-            ? 'border-cyan-400/20 bg-cyan-500/10'
-            : 'border-cyan-400/20 bg-cyan-500/10';
+            ? 'border-sky-200 bg-gradient-to-r from-sky-50 to-cyan-50 dark:border-cyan-400/20 dark:bg-cyan-500/10 dark:bg-none'
+            : 'border-slate-200 bg-white dark:border-cyan-400/20 dark:bg-cyan-500/10';
 
       return (
         <div
@@ -5415,17 +5415,17 @@ const renderEditUserModal = () => {
           ].join(' ')}
         >
           {eyebrow && (
-            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-200/60">
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-cyan-200/60">
               {eyebrow}
             </div>
           )}
 
-          <div className={compact ? 'text-sm font-semibold text-slate-50' : 'text-xl font-bold text-slate-50'}>
+          <div className={compact ? 'text-sm font-semibold text-slate-900 dark:text-slate-50' : 'text-xl font-bold text-slate-900 dark:text-slate-50'}>
             {title}
           </div>
 
           {subtitle && (
-            <div className="mt-2 text-xs text-cyan-100/70">
+            <div className="mt-2 text-xs text-slate-500 dark:text-cyan-100/70">
               {subtitle}
             </div>
           )}
@@ -5455,9 +5455,9 @@ const renderEditUserModal = () => {
           </div>
         </div>
 
-        <div className="space-y-8 overflow-x-auto bg-slate-950/20 px-5 py-6">
+        <div className="space-y-8 overflow-x-auto bg-slate-50 px-5 py-6 dark:bg-slate-950/20">
           {locationsForChart.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-cyan-300/30 bg-cyan-500/5 px-4 py-6 text-sm text-cyan-100/85">
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-sm text-slate-500 dark:border-cyan-300/30 dark:bg-cyan-500/5 dark:text-cyan-100/85">
               {isDe
                 ? 'Noch keine Organisationsstruktur vorhanden.'
                 : 'No organisation structure available yet.'}
@@ -5481,7 +5481,7 @@ const renderEditUserModal = () => {
             return (
               <div
                 key={location.id}
-                className="min-w-[1120px] rounded-2xl border border-slate-700/50 bg-slate-950/20 px-8 py-8 shadow-sm"
+                className="min-w-[1120px] rounded-2xl border border-slate-200 bg-white px-8 py-8 shadow-sm dark:border-slate-700/50 dark:bg-slate-950/20"
               >
                 <div className="flex justify-center">
                   <div
@@ -5525,7 +5525,7 @@ setShowAddTeam(false);
 
                 {locationDepartments.length === 0 ? (
                   <div className="mt-6 flex justify-center">
-                    <div className="rounded-2xl border border-dashed border-cyan-300/30 bg-cyan-500/5 px-4 py-4 text-sm text-cyan-100/85">
+                    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-500 dark:border-cyan-300/30 dark:bg-cyan-500/5 dark:text-cyan-100/85">
                       {isDe ? 'Noch keine Abteilungen angelegt.' : 'No departments created yet.'}
                     </div>
                   </div>
@@ -5644,7 +5644,7 @@ setShowAddTeam(false);
 
                             {teams.length > 0 ? (
                               <div className="flex flex-col items-center">
-                                <div className="h-8 w-[2px] bg-cyan-400/25" />
+                                <div className="h-8 w-[3px] bg-[#CBD5E1] dark:w-[2px] dark:bg-cyan-400/25" />
 
                                 <div className="flex flex-col items-center">
                                   {teams.map((team, index) => {
@@ -5669,7 +5669,7 @@ setShowAddTeam(false);
                                     return (
                                       <React.Fragment key={team.id}>
                                         {index > 0 && (
-                                          <div className="h-5 w-[2px] bg-cyan-400/25" />
+                                          <div className="h-5 w-[3px] bg-[#CBD5E1] dark:w-[2px] dark:bg-cyan-400/25" />
                                         )}
 
                                         <div
@@ -5720,9 +5720,9 @@ setShowAddTeam(false);
                               </div>
                             ) : (
                               <div className="flex flex-col items-center">
-                                <div className="h-8 w-[2px] bg-cyan-400/25" />
+                                <div className="h-8 w-[3px] bg-[#CBD5E1] dark:w-[2px] dark:bg-cyan-400/25" />
 
-                                <div className="rounded-2xl border border-dashed border-cyan-300/30 bg-cyan-500/5 px-4 py-3 text-xs text-cyan-100/85">
+                                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-xs text-slate-500 dark:border-cyan-300/30 dark:bg-cyan-500/5 dark:text-cyan-100/85">
                                   {isDe ? 'Noch keine Teams' : 'No teams yet'}
                                 </div>
                               </div>
