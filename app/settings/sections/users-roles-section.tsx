@@ -5401,10 +5401,10 @@ const renderEditUserModal = () => {
     }) => {
       const variantClass =
         variant === 'root'
-          ? 'border-sky-200 bg-gradient-to-r from-sky-50 to-cyan-50 dark:border-cyan-400/20 dark:bg-white0/10 dark:bg-none'
+          ? 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'
           : variant === 'department'
-            ? 'border-sky-200 bg-gradient-to-r from-sky-50 to-cyan-50 dark:border-cyan-400/20 dark:bg-white0/10 dark:bg-none'
-            : 'border-slate-200 bg-white dark:border-cyan-400/20 dark:bg-white0/10';
+            ? 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'
+            : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900';
 
       return (
         <div
@@ -5415,7 +5415,7 @@ const renderEditUserModal = () => {
           ].join(' ')}
         >
           {eyebrow && (
-            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-cyan-200/60">
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
               {eyebrow}
             </div>
           )}
@@ -5425,7 +5425,7 @@ const renderEditUserModal = () => {
           </div>
 
           {subtitle && (
-            <div className="mt-2 text-xs text-slate-500 dark:text-cyan-100/70">
+            <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
               {subtitle}
             </div>
           )}
@@ -5457,7 +5457,7 @@ const renderEditUserModal = () => {
 
         <div className="space-y-8 overflow-x-auto bg-slate-50 px-5 py-6 dark:bg-slate-950/20">
           {locationsForChart.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-sm text-slate-500 dark:border-cyan-300/30 dark:bg-white0/5 dark:text-cyan-100/85">
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
               {isDe
                 ? 'Noch keine Organisationsstruktur vorhanden.'
                 : 'No organisation structure available yet.'}
@@ -5525,7 +5525,7 @@ setShowAddTeam(false);
 
                 {locationDepartments.length === 0 ? (
                   <div className="mt-6 flex justify-center">
-                    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-500 dark:border-cyan-300/30 dark:bg-white0/5 dark:text-cyan-100/85">
+                    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                       {isDe ? 'Noch keine Abteilungen angelegt.' : 'No departments created yet.'}
                     </div>
                   </div>
@@ -5644,7 +5644,7 @@ setShowAddTeam(false);
 
                             {teams.length > 0 ? (
                               <div className="flex flex-col items-center">
-                                <div className="h-8 w-[3px] bg-[#CBD5E1] dark:w-[2px] dark:bg-cyan-400/25" />
+                                <div className="h-8 w-[3px] bg-[#CBD5E1] dark:w-[2px] dark:bg-slate-600" />
 
                                 <div className="flex flex-col items-center">
                                   {teams.map((team, index) => {
@@ -5669,7 +5669,7 @@ setShowAddTeam(false);
                                     return (
                                       <React.Fragment key={team.id}>
                                         {index > 0 && (
-                                          <div className="h-5 w-[3px] bg-[#CBD5E1] dark:w-[2px] dark:bg-cyan-400/25" />
+                                          <div className="h-5 w-[3px] bg-[#CBD5E1] dark:w-[2px] dark:bg-slate-600" />
                                         )}
 
                                         <div
@@ -5720,9 +5720,9 @@ setShowAddTeam(false);
                               </div>
                             ) : (
                               <div className="flex flex-col items-center">
-                                <div className="h-8 w-[3px] bg-[#CBD5E1] dark:w-[2px] dark:bg-cyan-400/25" />
+                                <div className="h-8 w-[3px] bg-[#CBD5E1] dark:w-[2px] dark:bg-slate-600" />
 
-                                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-xs text-slate-500 dark:border-cyan-300/30 dark:bg-white0/5 dark:text-cyan-100/85">
+                                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                                   {isDe ? 'Noch keine Teams' : 'No teams yet'}
                                 </div>
                               </div>
