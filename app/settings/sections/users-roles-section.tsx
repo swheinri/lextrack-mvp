@@ -131,7 +131,7 @@ const ROLE_OPTIONS = [
     id: 'compliance_manager',
     labelDe: 'Compliance Manager',
     labelEn: 'Compliance Manager',
-    descriptionDe: 'Verantwortlich für Compliance-Bewertung und Freigaben.',
+    descriptionDe: 'Verantwortlich fÃ¼r Compliance-Bewertung und Freigaben.',
     descriptionEn: 'Responsible for compliance assessment and approvals.',
   },
   {
@@ -145,7 +145,7 @@ const ROLE_OPTIONS = [
     id: 'auditor',
     labelDe: 'Auditor',
     labelEn: 'Auditor',
-    descriptionDe: 'Prüft Anforderungen, Nachweise und Umsetzung nachvollziehbar.',
+    descriptionDe: 'PrÃ¼ft Anforderungen, Nachweise und Umsetzung nachvollziehbar.',
     descriptionEn: 'Reviews requirements, evidence and implementation.',
   },
   {
@@ -159,15 +159,15 @@ const ROLE_OPTIONS = [
     id: 'external',
     labelDe: 'Externer Nutzer',
     labelEn: 'External user',
-    descriptionDe: 'Eingeschränkter Zugriff für externe Partner oder Lieferanten.',
+    descriptionDe: 'EingeschrÃ¤nkter Zugriff fÃ¼r externe Partner oder Lieferanten.',
     descriptionEn: 'Restricted access for external partners or suppliers.',
   },
 ] as const;
 
-const panelCls = 'rounded-xl border border-slate-200 bg-white shadow-sm';
+const panelCls = 'rounded-xl border border-slate-700/50 bg-white shadow-sm';
 
 const inputCls =
-  'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#009A93] focus:ring-4 focus:ring-[#009A93]/15';
+  'w-full rounded-lg border border-slate-700/50 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#009A93] focus:ring-4 focus:ring-[#009A93]/15';
 
 const labelCls = 'text-xs font-semibold text-slate-700';
 
@@ -756,7 +756,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
       id: 'users',
       labelDe: 'Personen',
       labelEn: 'Users',
-      descriptionDe: 'Personenübersicht, Rollen und Status.',
+      descriptionDe: 'PersonenÃ¼bersicht, Rollen und Status.',
       descriptionEn: 'Overview of users, roles and status.',
       icon: <Users className="h-5 w-5" />,
     },
@@ -831,7 +831,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
   const deleteAdminUser = async (user: AdminUserRow) => {
     const confirmed = confirm(
       isDe
-        ? `Personen ${user.email} wirklich löschen? Die E-Mail-Adresse wird danach wieder für Einladungen frei.`
+        ? `Personen ${user.email} wirklich lÃ¶schen? Die E-Mail-Adresse wird danach wieder fÃ¼r Einladungen frei.`
         : `Delete user ${user.email}? The email address will be available for invitations again.`
     );
 
@@ -853,7 +853,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
       if (!response.ok || data?.success === false) {
         throw new Error(
           data?.message ??
-            (isDe ? 'Personen konnte nicht gelöscht werden.' : 'User could not be deleted.')
+            (isDe ? 'Personen konnte nicht gelÃ¶scht werden.' : 'User could not be deleted.')
         );
       }
 
@@ -866,7 +866,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
       setUiMessage(
         data?.message ??
           (isDe
-            ? 'Personen wurde gelöscht. Die E-Mail-Adresse ist wieder frei.'
+            ? 'Personen wurde gelÃ¶scht. Die E-Mail-Adresse ist wieder frei.'
             : 'User has been deleted. The email address is available again.')
       );
 
@@ -876,7 +876,7 @@ const usersAssignableToSelectedDepartment = useMemo(() => {
         error instanceof Error
           ? error.message
           : isDe
-            ? 'Personen konnte nicht gelöscht werden.'
+            ? 'Personen konnte nicht gelÃ¶scht werden.'
             : 'User could not be deleted.'
       );
     } finally {
@@ -914,7 +914,7 @@ const saveUserAssignment = async () => {
   if (editLocationId && !editDepartmentId) {
     setUiError(
       isDe
-        ? 'Bitte eine Abteilung für den ausgewählten Standort auswählen. Der Standort wird über die Abteilung gespeichert.'
+        ? 'Bitte eine Abteilung fÃ¼r den ausgewÃ¤hlten Standort auswÃ¤hlen. Der Standort wird Ã¼ber die Abteilung gespeichert.'
         : 'Please select a department for the selected location. The location is stored via the department.'
     );
     return;
@@ -1128,7 +1128,7 @@ const saveUserAssignment = async () => {
   if (!effectiveDepartmentLocationId) {
     setUiError(
       isDe
-        ? 'Bitte einen Standort für die Abteilung auswählen.'
+        ? 'Bitte einen Standort fÃ¼r die Abteilung auswÃ¤hlen.'
         : 'Please select a location for the department.'
     );
     return;
@@ -1137,7 +1137,7 @@ const saveUserAssignment = async () => {
   if (isBlank(depName)) {
     setUiError(
       isDe
-        ? 'Bitte Abteilungsname ausfüllen.'
+        ? 'Bitte Abteilungsname ausfÃ¼llen.'
         : 'Please enter a department name.'
     );
     return;
@@ -1218,13 +1218,13 @@ const saveUserAssignment = async () => {
     if (selectedLocationDepartmentCount > 0) {
       setUiError(
         isDe
-          ? 'Der Standort kann nicht gelöscht werden, solange ihm noch Abteilungen zugeordnet sind. Bitte zuerst die Abteilungen löschen oder verschieben.'
+          ? 'Der Standort kann nicht gelÃ¶scht werden, solange ihm noch Abteilungen zugeordnet sind. Bitte zuerst die Abteilungen lÃ¶schen oder verschieben.'
           : 'The location cannot be deleted while departments are still assigned to it. Please delete or move the departments first.'
       );
       return;
     }
 
-    if (confirm(isDe ? 'Standort wirklich löschen?' : 'Delete location?')) {
+    if (confirm(isDe ? 'Standort wirklich lÃ¶schen?' : 'Delete location?')) {
       removeLocation(selectedLocation.id);
       setSelectedLocationId(null);
       setSelectedDepartmentId(null);
@@ -1240,22 +1240,22 @@ const saveUserAssignment = async () => {
     const email = inviteEmail.trim();
 
     if (!email) {
-      setUiError(isDe ? 'Bitte E-Mail-Adresse ausfüllen.' : 'Please enter an email address.');
+      setUiError(isDe ? 'Bitte E-Mail-Adresse ausfÃ¼llen.' : 'Please enter an email address.');
       return;
     }
 
     if (!email.includes('@')) {
-      setUiError(isDe ? 'E-Mail-Adresse wirkt ungültig.' : 'Email address looks invalid.');
+      setUiError(isDe ? 'E-Mail-Adresse wirkt ungÃ¼ltig.' : 'Email address looks invalid.');
       return;
     }
 
     if (!inviteRoleId) {
-      setUiError(isDe ? 'Bitte Rolle auswählen.' : 'Please select a role.');
+      setUiError(isDe ? 'Bitte Rolle auswÃ¤hlen.' : 'Please select a role.');
       return;
     }
 
     if (!effectiveInviteDepartmentId) {
-      setUiError(isDe ? 'Bitte Abteilung auswählen.' : 'Please select a department.');
+      setUiError(isDe ? 'Bitte Abteilung auswÃ¤hlen.' : 'Please select a department.');
       return;
     }
 
@@ -1328,7 +1328,7 @@ const saveUserAssignment = async () => {
   };
 
   const userDisplayName = (person: UserTableRow) => {
-    return [person.firstName, person.lastName].filter(Boolean).join(' ') || person.email || '—';
+    return [person.firstName, person.lastName].filter(Boolean).join(' ') || person.email || 'â€”';
   };
 
   const orgLeadUserDisplayName = (user: any) => {
@@ -1394,7 +1394,7 @@ const saveUserAssignment = async () => {
     const department = departmentById.get(departmentId);
     if (!department) return isDe ? 'Unbekannte Abteilung' : 'Unknown department';
 
-    return department.kuerzel ? `${department.kuerzel} — ${department.name}` : department.name;
+    return department.kuerzel ? `${department.kuerzel} â€” ${department.name}` : department.name;
   };
 
   const teamDisplayName = (teamId: string | null | undefined) => {
@@ -1417,7 +1417,7 @@ const saveUserAssignment = async () => {
   const location = locationById.get(department.locationId);
   if (!location) return isDe ? 'Unbekannter Standort' : 'Unknown location';
 
-  return location.kuerzel ? `${location.kuerzel} — ${location.name}` : location.name;
+  return location.kuerzel ? `${location.kuerzel} â€” ${location.name}` : location.name;
 };
 
   const statusFilterLabel = () => {
@@ -1483,7 +1483,7 @@ const saveUserAssignment = async () => {
     if (!printWindow) {
       setUiError(
         isDe
-          ? 'Druckfenster konnte nicht geöffnet werden. Bitte Popup-Blocker prüfen.'
+          ? 'Druckfenster konnte nicht geÃ¶ffnet werden. Bitte Popup-Blocker prÃ¼fen.'
           : 'Print window could not be opened. Please check your popup blocker.'
       );
       return;
@@ -1575,7 +1575,7 @@ const saveUserAssignment = async () => {
           <option value="">{isDe ? 'Alle Standorte' : 'All locations'}</option>
           {locationOptions.map((location) => (
             <option key={location.id} value={location.id}>
-              {location.kuerzel ? `${location.kuerzel} — ${location.name}` : location.name}
+              {location.kuerzel ? `${location.kuerzel} â€” ${location.name}` : location.name}
             </option>
           ))}
         </select>
@@ -1596,7 +1596,7 @@ const saveUserAssignment = async () => {
           <option value="">{isDe ? 'Alle Abteilungen' : 'All departments'}</option>
           {departmentOptions.map((department) => (
             <option key={department.id} value={department.id}>
-              {department.kuerzel ? `${department.kuerzel} — ${department.name}` : department.name}
+              {department.kuerzel ? `${department.kuerzel} â€” ${department.name}` : department.name}
             </option>
           ))}
         </select>
@@ -1654,7 +1654,7 @@ const saveUserAssignment = async () => {
         <button
           type="button"
           onClick={exportFilteredUsersCsv}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700/50 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
         >
           <Download className="h-4 w-4" />
           Excel
@@ -1665,7 +1665,7 @@ const saveUserAssignment = async () => {
         <button
           type="button"
           onClick={printFilteredUsers}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700/50 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
         >
           <Printer className="h-4 w-4" />
           {isDe ? 'Drucken' : 'Print'}
@@ -1736,7 +1736,7 @@ const renderOrganisationPanel = () => {
 
     return (
       <aside className={panelCls + ' overflow-hidden'}>
-        <div className="border-b border-slate-200 px-5 py-4">
+        <div className="border-b border-slate-700/40 px-5 py-4">
           <div className="flex items-center gap-3">
             <Building2 className="h-5 w-5 text-slate-600" />
             <div>
@@ -1820,7 +1820,7 @@ setDepLocationId(location.id);
                         ? 'border-[#00559F] bg-[#00559F]/10 shadow-sm'
                         : isLocationActive
                           ? 'border-[#00559F]/50 bg-white'
-                          : 'border-slate-200 bg-white hover:bg-slate-50',
+                          : 'border-slate-700/50 bg-white hover:bg-slate-50',
                     ].join(' ')}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -1848,7 +1848,7 @@ setDepLocationId(location.id);
                   </button>
 
                   {isLocationActive && (
-                    <div className="ml-3 space-y-3 border-l border-slate-200 pl-3">
+                    <div className="ml-3 space-y-3 border-l border-slate-700/50 pl-3">
                       <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-400">
                         <span>{isDe ? 'Abteilungen' : 'Departments'}</span>
                         <span>{locationDepartments.length}</span>
@@ -1890,7 +1890,7 @@ setInviteDepartmentId(department.id);
                                     ? 'border-[#009A93] bg-[#009A93]/10 shadow-sm'
                                     : isDepartmentActive
                                       ? 'border-[#009A93]/50 bg-white'
-                                      : 'border-slate-200 bg-slate-50 hover:bg-white',
+                                      : 'border-slate-700/50 bg-slate-50 hover:bg-white',
                                 ].join(' ')}
                               >
                                 <div className="flex items-start justify-between gap-3">
@@ -1918,7 +1918,7 @@ setInviteDepartmentId(department.id);
                               </button>
 
                               {isDepartmentActive && (
-                                <div className="ml-3 space-y-2 border-l border-slate-200 pl-3">
+                                <div className="ml-3 space-y-2 border-l border-slate-700/50 pl-3">
                                   <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-400">
                                     <span>{isDe ? 'Teams' : 'Teams'}</span>
                                     <span>{departmentTeams.length}</span>
@@ -1956,7 +1956,7 @@ setInviteDepartmentId(department.id);
                                             'flex w-full items-center justify-between rounded-xl border px-3 py-3 text-left transition',
                                             isTeamActive
                                               ? 'border-[#00559F] bg-[#00559F]/10 shadow-sm'
-                                              : 'border-slate-200 bg-white hover:bg-slate-50',
+                                              : 'border-slate-700/50 bg-white hover:bg-slate-50',
                                           ].join(' ')}
                                         >
                                           <span className="flex min-w-0 items-center gap-3">
@@ -2540,7 +2540,7 @@ const renderTeamsPanel = () => {
 
   return (
     <section className={panelCls + ' overflow-hidden'}>
-      <div className="border-b border-slate-200 px-5 py-4">
+      <div className="border-b border-slate-700/40 px-5 py-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold text-slate-900">
@@ -2563,7 +2563,7 @@ const renderTeamsPanel = () => {
       </div>
 
       <div className="space-y-5 px-5 py-5">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
+        <div className="rounded-xl border border-slate-700/50 bg-slate-50 px-4 py-4">
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
             {detailType}
           </div>
@@ -2584,7 +2584,7 @@ const renderTeamsPanel = () => {
         </div>
 
         {activeLocation && !activeDepartment ? (
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
+          <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h4 className="text-sm font-semibold text-slate-900">
@@ -2641,7 +2641,7 @@ const renderTeamsPanel = () => {
                 <button
                   type="button"
                   onClick={openLeadAssignmentHint}
-                  className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="mt-2 rounded-lg border border-slate-700/50 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   {currentOrgLeadUser
                     ? isDe
@@ -2654,7 +2654,7 @@ const renderTeamsPanel = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {isDe ? 'Standort' : 'Location'}
               </div>
@@ -2663,7 +2663,7 @@ const renderTeamsPanel = () => {
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {isDe ? 'Abteilung' : 'Department'}
               </div>
@@ -2672,7 +2672,7 @@ const renderTeamsPanel = () => {
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {isDe ? 'Teams' : 'Teams'}
               </div>
@@ -2684,8 +2684,8 @@ const renderTeamsPanel = () => {
         )}
 
         {activeLocation && !activeDepartment && (
-          <div className="rounded-xl border border-slate-200 bg-white">
-            <div className="border-b border-slate-200 px-4 py-3">
+          <div className="rounded-xl border border-slate-700/50 bg-white">
+            <div className="border-b border-slate-700/40 px-4 py-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h4 className="text-sm font-semibold text-slate-900">
@@ -2709,7 +2709,7 @@ const renderTeamsPanel = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-3 p-4 xl:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3">
+              <div className="rounded-xl border border-slate-700/50 bg-slate-50/70 px-4 py-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {isDe ? 'Allgemein' : 'General'}
                 </div>
@@ -2738,7 +2738,7 @@ const renderTeamsPanel = () => {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3">
+              <div className="rounded-xl border border-slate-700/50 bg-slate-50/70 px-4 py-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {isDe ? 'Organisation' : 'Organisation'}
                 </div>
@@ -2760,7 +2760,7 @@ const renderTeamsPanel = () => {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+              <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {isDe ? 'Adresse / Lage' : 'Address / location'}
                 </div>
@@ -2798,7 +2798,7 @@ const renderTeamsPanel = () => {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+              <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {isDe ? 'Kontakt' : 'Contact'}
                 </div>
@@ -2841,7 +2841,7 @@ const renderTeamsPanel = () => {
 
         {activeLocation && (activeDepartment || selectedTeam) && (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -2874,14 +2874,14 @@ const renderTeamsPanel = () => {
                 <button
                   type="button"
                   onClick={openLeadAssignmentHint}
-                  className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="shrink-0 rounded-lg border border-slate-700/50 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                 >
-                  {currentOrgLeadUser ? (isDe ? 'Lead ändern' : 'Change lead') : responsibleActionLabel}
+                  {currentOrgLeadUser ? (isDe ? 'Lead Ã¤ndern' : 'Change lead') : responsibleActionLabel}
                 </button>
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {userCountLabel}
               </div>
@@ -2898,7 +2898,7 @@ const renderTeamsPanel = () => {
             </div>
 
             {selectedTeam && (
-              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 md:col-span-2">
+              <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3 md:col-span-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {isDe ? 'Beschreibung' : 'Description'}
                 </div>
@@ -2912,7 +2912,7 @@ const renderTeamsPanel = () => {
           </div>
         )}
 
-        <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
+        <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
               <h4 className="text-sm font-semibold text-slate-900">
@@ -2953,7 +2953,7 @@ const renderTeamsPanel = () => {
                   <button
                     type="button"
                     onClick={onDeleteSelectedLocation}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
                   >
                     <Trash2 className="h-4 w-4" />
                     {isDe ? 'Standort loeschen' : 'Delete location'}
@@ -2975,7 +2975,7 @@ const renderTeamsPanel = () => {
                   <button
                     type="button"
                     onClick={deleteActiveDepartment}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
                   >
                     <Trash2 className="h-4 w-4" />
                     {isDe ? 'Abteilung loeschen' : 'Delete department'}
@@ -2997,7 +2997,7 @@ const renderTeamsPanel = () => {
                   <button
                     type="button"
                     onClick={deleteActiveTeam}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
                   >
                     <Trash2 className="h-4 w-4" />
                     {isDe ? 'Team loeschen' : 'Delete team'}
@@ -3008,7 +3008,7 @@ const renderTeamsPanel = () => {
           </div>
 
           {showAddLocation && !activeLocation && (
-            <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
+            <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-700/50 bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
               <div className="space-y-1">
                 <div className={labelCls}>{isDe ? 'Standortname' : 'Location name'}</div>
                 <input
@@ -3042,7 +3042,7 @@ const renderTeamsPanel = () => {
           )}
 
           {showAddDepartment && activeLocation && !activeDepartment && (
-            <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
+            <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-700/50 bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
               <div className="space-y-1">
                 <div className={labelCls}>{isDe ? 'Abteilungsname' : 'Department name'}</div>
                 <input
@@ -3076,7 +3076,7 @@ const renderTeamsPanel = () => {
           )}
 
           {showAddTeam && activeDepartment && !selectedTeam && (
-            <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
+            <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-700/50 bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
               <div className="space-y-1">
                 <div className={labelCls}>{isDe ? 'Teamname' : 'Team name'}</div>
                 <input
@@ -3113,8 +3113,8 @@ const renderTeamsPanel = () => {
 
       {isLocationLeadOpen && activeLocation && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-[1px]">
-          <div className="w-full max-w-xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
-            <div className="border-b border-slate-200 px-5 py-4">
+          <div className="w-full max-w-xl overflow-hidden rounded-xl border border-slate-700/50 bg-white shadow-2xl">
+            <div className="border-b border-slate-700/40 px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900">
@@ -3129,7 +3129,7 @@ const renderTeamsPanel = () => {
                   type="button"
                   onClick={() => setIsLocationLeadOpen(false)}
                   aria-label={isDe ? 'Schliessen' : 'Close'}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700/50 bg-white text-slate-600 hover:bg-slate-50"
                 >
                   <X className="h-4 w-4" aria-hidden="true" />
                 </button>
@@ -3176,11 +3176,11 @@ const renderTeamsPanel = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4">
+            <div className="flex items-center justify-between gap-3 border-t border-slate-700/40 bg-slate-50 px-5 py-4">
               <button
                 type="button"
                 onClick={() => setIsLocationLeadOpen(false)}
-                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded-lg border border-slate-700/50 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 {isDe ? 'Abbrechen' : 'Cancel'}
               </button>
@@ -3293,7 +3293,7 @@ const renderDepartmentAssignmentPanel = () => {
 
   return (
     <section className={`${panelCls} overflow-hidden`}>
-      <div className="border-b border-slate-200 px-5 py-4">
+      <div className="border-b border-slate-700/40 px-5 py-4">
         <div className="flex flex-col gap-1">
           <h3 className="text-lg font-semibold text-slate-900">
             {isDe ? 'Personen zuordnen' : 'Assign users'}
@@ -3317,14 +3317,14 @@ const renderDepartmentAssignmentPanel = () => {
             onChange={(event) => setAssignUserId(event.target.value)}
           >
             <option value="">
-              {isDe ? 'Personen auswählen' : 'Select user'}
+              {isDe ? 'Personen auswÃ¤hlen' : 'Select user'}
             </option>
 
             {usersAssignableToSelectedDepartment.map((user) => {
               const currentDepartment = user.person?.department;
               const currentLabel = currentDepartment
                 ? currentDepartment.kuerzel
-                  ? `${currentDepartment.kuerzel} — ${currentDepartment.name}`
+                  ? `${currentDepartment.kuerzel} â€” ${currentDepartment.name}`
                   : currentDepartment.name
                 : isDe
                   ? 'Keine Abteilung'
@@ -3332,7 +3332,7 @@ const renderDepartmentAssignmentPanel = () => {
 
               return (
                 <option key={user.id} value={user.id}>
-                  {user.name || user.email} · {user.email} · {currentLabel}
+                  {user.name || user.email} Â· {user.email} Â· {currentLabel}
                 </option>
               );
             })}
@@ -3353,7 +3353,7 @@ const renderDepartmentAssignmentPanel = () => {
           >
             {isAssigningUser
               ? isDe
-                ? 'Zuordnung läuft ...'
+                ? 'Zuordnung lÃ¤uft ...'
                 : 'Assigning ...'
               : isDe
                 ? 'Der Abteilung zuordnen'
@@ -3378,7 +3378,7 @@ const renderDepartmentAssignmentPanel = () => {
             {usersAssignedToSelectedDepartment.map((user) => (
               <div
                 key={user.id}
-                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
+                className="rounded-lg border border-slate-700/50 bg-slate-50 px-3 py-3"
               >
                 <div className="font-semibold text-slate-900">
                   {user.name || user.email}
@@ -3400,7 +3400,7 @@ const renderDepartmentAssignmentPanel = () => {
 
   const renderUsersTable = () => (
     <section className={`${panelCls} overflow-hidden`}>
-      <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 border-b border-slate-700/40 px-5 py-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">
             {isDe ? 'Personen' : 'Users'}
@@ -3419,7 +3419,7 @@ const renderDepartmentAssignmentPanel = () => {
                   ? `Gefiltert nach Standort: ${selectedLocation.name}`
                   : `Filtered by location: ${selectedLocation.name}`
                 : isDe
-                  ? 'Alle Personen anzeigen oder über die Kontextzeile filtern.'
+                  ? 'Alle Personen anzeigen oder Ã¼ber die Kontextzeile filtern.'
                   : 'Show all users or filter via the context line.'}
           </p>
         </div>
@@ -3439,7 +3439,7 @@ const renderDepartmentAssignmentPanel = () => {
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="divide-y divide-slate-700/40">
             {isLoadingAdminUsers && (
               <tr>
                 <td colSpan={7} className="px-5 py-8 text-center text-sm text-slate-500">
@@ -3472,7 +3472,7 @@ const renderDepartmentAssignmentPanel = () => {
                           {userDisplayName(person)}
                         </div>
                         <div className="truncate text-xs text-slate-500">
-                          {person.email ?? '—'}
+                          {person.email ?? 'â€”'}
                         </div>
                       </div>
                     </div>
@@ -3542,7 +3542,7 @@ const renderDepartmentAssignmentPanel = () => {
                               role="dialog"
                               aria-modal="true"
                               aria-label={isDe ? 'Personenaktionen' : 'Person actions'}
-                              className="flex h-full w-screen max-w-xl flex-col overflow-hidden border-l border-slate-200 bg-white shadow-[0_24px_90px_rgba(15,23,42,0.38)]"
+                              className="flex h-full w-screen max-w-xl flex-col overflow-hidden border-l border-slate-700/50 bg-white shadow-[0_24px_90px_rgba(15,23,42,0.38)]"
                               onClick={(event) => event.stopPropagation()}
                             >
                               <div className="bg-gradient-to-r from-[#00559F] via-[#0067B1] to-[#009A93] px-6 py-5 text-white">
@@ -3586,7 +3586,7 @@ const renderDepartmentAssignmentPanel = () => {
                                 </div>
                               </div>
 
-                              <div className="border-b border-slate-200 bg-slate-50 px-6 py-4">
+                              <div className="border-b border-slate-700/40 bg-slate-50 px-6 py-4">
                                 <h3 className="text-sm font-semibold text-slate-900">
                                   {isDe ? 'Kontextsensitives Action-Panel' : 'Context-sensitive action panel'}
                                 </h3>
@@ -3617,7 +3617,7 @@ const renderDepartmentAssignmentPanel = () => {
                                     <div className="space-y-2">
                                       <button
                                         type="button"
-                                        className="group flex w-full items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-[#00559F]/35 hover:bg-[#00559F]/[0.04]"
+                                        className="group flex w-full items-start gap-3 rounded-2xl border border-slate-700/50 bg-white px-4 py-3 text-left shadow-sm transition hover:border-[#00559F]/35 hover:bg-[#00559F]/[0.04]"
                                         onClick={() => {
                                           setOpenPersonActionMenuId(null);
                                           setUiError(null);
@@ -3645,7 +3645,7 @@ const renderDepartmentAssignmentPanel = () => {
 
                                       <button
                                         type="button"
-                                        className="group flex w-full items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-[#00559F]/35 hover:bg-[#00559F]/[0.04]"
+                                        className="group flex w-full items-start gap-3 rounded-2xl border border-slate-700/50 bg-white px-4 py-3 text-left shadow-sm transition hover:border-[#00559F]/35 hover:bg-[#00559F]/[0.04]"
                                         onClick={() => {
                                           setOpenPersonActionMenuId(null);
                                           openEditUser(person);
@@ -3710,7 +3710,7 @@ const renderDepartmentAssignmentPanel = () => {
 
                                       <button
                                         type="button"
-                                        className="group flex w-full items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-[#009A93]/40 hover:bg-[#009A93]/[0.05]"
+                                        className="group flex w-full items-start gap-3 rounded-2xl border border-slate-700/50 bg-white px-4 py-3 text-left shadow-sm transition hover:border-[#009A93]/40 hover:bg-[#009A93]/[0.05]"
                                         onClick={() => {
                                           setOpenPersonActionMenuId(null);
                                           openEditUser(person);
@@ -3752,7 +3752,7 @@ const renderDepartmentAssignmentPanel = () => {
                                         className={[
                                           'group flex w-full items-start gap-3 rounded-2xl border px-4 py-3 text-left shadow-sm transition hover:bg-slate-50',
                                           ((person as any).roleName || (person as any).roleCode || (person as any).role)
-                                            ? 'border-slate-200 bg-white hover:border-slate-400'
+                                            ? 'border-slate-700/50 bg-white hover:border-slate-400'
                                             : 'border-[#00559F]/35 bg-[#00559F]/[0.05] ring-1 ring-[#00559F]/10 hover:border-[#00559F]/55',
                                         ].join(' ')}
                                         onClick={() => {
@@ -3775,7 +3775,7 @@ const renderDepartmentAssignmentPanel = () => {
 
                                       <button
                                         type="button"
-                                        className="group flex w-full items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
+                                        className="group flex w-full items-start gap-3 rounded-2xl border border-slate-700/50 bg-white px-4 py-3 text-left shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
                                         onClick={() => {
                                           setOpenPersonActionMenuId(null);
                                           setUiError(null);
@@ -3824,7 +3824,7 @@ const renderDepartmentAssignmentPanel = () => {
                                       className={[
                                         'group flex w-full items-start gap-3 rounded-2xl border px-4 py-3 text-left shadow-sm transition',
                                         isDeletingUserId === person.id
-                                          ? 'cursor-wait border-slate-200 bg-slate-50 text-slate-400'
+                                          ? 'cursor-wait border-slate-700/50 bg-slate-50 text-slate-400'
                                           : 'border-rose-200 bg-rose-50/60 text-rose-800 hover:border-rose-300 hover:bg-rose-100',
                                       ].join(' ')}
                                       onClick={() => {
@@ -3860,14 +3860,14 @@ const renderDepartmentAssignmentPanel = () => {
                                 </div>
                               </div>
 
-                              <div className="flex items-center justify-between gap-4 border-t border-slate-200 bg-white px-6 py-4">
+                              <div className="flex items-center justify-between gap-4 border-t border-slate-700/40 bg-white px-6 py-4">
                                 <p className="text-[11px] leading-relaxed text-slate-500">
                                   {isDe ? 'Dieses Panel ist der Arbeitsbereich fuer die ausgewaehlte Person.' : 'This panel is the workspace for the selected person.'}
                                 </p>
                                 <button
                                   type="button"
                                   onClick={() => setOpenPersonActionMenuId(null)}
-                                  className="shrink-0 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                                  className="shrink-0 rounded-xl border border-slate-700/50 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
                                 >
                                   {isDe ? 'Schliessen' : 'Close'}
                                 </button>
@@ -3888,7 +3888,7 @@ const renderDepartmentAssignmentPanel = () => {
 
   const renderInviteForm = () => (
     <section className={`${panelCls} overflow-hidden`}>
-      <div className="border-b border-slate-200 px-5 py-4">
+      <div className="border-b border-slate-700/40 px-5 py-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-900">
             {isDe ? 'Einladung senden' : 'Send invitation'}
@@ -3910,7 +3910,7 @@ const renderDepartmentAssignmentPanel = () => {
         </div>
 
         <div className="space-y-1">
-          <div className={labelCls}>{isDe ? 'Rolle auswählen' : 'Select role'}</div>
+          <div className={labelCls}>{isDe ? 'Rolle auswÃ¤hlen' : 'Select role'}</div>
           <select
             className={inputCls}
             value={inviteRoleId}
@@ -3925,16 +3925,16 @@ const renderDepartmentAssignmentPanel = () => {
         </div>
 
         <div className="space-y-1">
-          <div className={labelCls}>{isDe ? 'Abteilung auswählen' : 'Select department'}</div>
+          <div className={labelCls}>{isDe ? 'Abteilung auswÃ¤hlen' : 'Select department'}</div>
           <select
             className={inputCls}
             value={effectiveInviteDepartmentId}
             onChange={(event) => setInviteDepartmentId(event.target.value)}
           >
-            <option value="">{isDe ? 'Abteilung auswählen' : 'Select department'}</option>
+            <option value="">{isDe ? 'Abteilung auswÃ¤hlen' : 'Select department'}</option>
             {allDepartmentOptions.map((department) => (
               <option key={department.id} value={department.id}>
-                {department.kuerzel ? `${department.kuerzel} — ${department.name}` : department.name}
+                {department.kuerzel ? `${department.kuerzel} â€” ${department.name}` : department.name}
               </option>
             ))}
           </select>
@@ -3970,7 +3970,7 @@ const renderDepartmentAssignmentPanel = () => {
 
   const renderPendingInvites = () => (
     <section className={`${panelCls} overflow-hidden`}>
-      <div className="border-b border-slate-200 px-5 py-4">
+      <div className="border-b border-slate-700/40 px-5 py-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-900">
             {isDe ? 'Einladungsverlauf' : 'Invitation history'}
@@ -3993,7 +3993,7 @@ const renderDepartmentAssignmentPanel = () => {
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="divide-y divide-slate-700/40">
             {invitationRows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-5 py-8 text-center text-sm text-slate-500">
@@ -4030,7 +4030,7 @@ const renderDepartmentAssignmentPanel = () => {
                       <button
                         type="button"
                         onClick={() => onResendInvite(invite.id)}
-                        className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                        className="rounded-md border border-slate-700/50 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
                       >
                         {isDe ? 'Erneut senden' : 'Resend'}
                       </button>
@@ -4040,12 +4040,12 @@ const renderDepartmentAssignmentPanel = () => {
                       <button
                         type="button"
                         onClick={() => onDeleteInvite(invite.id)}
-                        className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+                        className="rounded-md border border-slate-700/50 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-rose-50 hover:text-rose-700"
                       >
-                        {isDe ? 'Löschen' : 'Delete'}
+                        {isDe ? 'LÃ¶schen' : 'Delete'}
                       </button>
                     ) : (
-                      <span className="text-xs text-slate-400">—</span>
+                      <span className="text-xs text-slate-400">â€”</span>
                     )}
                   </div>
                 </td>
@@ -4059,7 +4059,7 @@ const renderDepartmentAssignmentPanel = () => {
 
   const renderRolesPanel = () => (
     <section className={`${panelCls} overflow-hidden`}>
-      <div className="border-b border-slate-200 px-5 py-4">
+      <div className="border-b border-slate-700/40 px-5 py-4">
         <div className="flex items-center gap-3">
           <ShieldCheck className="h-5 w-5 text-slate-600" />
           <div>
@@ -4068,7 +4068,7 @@ const renderDepartmentAssignmentPanel = () => {
             </h3>
             <p className="mt-1 text-xs text-slate-500">
               {isDe
-                ? 'Vorbereitete Rollenprofile für den späteren Berechtigungsaufbau.'
+                ? 'Vorbereitete Rollenprofile fÃ¼r den spÃ¤teren Berechtigungsaufbau.'
                 : 'Prepared role profiles for the later permission model.'}
             </p>
           </div>
@@ -4077,7 +4077,7 @@ const renderDepartmentAssignmentPanel = () => {
 
       <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
         {ROLE_OPTIONS.map((role) => (
-          <div key={role.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div key={role.id} className="rounded-xl border border-slate-700/50 bg-slate-50 p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h4 className="font-semibold text-slate-900">
@@ -4100,13 +4100,13 @@ const renderDepartmentAssignmentPanel = () => {
     const locationName = selectedLocation
       ? selectedLocation.name
       : isDe
-        ? 'Kein Standort ausgewählt'
+        ? 'Kein Standort ausgewÃ¤hlt'
         : 'No location selected';
 
     const departmentName = selectedDepartment
       ? selectedDepartment.name
       : isDe
-        ? 'Keine Abteilung ausgewählt'
+        ? 'Keine Abteilung ausgewÃ¤hlt'
         : 'No department selected';
 
     const contextPath = selectedDepartment
@@ -4120,7 +4120,7 @@ const renderDepartmentAssignmentPanel = () => {
       organization: {
         titleDe: 'Organisationspfad',
         titleEn: 'Organisation path',
-        descriptionDe: 'Der ausgewählte Standort steuert, welche Abteilungen und Personen angezeigt werden.',
+        descriptionDe: 'Der ausgewÃ¤hlte Standort steuert, welche Abteilungen und Personen angezeigt werden.',
         descriptionEn: 'The selected location controls which departments and users are shown.',
         metricDe: `${selectedLocationDepartmentCount} Abteilungen`,
         metricEn: `${selectedLocationDepartmentCount} departments`,
@@ -4128,7 +4128,7 @@ const renderDepartmentAssignmentPanel = () => {
       users: {
         titleDe: 'Personenkontext',
         titleEn: 'User context',
-        descriptionDe: 'Die Personenliste wird anhand des ausgewählten Standorts und der ausgewählten Abteilung gefiltert.',
+        descriptionDe: 'Die Personenliste wird anhand des ausgewÃ¤hlten Standorts und der ausgewÃ¤hlten Abteilung gefiltert.',
         descriptionEn: 'The user list is filtered by the selected location and department.',
         metricDe: `${filteredPeople.length} Personen im Filter`,
         metricEn: `${filteredPeople.length} users in filter`,
@@ -4144,7 +4144,7 @@ const renderDepartmentAssignmentPanel = () => {
       roles: {
         titleDe: 'Rollen- und Rechtekontext',
         titleEn: 'Roles and permissions context',
-        descriptionDe: 'Rollenprofile sind systemweit vorbereitet und werden später mit konkreten Berechtigungen verknüpft.',
+        descriptionDe: 'Rollenprofile sind systemweit vorbereitet und werden spÃ¤ter mit konkreten Berechtigungen verknÃ¼pft.',
         descriptionEn: 'Role profiles are prepared system-wide and will later be linked to concrete permissions.',
         metricDe: `${ROLE_OPTIONS.length} Rollenprofile`,
         metricEn: `${ROLE_OPTIONS.length} role profiles`,
@@ -4180,7 +4180,7 @@ const renderDepartmentAssignmentPanel = () => {
         .join(arrowChar);
 
       return (
-        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm">
+        <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3 text-slate-900 shadow-sm">
           <div className="text-sm font-semibold">
             {isDe ? 'Organisationspfad' : 'Organisation path'}
           </div>
@@ -4198,7 +4198,7 @@ const renderDepartmentAssignmentPanel = () => {
     }
 
     return (
-      <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm">
+      <div className="rounded-xl border border-slate-700/50 bg-white px-4 py-3 text-slate-900 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="text-sm font-semibold">
@@ -4207,7 +4207,7 @@ const renderDepartmentAssignmentPanel = () => {
 
             <div className="mt-1 text-xs text-slate-500">
               <span className="font-medium text-slate-700">{contextPath}</span>
-              <span className="mx-2 text-slate-300">·</span>
+              <span className="mx-2 text-slate-300">Â·</span>
               <span>{isDe ? context.descriptionDe : context.descriptionEn}</span>
             </div>
           </div>
@@ -4217,7 +4217,7 @@ const renderDepartmentAssignmentPanel = () => {
               {isDe ? context.metricDe : context.metricEn}
             </span>
             <span>
-              {isDe ? 'Inaktive Zugänge:' : 'Inactive users:'} {inactivePeopleCount}
+              {isDe ? 'Inaktive ZugÃ¤nge:' : 'Inactive users:'} {inactivePeopleCount}
             </span>
           </div>
         </div>
@@ -4277,8 +4277,8 @@ const renderTeamLeadModal = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
-      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-        <div className="border-b border-slate-200 px-5 py-4">
+      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-700/50 bg-white shadow-xl">
+        <div className="border-b border-slate-700/40 px-5 py-4">
           <h3 className="text-lg font-semibold text-slate-900">
             {isDe ? 'Team Lead festlegen' : 'Set team lead'}
           </h3>
@@ -4326,7 +4326,7 @@ const renderTeamLeadModal = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4">
+        <div className="flex items-center justify-end gap-3 border-t border-slate-700/40 bg-slate-50 px-5 py-4">
           <button
             type="button"
             onClick={() => {
@@ -4334,7 +4334,7 @@ const renderTeamLeadModal = () => {
               setTeamLeadPersonId('');
             }}
             disabled={isSavingTeamLead}
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg border border-slate-700/50 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isDe ? 'Abbrechen' : 'Cancel'}
           </button>
@@ -4557,8 +4557,8 @@ const renderStructureCreateSlideOver = () => {
       />
 
       <div className="pointer-events-none fixed inset-0 z-[1001] flex items-start justify-center overflow-y-auto px-6 py-8">
-<aside className="pointer-events-auto flex max-h-[calc(100vh-4rem)] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
-        <div className="border-b border-slate-200 px-6 py-5">
+<aside className="pointer-events-auto flex max-h-[calc(100vh-4rem)] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-slate-700/50 bg-white shadow-2xl">
+        <div className="border-b border-slate-700/40 px-6 py-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
@@ -4569,7 +4569,7 @@ const renderStructureCreateSlideOver = () => {
               type="button"
               onClick={closeSlideOver}
               aria-label={isDe ? 'Schliessen' : 'Close'}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700/50 bg-white text-slate-600 hover:bg-slate-50"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -4579,7 +4579,7 @@ const renderStructureCreateSlideOver = () => {
         <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
           {(createMode === 'location' || createMode === 'department' || createMode === 'team') && (
             <section className="space-y-3">
-              <div className="overflow-hidden rounded-lg border border-slate-200">
+              <div className="overflow-hidden rounded-lg border border-slate-700/50">
                 <div className="bg-[#0B2A55] px-4 py-2 text-sm font-semibold text-white">
                   {isDe ? 'Allgemein' : 'General'}
                 </div>
@@ -4623,7 +4623,7 @@ const renderStructureCreateSlideOver = () => {
                     />
                   </div>
 
-                  <div className="overflow-hidden rounded-lg border border-slate-200">
+                  <div className="overflow-hidden rounded-lg border border-slate-700/50">
                     <div className="bg-[#0B2A55] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white">
                       {isDe ? 'Organisation' : 'Organisation'}
                     </div>
@@ -4649,7 +4649,7 @@ const renderStructureCreateSlideOver = () => {
                     </div>
                   </div>
 
-                  <div className="overflow-hidden rounded-lg border border-slate-200">
+                  <div className="overflow-hidden rounded-lg border border-slate-700/50">
                     <div className="bg-[#0B2A55] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white">
                       {isDe ? 'Adresse / Lage' : 'Address / location'}
                     </div>
@@ -4751,7 +4751,7 @@ const renderStructureCreateSlideOver = () => {
                     />
                   </div>
 
-                  <div className="overflow-hidden rounded-lg border border-slate-200">
+                  <div className="overflow-hidden rounded-lg border border-slate-700/50">
                     <div className="bg-[#0B2A55] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white">
                       {isDe ? 'Kontakt' : 'Contact'}
                     </div>
@@ -4861,7 +4861,7 @@ const renderStructureCreateSlideOver = () => {
               {(createMode === 'department' || createMode === 'team' || createMode === 'user') && (
                 <div className="space-y-1">
                   <div className={labelCls}>{isDe ? 'Standort' : 'Location'}</div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+                  <div className="rounded-lg border border-slate-700/50 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
                     {activeLocation
                       ? activeLocation.kuerzel
                         ? activeLocation.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + activeLocation.name
@@ -4876,7 +4876,7 @@ const renderStructureCreateSlideOver = () => {
               {(createMode === 'team' || createMode === 'user') && (
                 <div className="space-y-1">
                   <div className={labelCls}>{isDe ? 'Abteilung' : 'Department'}</div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+                  <div className="rounded-lg border border-slate-700/50 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
                     {activeDepartment
                       ? activeDepartment.kuerzel
                         ? activeDepartment.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + activeDepartment.name
@@ -4891,7 +4891,7 @@ const renderStructureCreateSlideOver = () => {
               {createMode === 'user' && selectedTeam && (
                 <div className="space-y-1">
                   <div className={labelCls}>Team</div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+                  <div className="rounded-lg border border-slate-700/50 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
                     {selectedTeam.kuerzel
                       ? selectedTeam.kuerzel + ' ' + String.fromCharCode(0x2014) + ' ' + selectedTeam.name
                       : selectedTeam.name}
@@ -4936,12 +4936,12 @@ const renderStructureCreateSlideOver = () => {
           )}
         </div>
 
-                <div className="border-t border-slate-200 bg-white px-6 py-4">
+                <div className="border-t border-slate-700/40 bg-white px-6 py-4">
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="button"
               onClick={closeSlideOver}
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-slate-700/50 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               {isDe ? 'Abbrechen' : 'Cancel'}
             </button>
@@ -4954,7 +4954,7 @@ const renderStructureCreateSlideOver = () => {
                     onClick={() => onAddLocation(false)}
                     disabled={isSavingLocationMasterdata}
                     className={[
-                      'rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50',
+                      'rounded-lg border border-slate-700/50 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50',
                       isSavingLocationMasterdata ? 'cursor-wait opacity-70' : '',
                     ].join(' ')}
                   >
@@ -5060,8 +5060,8 @@ const renderEditUserModal = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
-      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-        <div className="border-b border-slate-200 px-5 py-4">
+      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-700/50 bg-white shadow-xl">
+        <div className="border-b border-slate-700/40 px-5 py-4">
           <h3 className="text-lg font-semibold text-slate-900">
             {isDe ? 'Person bearbeiten' : 'Edit user'}
           </h3>
@@ -5103,7 +5103,7 @@ const renderEditUserModal = () => {
 
     {locationOptions.map((location) => (
       <option key={location.id} value={location.id}>
-        {location.kuerzel ? `${location.kuerzel} — ${location.name}` : location.name}
+        {location.kuerzel ? `${location.kuerzel} â€” ${location.name}` : location.name}
       </option>
     ))}
   </select>
@@ -5122,7 +5122,7 @@ const renderEditUserModal = () => {
     <option value="">
   {editLocationId
     ? isDe
-      ? 'Abteilung auswählen'
+      ? 'Abteilung auswÃ¤hlen'
       : 'Select department'
     : isDe
       ? 'Keine Abteilung'
@@ -5132,7 +5132,7 @@ const renderEditUserModal = () => {
     {editDepartmentOptions.map((department) => (
       <option key={department.id} value={department.id}>
         {department.kuerzel
-          ? `${department.kuerzel} — ${department.name}`
+          ? `${department.kuerzel} â€” ${department.name}`
           : department.name}
       </option>
     ))}
@@ -5221,12 +5221,12 @@ const renderEditUserModal = () => {
 
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4">
+        <div className="flex items-center justify-end gap-3 border-t border-slate-700/40 bg-slate-50 px-5 py-4">
           <button
             type="button"
             onClick={() => setEditingUser(null)}
             disabled={isSavingUser}
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg border border-slate-700/50 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isDe ? 'Abbrechen' : 'Cancel'}
           </button>
@@ -5255,7 +5255,7 @@ const renderEditUserModal = () => {
 };
 
   const renderOrganisationViewSwitch = () => (
-    <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-col gap-3 rounded-xl border border-slate-700/50 bg-white px-4 py-3 shadow-sm md:flex-row md:items-center md:justify-between">
       <div>
         <div className="text-sm font-semibold text-slate-900">
           {isDe ? 'Organisationsansicht' : 'Organisation view'}
@@ -5267,7 +5267,7 @@ const renderEditUserModal = () => {
         </div>
       </div>
 
-      <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+      <div className="inline-flex rounded-lg border border-slate-700/50 bg-slate-50 p-1">
         <button
           type="button"
           onClick={() => setOrganisationViewMode('structure')}
@@ -5404,7 +5404,7 @@ const renderEditUserModal = () => {
           ? 'border-sky-200 bg-gradient-to-r from-sky-50 to-cyan-50'
           : variant === 'department'
             ? 'border-teal-200 bg-gradient-to-r from-teal-50 to-cyan-50'
-            : 'border-slate-200 bg-white';
+            : 'border-slate-700/50 bg-white';
 
       return (
         <div
@@ -5435,7 +5435,7 @@ const renderEditUserModal = () => {
 
     return (
       <section className={panelCls + ' overflow-hidden'}>
-        <div className="border-b border-slate-200 px-5 py-4">
+        <div className="border-b border-slate-700/40 px-5 py-4">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <h3 className="text-lg font-semibold text-slate-900">
@@ -5481,7 +5481,7 @@ const renderEditUserModal = () => {
             return (
               <div
                 key={location.id}
-                className="min-w-[1120px] rounded-2xl border border-slate-200 bg-white px-8 py-8 shadow-sm"
+                className="min-w-[1120px] rounded-2xl border border-slate-700/50 bg-white px-8 py-8 shadow-sm"
               >
                 <div className="flex justify-center">
                   <div
@@ -5808,7 +5808,7 @@ const renderMainContent = () => {
 
           <p className="mt-1 text-xs text-white/80">
             {isDe
-              ? 'Verwalte Organisationsstruktur, Personenzugänge und Rollenprofile.'
+              ? 'Verwalte Organisationsstruktur, PersonenzugÃ¤nge und Rollenprofile.'
               : 'Manage organisation structure, user access and role profiles.'}
           </p>
         </div>
@@ -5826,7 +5826,7 @@ const renderMainContent = () => {
                   'rounded-xl border bg-white px-4 py-4 text-left shadow-sm transition',
                   isActive
                     ? 'border-[#00559F] ring-2 ring-[#00559F]/15'
-                    : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50',
+                    : 'border-slate-700/50 hover:border-slate-300 hover:bg-slate-50',
                 ].join(' ')}
               >
                 <div className="flex items-start gap-3">
