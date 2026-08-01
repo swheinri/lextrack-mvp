@@ -1676,39 +1676,39 @@ const saveUserAssignment = async () => {
 
   const renderKpis = () => (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-      <div className="rounded-lg border border-cyan-400/20 bg-white0/10 px-5 py-4 shadow-sm">
+      <div className="rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-sm dark:border-cyan-400/20 dark:bg-cyan-500/10">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-3xl font-semibold text-slate-50">{activePeopleCount}</div>
-            <div className="mt-1 text-sm font-medium text-cyan-100/80">
+            <div className="text-3xl font-semibold text-slate-900 dark:text-slate-50">{activePeopleCount}</div>
+            <div className="mt-1 text-sm font-medium text-slate-600 dark:text-cyan-100/80">
               {isDe ? 'Aktive Personen' : 'Active users'}
             </div>
           </div>
-          <Users className="h-5 w-5 text-cyan-200/50" />
+          <Users className="h-5 w-5 text-slate-400 dark:text-cyan-200/50" />
         </div>
       </div>
 
-      <div className="rounded-lg border border-cyan-400/20 bg-white0/10 px-5 py-4 shadow-sm">
+      <div className="rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-sm dark:border-cyan-400/20 dark:bg-cyan-500/10">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-3xl font-semibold text-slate-50">{kpiDepartmentCount}</div>
-            <div className="mt-1 text-sm font-medium text-cyan-100/80">
+            <div className="text-3xl font-semibold text-slate-900 dark:text-slate-50">{kpiDepartmentCount}</div>
+            <div className="mt-1 text-sm font-medium text-slate-600 dark:text-cyan-100/80">
               {isDe ? 'Abteilungen' : 'Departments'}
             </div>
           </div>
-          <Building2 className="h-5 w-5 text-cyan-200/50" />
+          <Building2 className="h-5 w-5 text-slate-400 dark:text-cyan-200/50" />
         </div>
       </div>
 
-      <div className="rounded-lg border border-cyan-400/20 bg-white0/10 px-5 py-4 shadow-sm">
+      <div className="rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-sm dark:border-cyan-400/20 dark:bg-cyan-500/10">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-3xl font-semibold text-slate-50">{openInviteCount}</div>
-            <div className="mt-1 text-sm font-medium text-cyan-100/80">
+            <div className="text-3xl font-semibold text-slate-900 dark:text-slate-50">{openInviteCount}</div>
+            <div className="mt-1 text-sm font-medium text-slate-600 dark:text-cyan-100/80">
               {isDe ? 'Offene Einladungen' : 'Open invitations'}
             </div>
           </div>
-          <Mail className="h-5 w-5 text-cyan-200/50" />
+          <Mail className="h-5 w-5 text-slate-400 dark:text-cyan-200/50" />
         </div>
       </div>
     </div>
