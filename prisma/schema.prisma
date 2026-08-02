@@ -37,6 +37,66 @@ enum OrgFunction {
   DEPUTY
 }
 
+enum RegisterDocumentStatus {
+  CAPTURED
+  ASSIGNED
+  IN_REVIEW
+  REJECTED
+  ACTIVE
+  OBSOLETE
+  ARCHIVED
+}
+
+enum AssignmentStatus {
+  ASSIGNED
+  IN_REVIEW
+  COMPLETED
+}
+
+enum AssessmentRelevance {
+  UNASSESSED
+  RELEVANT
+  NOT_RELEVANT
+  ACTION_REQUIRED
+}
+
+enum MatrixStatus {
+  DRAFT
+  IN_REVIEW
+  FINAL
+}
+
+enum ComplianceClauseStatus {
+  OPEN
+  COMPLIANT
+  NOT_FULFILLED
+  NOT_APPLICABLE
+}
+
+enum LocationAccessLevel {
+  READ
+  CONTRIBUTE
+  RESPONSIBLE
+  ADMIN
+}
+
+enum RiskAggregationMode {
+  WORST_CASE
+  INDEX
+}
+
+enum RiskScope {
+  ALL
+  NON_COMPLIANT
+}
+
+enum PsoeLevel {
+  P
+  S
+  O
+  E
+}
+
 model Location {
   id          String       @id @default(cuid())
   name        String
@@ -48,18 +108,20 @@ model Location {
   leadPersonId String?
   leadPerson   Person? @relation("LocationLead", fields: [leadPersonId], references: [id], onDelete: SetNull)
 
-  organisationName String?
+  organisationName   String?
   organisationalUnit String?
-  contactName String?
-  contactPhone String?
-  contactMobile String?
-  contactEmail String?
+  contactName        String?
+  contactPhone       String?
+  contactMobile      String?
+  contactEmail       String?
 
   departments Department[]
   addresses   LocationAddress[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  documentLocationAssignments DocumentLocationAssignment[]
+  userLocationAccesses        UserLocationAccess[]
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
 
   @@unique([kuerzel])
   @@index([name])
@@ -217,8 +279,11 @@ model User {
   tokens AuthToken[]
   person Person? // Back-Relation (FK liegt in Person.userId)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  assignedDocumentLocationAssignments DocumentLocationAssignment[] @relation("DocumentLocationAssignedBy")
+  assessedLocationAssessments         LocationAssessment[]         @relation("LocationAssessmentAssessedBy")
+  locationAccesses                    UserLocationAccess[]
+  createdAt                           DateTime                     @default(now())
+  updatedAt                           DateTime                     @updatedAt
 }
 
 model AuthToken {
@@ -233,4 +298,207 @@ model AuthToken {
   createdAt DateTime @default(now())
 
   @@index([userId, type])
+}
+
+model RegisterDocument {
+  id String @id @default(cuid())
+
+  dokumentenart  String?
+  vertragsumfeld String?
+  rechtsart      String?
+  normFamily     String?
+
+  kuerzel     String
+  bezeichnung String
+  themenfeld  String?
+
+  publiziert DateTime?
+  frist      DateTime?
+  relevanz   String?
+
+  status RegisterDocumentStatus @default(CAPTURED)
+
+  herausgeber String?
+  gueltigSeit DateTime?
+  gueltigBis  DateTime?
+
+  dokumentUrl      String?
+  quelleUrl        String?
+  dokumentFileName String?
+  dokumentFileHref String?
+  dokumentName     String?
+
+  zustaendigkeit String?
+  kategorie      String?
+  abgeloestDurch String?
+
+  erfasserVorname   String?
+  erfasserNachname  String?
+  erfasserAbteilung String?
+
+  obsoletedAt    DateTime?
+  archivedAt     DateTime?
+  retentionUntil DateTime?
+
+  assignments DocumentLocationAssignment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([kuerzel])
+  @@index([themenfeld])
+  @@index([relevanz])
+  @@index([frist])
+}
+
+model DocumentLocationAssignment {
+  id String @id @default(cuid())
+
+  documentId String
+  document   RegisterDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  status  AssignmentStatus @default(ASSIGNED)
+  dueDate DateTime?
+
+  assignedByUserId String?
+  assignedByUser   User?   @relation("DocumentLocationAssignedBy", fields: [assignedByUserId], references: [id], onDelete: SetNull)
+
+  assessment LocationAssessment?
+  matrix     ComplianceMatrix?
+
+  assignedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([documentId, locationId])
+  @@index([documentId])
+  @@index([locationId, status])
+  @@index([assignedByUserId])
+  @@index([dueDate])
+}
+
+model LocationAssessment {
+  id String @id @default(cuid())
+
+  assignmentId String                     @unique
+  assignment   DocumentLocationAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  relevance AssessmentRelevance @default(UNASSESSED)
+
+  riskMode          String?
+  bewertungErgebnis String?
+  evaluationNote    String?
+
+  evaluationLikelihood Int?
+  evaluationImpact     Int?
+  evaluationScore      Int?
+  evaluationLevel      String?
+  evaluatedAt          DateTime?
+  evaluatedBy          String?
+
+  mitigationPlanned Boolean   @default(false)
+  mitigationAt      DateTime?
+
+  projektJson Json?
+
+  comment        String?
+  actionRequired Boolean @default(false)
+  actionSummary  String?
+
+  assessedByUserId String?
+  assessedByUser   User?   @relation("LocationAssessmentAssessedBy", fields: [assessedByUserId], references: [id], onDelete: SetNull)
+
+  assessedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([relevance])
+  @@index([actionRequired])
+  @@index([assessedByUserId])
+  @@index([evaluatedAt])
+}
+
+model ComplianceMatrix {
+  id String @id @default(cuid())
+
+  assignmentId String                     @unique
+  assignment   DocumentLocationAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  status MatrixStatus @default(DRAFT)
+
+  riskAggregationMode RiskAggregationMode @default(WORST_CASE)
+  riskScope           RiskScope           @default(NON_COMPLIANT)
+
+  clauses ComplianceMatrixClause[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model ComplianceMatrixClause {
+  id String @id @default(cuid())
+
+  matrixId String
+  matrix   ComplianceMatrix @relation(fields: [matrixId], references: [id], onDelete: Cascade)
+
+  refLevel1 String?
+  refLevel2 String?
+  refLevel3 String?
+
+  titleLevel1 String?
+  titleLevel2 String?
+  titleLevel3 String?
+
+  requirementText String?
+  evidenceNote    String?
+  comment         String?
+
+  status ComplianceClauseStatus @default(OPEN)
+
+  psoeLevel       PsoeLevel?
+  riskSeverity    Int?
+  riskProbability Int?
+
+  parentId String?
+  parent   ComplianceMatrixClause?  @relation("ComplianceMatrixClauseTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children ComplianceMatrixClause[] @relation("ComplianceMatrixClauseTree")
+
+  internalRefsJson Json?
+  legalRefsJson    Json?
+  processRefsJson  Json?
+  formRefsJson     Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([matrixId])
+  @@index([parentId])
+  @@index([status])
+}
+
+model UserLocationAccess {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  accessLevel LocationAccessLevel @default(READ)
+  isActive    Boolean             @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, locationId])
+  @@index([userId, accessLevel])
+  @@index([locationId, accessLevel])
+  @@index([isActive])
 }
