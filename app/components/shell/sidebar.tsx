@@ -13,13 +13,17 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
 };
 
-const NAV_ITEMS: NavItem[] = [
+const BASE_NAV_ITEMS: NavItem[] = [
   { href: '/',         key: 'home',     icon: Home },
   { href: '/register', key: 'register', icon: FileText },
   { href: '/matrix',   key: 'matrix',   icon: Grid3X3 },
   { href: '/reports',  key: 'reports',  icon: BarChart3 },
   { href: '/settings', key: 'settings', icon: Settings },
 ];
+
+const NAV_ITEMS: NavItem[] = BASE_NAV_ITEMS.filter(
+  (item) => item.key !== 'reports' || process.env.NODE_ENV === 'development'
+);
 
 export default function Sidebar() {
   const pathname = usePathname() || '/';
