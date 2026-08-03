@@ -329,7 +329,19 @@ const store: Store = {
       history,
     };
 
-    const next = [toInsert, ...stateRef.current.rows];
+    const existing = stateRef.current.rows.find((r) => r.id === toInsert.id);
+
+    const merged = existing
+      ? {
+          ...existing,
+          ...toInsert,
+          history: toInsert.history ?? existing.history,
+        }
+      : toInsert;
+
+    const withoutSameId = stateRef.current.rows.filter((r) => r.id !== toInsert.id);
+
+    const next = [merged, ...withoutSameId];
     stateRef.current = { rows: next, lastAddedId: toInsert.id };
     saveToLS(next);
     listeners.forEach((l) => l());

@@ -16,6 +16,7 @@ type Props = {
   role: UiRole;
   onOpen?: (row: LawRow) => void;
   onRemove?: (row: LawRow) => void;
+  assignmentLabelsByDocumentId?: Record<string, string[]>;
   /** Druckfunktion aus page.tsx (neues Layout) */
   onPrint?: () => void;
 };
@@ -214,7 +215,7 @@ function InfoModal({ onClose }: { onClose: () => void }) {
 
 /* ---------- Hauptkomponente ---------- */
 
-export default function Registerview({ role, onOpen, onRemove, onPrint }: Props) {
+export default function Registerview({ role, onOpen, onRemove, onPrint, assignmentLabelsByDocumentId = {} }: Props) {
   const { rows } = useRegisterStore();
   const { language } = useLanguage();
   const uiLang: Lang = language === 'en' ? 'en' : 'de';
@@ -308,6 +309,19 @@ export default function Registerview({ role, onOpen, onRemove, onPrint }: Props)
       }),
     [rows, filters, renderErfasser]
   );
+
+  const visibleRows: LawRow[] = useMemo(() => {
+    const seen = new Set<string>();
+    const result: LawRow[] = [];
+
+    for (const row of filteredRows) {
+      if (!row.id || seen.has(row.id)) continue;
+      seen.add(row.id);
+      result.push(row);
+    }
+
+    return result;
+  }, [filteredRows]);
 
   const hasActiveFilter =
     filters.themenfeld !== 'alle' ||
@@ -624,17 +638,18 @@ export default function Registerview({ role, onOpen, onRemove, onPrint }: Props)
               <th className={th}>{uiLang === 'de' ? 'Frist' : 'Due date'}</th>
               <th className={th}>{uiLang === 'de' ? 'Relevanz' : 'Relevance'}</th>
               <th className={th}>{uiLang === 'de' ? 'Status' : 'Status'}</th>
+              <th className={th}>{uiLang === 'de' ? 'Standorte' : 'Locations'}</th>
               <th className={th}>{uiLang === 'de' ? 'Erfassung durch' : 'Captured by'}</th>
               {isAdmin && <th className={th}>{uiLang === 'de' ? 'Aktionen' : 'Actions'}</th>}
             </tr>
           </thead>
 
           <tbody>
-            {filteredRows.length === 0 ? (
+            {visibleRows.length === 0 ? (
               <tr>
                 <td
                   className="px-4 py-6 text-center text-slate-500 dark:text-slate-300"
-                  colSpan={isAdmin ? 10 : 9}
+                  colSpan={isAdmin ? 11 : 10}
                 >
                   {uiLang === 'de'
                     ? 'Keine Einträge für die aktuelle Filterung gefunden.'
@@ -642,7 +657,7 @@ export default function Registerview({ role, onOpen, onRemove, onPrint }: Props)
                 </td>
               </tr>
             ) : (
-              filteredRows.map((r) => (
+              visibleRows.map((r) => (
                 <tr
                   key={r.id}
                   className="border-t border-slate-100 hover:bg-slate-50/50 dark:border-slate-700 dark:hover:bg-slate-800"
@@ -660,6 +675,24 @@ export default function Registerview({ role, onOpen, onRemove, onPrint }: Props)
                   <td className={td}>{r.frist || '—'}</td>
                   <td className={td}>{relChip(r.relevanz, uiLang)}</td>
                   <td className={td}>{statChip(r.status, uiLang, isDark)}</td>
+                  <td className={td}>
+                    {(assignmentLabelsByDocumentId[r.id] ?? []).length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {(assignmentLabelsByDocumentId[r.id] ?? []).map((label) => (
+                          <span
+                            key={label}
+                            className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200"
+                          >
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-400">
+                        {uiLang === 'de' ? 'Nicht zugewiesen' : 'Not assigned'}
+                      </span>
+                    )}
+                  </td>
                   <td className={td}>{renderErfasser(r)}</td>
 
                   {isAdmin && (

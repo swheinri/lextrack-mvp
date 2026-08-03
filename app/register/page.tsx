@@ -5,6 +5,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Eingabeform from './eingabeform';
 import { useRegisterStore, LawRow, type Status, normalizeStatus } from './registerstore';
 import { fetchRegisterDocuments } from './register-api';
+import { fetchDocumentLocationAssignments } from './location-assignment-api';
 import EditorPanel from './editorpanel';
 import Registerview from './registerview';
 import { Info } from 'lucide-react';
@@ -300,6 +301,51 @@ export default function Page() {
     };
     // bewusst nur beim ?ffnen laden; der bestehende LocalStorage-Store bleibt vorerst Rueckfall
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const [assignmentLabelsByDocumentId, setAssignmentLabelsByDocumentId] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAssignments() {
+      try {
+        const assignments = await fetchDocumentLocationAssignments();
+
+        if (cancelled) return;
+
+        const next: Record<string, string[]> = {};
+
+        for (const assignment of assignments) {
+          const documentId = assignment.document?.id || assignment.documentId;
+          const label =
+            assignment.location?.kuerzel ||
+            assignment.location?.name ||
+            assignment.locationId;
+
+          if (!documentId || !label) continue;
+
+          if (!next[documentId]) next[documentId] = [];
+          if (!next[documentId].includes(label)) next[documentId].push(label);
+        }
+
+        for (const key of Object.keys(next)) {
+          next[key].sort((a, b) => a.localeCompare(b, 'de'));
+        }
+
+        setAssignmentLabelsByDocumentId(next);
+      } catch {
+        if (!cancelled) {
+          setAssignmentLabelsByDocumentId({});
+        }
+      }
+    }
+
+    loadAssignments();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const current = useMemo(() => rows.find((r) => r.id === editId) ?? null, [rows, editId]);
@@ -623,7 +669,7 @@ export default function Page() {
           {isDe ? 'Compliance Kataster' : 'Compliance register'}
         </div>
 
-        <Registerview role={role} onOpen={openFromRegisterView} onRemove={removeFromRegisterView} onPrint={handlePrintRegister} />
+        <Registerview role={role} onOpen={openFromRegisterView} onRemove={removeFromRegisterView} onPrint={handlePrintRegister} assignmentLabelsByDocumentId={assignmentLabelsByDocumentId} />
       </div>
 
       {/* Editor */}
