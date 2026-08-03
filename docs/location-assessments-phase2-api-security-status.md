@@ -266,3 +266,142 @@ Ziel:
 - Matrix darf nicht mehr global an lawId haengen
 - Matrix muss an assignmentId haengen
 ```
+
+
+---
+
+## 8. Nachtrag: Compliance Matrix und Clauses
+
+Stand: 2026-08-03
+
+Nach der Zwischendokumentation wurden zwei weitere API-Bausteine umgesetzt und getestet.
+
+### 8.1 Compliance Matrix API
+
+Datei:
+
+```txt
+app/api/compliance-matrices/route.ts
+```
+
+Umgesetzt:
+
+```txt
+GET  /api/compliance-matrices
+POST /api/compliance-matrices
+```
+
+Sicherheitslogik:
+
+```txt
+- Matrix haengt an DocumentLocationAssignment.assignmentId.
+- Zugriff wird ueber assignment.locationId geprueft.
+- READ darf Matrix lesen.
+- Access Level CONTRIBUTE, RESPONSIBLE und zentrale Rollen duerfen Matrix erstellen/bearbeiten.
+- Standortrollen koennen keine Matrix fuer fremde oder nur lesbare Standorte schreiben.
+```
+
+Nachgewiesener Testfall:
+
+```txt
+REQUIREMENT_ENGINEER:
+FRA = RESPONSIBLE -> Matrix erstellen erlaubt
+MUC = READ        -> Matrix erstellen verboten
+```
+
+Testergebnis:
+
+```txt
+FRA matrix write result: 200 / success true
+MUC matrix write result: 403 / Forbidden / requiredAccess CONTRIBUTE
+```
+
+Datenbankpruefung:
+
+```txt
+TEST-PHASE2-001 -> FRA -> ComplianceMatrix vorhanden
+TEST-PHASE2-001 -> MUC -> keine durch REQUIREMENT_ENGINEER geschriebene Matrix
+```
+
+### 8.2 Compliance Matrix Clauses API
+
+Datei:
+
+```txt
+app/api/compliance-matrix-clauses/route.ts
+```
+
+Umgesetzt:
+
+```txt
+GET  /api/compliance-matrix-clauses
+POST /api/compliance-matrix-clauses
+```
+
+Sicherheitslogik:
+
+```txt
+- Clause haengt an ComplianceMatrix.
+- ComplianceMatrix haengt an DocumentLocationAssignment.
+- Zugriff wird ueber matrix.assignment.locationId geprueft.
+- READ darf Clauses lesen.
+- Access Level CONTRIBUTE, RESPONSIBLE und zentrale Rollen duerfen Clauses anlegen/bearbeiten.
+- Parent-Clauses muessen zur selben Matrix gehoeren.
+```
+
+Nachgewiesener Testfall:
+
+```txt
+REQUIREMENT_ENGINEER:
+FRA = RESPONSIBLE -> Clause anlegen erlaubt
+MUC = READ        -> Clause anlegen verboten
+```
+
+Testergebnis:
+
+```txt
+FRA clause write result: 200 / success true
+MUC clause write result: 403 / Forbidden / requiredAccess CONTRIBUTE
+```
+
+Datenbankpruefung:
+
+```txt
+Eine Clause vorhanden:
+TEST-PHASE2-001 -> FRA -> Testanforderung FRA
+
+Keine Clause fuer MUC.
+```
+
+### 8.3 Aktueller Phase-2-Status
+
+Phase 2 ist fachlich weitgehend umgesetzt.
+
+Erledigt:
+
+```txt
+- Standortzugriff serverseitig
+- zentrale Rollenlogik
+- UserLocationAccess
+- RegisterDocument API
+- DocumentLocationAssignment API
+- LocationAssessment API
+- ComplianceMatrix API
+- ComplianceMatrixClause API
+- Schreibschutz READ vs RESPONSIBLE nachgewiesen
+- Datenbankpruefung fuer Matrix und Clauses nachgewiesen
+```
+
+Bewertung:
+
+```txt
+Phase 2 Status: ca. 90-95 %
+```
+
+Noch offen fuer einen vollstaendigen Abschluss:
+
+```txt
+- finaler Lesetest fuer Matrix und Clauses aus Standortrollensicht
+- optional: DELETE/Archivierungslogik fuer Clauses spaeter bewusst entscheiden
+- Abschlussdokumentation nach finalem Lesetest aktualisieren
+```
