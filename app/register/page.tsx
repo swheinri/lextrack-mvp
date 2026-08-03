@@ -1,9 +1,10 @@
 // app/register/page.tsx
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Eingabeform from './eingabeform';
 import { useRegisterStore, LawRow, type Status, normalizeStatus } from './registerstore';
+import { fetchRegisterDocuments } from './register-api';
 import EditorPanel from './editorpanel';
 import Registerview from './registerview';
 import { Info } from 'lucide-react';
@@ -236,7 +237,7 @@ type MatrixDocLite = { lawId?: string | null };
 type MatrixStoreLite = { docs?: MatrixDocLite[] };
 
 export default function Page() {
-  const { rows, remove, update } = useRegisterStore();
+  const { rows, add, remove, update } = useRegisterStore();
 
   const matrixStore = useMatrixStore() as unknown as MatrixStoreLite;
   const docs = matrixStore.docs ?? [];
@@ -253,6 +254,53 @@ export default function Page() {
   const [rowToDelete, setRowToDelete] = useState<LawRow | null>(null);
   const [blockedRow, setBlockedRow] = useState<LawRow | null>(null);
   const [blockedReasons, setBlockedReasons] = useState<string[]>([]);
+
+  const [apiLoadState, setApiLoadState] = useState<'idle' | 'loading' | 'loaded' | 'fallback'>('idle');
+  const [apiLoadMessage, setApiLoadMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadApiDocuments() {
+      setApiLoadState('loading');
+      setApiLoadMessage(null);
+
+      try {
+        const apiRows = await fetchRegisterDocuments();
+
+        if (cancelled) return;
+
+        for (const apiRow of apiRows) {
+          const existing = rows.find((row) => row.id === apiRow.id);
+
+          if (existing) {
+            update(apiRow.id, apiRow);
+          } else {
+            add(apiRow);
+          }
+        }
+
+        setApiLoadState('loaded');
+      } catch (error) {
+        if (cancelled) return;
+
+        setApiLoadState('fallback');
+        setApiLoadMessage(
+          error instanceof Error
+            ? error.message
+            : 'Registerdaten konnten nicht aus der API geladen werden.'
+        );
+      }
+    }
+
+    loadApiDocuments();
+
+    return () => {
+      cancelled = true;
+    };
+    // bewusst nur beim ?ffnen laden; der bestehende LocalStorage-Store bleibt vorerst Rueckfall
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const current = useMemo(() => rows.find((r) => r.id === editId) ?? null, [rows, editId]);
 
