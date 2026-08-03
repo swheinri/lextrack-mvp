@@ -405,3 +405,67 @@ Noch offen fuer einen vollstaendigen Abschluss:
 - optional: DELETE/Archivierungslogik fuer Clauses spaeter bewusst entscheiden
 - Abschlussdokumentation nach finalem Lesetest aktualisieren
 ```
+
+
+---
+
+## 9. Finaler Lesetest und Abschluss Phase 2
+
+Stand: 2026-08-03
+
+Nach Umsetzung der Matrix- und Clause-APIs wurde ein finaler Lesetest aus Sicht einer Standortrolle durchgefuehrt.
+
+Testrolle:
+
+```txt
+REQUIREMENT_ENGINEER
+FRA = RESPONSIBLE
+MUC = READ
+```
+
+Getestete Endpunkte:
+
+```txt
+GET /api/compliance-matrices
+GET /api/compliance-matrix-clauses
+```
+
+Testergebnis:
+
+```txt
+Matrices read status: 200
+Clauses read status: 200
+accessScope: LIMITED
+allowedLocationIds: FRA + MUC
+Relevant matrices: 2
+Relevant clauses: 1
+```
+
+Bewertung:
+
+```txt
+- Standortrolle kann Matrizen fuer freigegebene Standorte lesen.
+- Standortrolle kann Clauses fuer freigegebene Standorte lesen.
+- MUC ist lesbar, weil READ vorhanden ist.
+- Schreiben bleibt durch requiredAccess CONTRIBUTE geschuetzt.
+- FRA RESPONSIBLE darf schreiben.
+- MUC READ darf nicht schreiben.
+```
+
+Phase-2-Abschluss:
+
+```txt
+Phase 2 ist fuer den Backend-/API-Schutz fachlich abgeschlossen.
+
+Die zentrale Sicherheitsregel ist umgesetzt und nachgewiesen:
+
+Ein Standort darf nur fuer die Dokumente eine Compliance Matrix anlegen oder bearbeiten,
+die diesem Standort zur Bewertung zugewiesen wurden und fuer die der Nutzer ausreichende
+Schreibrechte besitzt.
+```
+
+Naechster Schritt:
+
+```txt
+Phase 3: Kataster UI / Standort-Zuweisung
+```
