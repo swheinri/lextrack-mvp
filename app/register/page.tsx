@@ -4,7 +4,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Eingabeform from './eingabeform';
 import { useRegisterStore, LawRow, type Status, normalizeStatus } from './registerstore';
-import { createRegisterDocument, fetchRegisterDocuments } from './register-api';
+import { createRegisterDocument, fetchRegisterDocuments, updateRegisterDocument } from './register-api';
 import { fetchDocumentLocationAssignments, fetchLocationOptions, saveDocumentLocationAssignments, type LocationOption } from './location-assignment-api';
 import EditorPanel from './editorpanel';
 import Registerview from './registerview';
@@ -258,6 +258,7 @@ export default function Page() {
 
   const [apiLoadState, setApiLoadState] = useState<'idle' | 'loading' | 'loaded' | 'fallback'>('idle');
   const [apiLoadMessage, setApiLoadMessage] = useState<string | null>(null);
+  const [apiRegisterDocumentIds, setApiRegisterDocumentIds] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -270,6 +271,8 @@ export default function Page() {
         const apiRows = await fetchRegisterDocuments();
 
         if (cancelled) return;
+
+        setApiRegisterDocumentIds(apiRows.map((row) => row.id));
 
         for (const apiRow of apiRows) {
           const existing = rows.find((row) => row.id === apiRow.id);
@@ -436,6 +439,10 @@ export default function Page() {
         // Es wird zuerst als echtes RegisterDocument gespeichert.
         persistedRow = await createRegisterDocument(locationDialogRow);
 
+        setApiRegisterDocumentIds((currentIds) =>
+          currentIds.includes(persistedRow.id) ? currentIds : [...currentIds, persistedRow.id]
+        );
+
         // Lokalen Store auf die echte Datenbank-ID umstellen.
         update(locationDialogRow.id, persistedRow);
 
@@ -479,13 +486,13 @@ export default function Page() {
 
   const current = useMemo(() => rows.find((r) => r.id === editId) ?? null, [rows, editId]);
 
-  const handleSave = (id: string, patch: Partial<LawRow>) => {
+  const handleSave = async (id: string, patch: Partial<LawRow>) => {
     const before = rows.find((r) => r.id === id);
     if (!before) return;
 
     const patched: Partial<LawRow> = { ...patch };
 
-    // Dokumentenart => legacy rechtsart spiegeln (damit ältere Anzeige/Exports stabil bleiben)
+    // Dokumentenart => legacy rechtsart spiegeln
     if (Object.prototype.hasOwnProperty.call(patched, 'dokumentenart')) {
       const dt = (patched as any).dokumentenart;
       (patched as any).rechtsart = dt ?? undefined;
@@ -499,7 +506,46 @@ export default function Page() {
     const baseHistory = ensureCreationEntry(before.history, before);
     const nextHistory = changeEntries.length > 0 ? [...baseHistory, ...changeEntries] : baseHistory;
 
-    update(id, { ...restPatch, history: nextHistory });
+    try {
+      let persistedRow: LawRow;
+
+      if (apiRegisterDocumentIds.includes(id)) {
+        persistedRow = await updateRegisterDocument(id, restPatch);
+      } else {
+        const rowToCreate: LawRow = {
+          ...before,
+          ...restPatch,
+          history: nextHistory,
+        };
+
+        persistedRow = await createRegisterDocument(rowToCreate);
+
+        setApiRegisterDocumentIds((currentIds) =>
+          currentIds.includes(persistedRow.id)
+            ? currentIds
+            : [...currentIds, persistedRow.id]
+        );
+      }
+
+      update(id, {
+        ...persistedRow,
+        history: nextHistory,
+      });
+
+      if (persistedRow.id !== id) {
+        setEditId(persistedRow.id);
+      }
+
+      setApiLoadMessage(null);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Dokument konnte nicht gespeichert werden.';
+
+      setApiLoadMessage(message);
+      console.error(message, error);
+    }
   };
 
   const openFromRegisterView = (row: LawRow) => setEditId(row.id);
