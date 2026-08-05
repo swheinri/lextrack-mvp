@@ -211,16 +211,6 @@ export async function POST(req: Request) {
     return jsonError('documentId ist ein Pflichtfeld.', 400);
   }
 
-  if (locationIds.length === 0) {
-    return jsonError('Mindestens ein Standort muss angegeben werden.', 400, {
-      expectedShape: {
-        documentId: 'string',
-        locationIds: ['string'],
-        dueDate: 'optional ISO date',
-      },
-    });
-  }
-
   if (!dueDate.ok) {
     return jsonError('Ungueltiges Datum.', 400, {
       field: dueDate.field,
@@ -266,44 +256,127 @@ export async function POST(req: Request) {
   }
 
   const assignments = await prisma.$transaction(async (tx) => {
-    await Promise.all(
-      locationIds.map((locationId) =>
-        tx.documentLocationAssignment.upsert({
-          where: {
-            documentId_locationId: {
+    const existingAssignments = await tx.documentLocationAssignment.findMany({
+      where: {
+        documentId,
+      },
+      include: {
+        assessment: {
+          select: {
+            id: true,
+          },
+        },
+        matrix: {
+          select: {
+            id: true,
+          },
+        },
+        location: {
+          select: {
+            id: true,
+            kuerzel: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    const desiredLocationIds = new Set(locationIds);
+    const assignmentsToRemove = existingAssignments.filter(
+      (assignment) => !desiredLocationIds.has(assignment.locationId)
+    );
+
+    const blockedRemovals = assignmentsToRemove
+      .filter((assignment) => assignment.assessment || assignment.matrix)
+      .map((assignment) => ({
+        assignmentId: assignment.id,
+        locationId: assignment.locationId,
+        locationLabel:
+          assignment.location.kuerzel ||
+          assignment.location.name ||
+          assignment.location.id,
+        hasAssessment: Boolean(assignment.assessment),
+        hasMatrix: Boolean(assignment.matrix),
+      }));
+
+    if (blockedRemovals.length > 0) {
+      throw new Error(
+        'BLOCKED_ASSIGNMENT_REMOVAL:' + JSON.stringify(blockedRemovals)
+      );
+    }
+
+    if (assignmentsToRemove.length > 0) {
+      await tx.documentLocationAssignment.deleteMany({
+        where: {
+          id: {
+            in: assignmentsToRemove.map((assignment) => assignment.id),
+          },
+        },
+      });
+    }
+
+    if (locationIds.length > 0) {
+      await Promise.all(
+        locationIds.map((locationId) =>
+          tx.documentLocationAssignment.upsert({
+            where: {
+              documentId_locationId: {
+                documentId,
+                locationId,
+              },
+            },
+            create: {
               documentId,
               locationId,
+              status,
+              dueDate: dueDate.value,
+              assignedByUserId: auth.user.id,
             },
-          },
-          create: {
-            documentId,
-            locationId,
-            status,
-            dueDate: dueDate.value,
-            assignedByUserId: auth.user.id,
-          },
-          update: {
-            status,
-            dueDate: dueDate.value,
-            assignedByUserId: auth.user.id,
-          },
-        })
-      )
-    );
+            update: {
+              status,
+              dueDate: dueDate.value,
+              assignedByUserId: auth.user.id,
+            },
+          })
+        )
+      );
+    }
 
     return tx.documentLocationAssignment.findMany({
       where: {
         documentId,
-        locationId: {
-          in: locationIds,
-        },
       },
       orderBy: {
         assignedAt: 'desc',
       },
       include: assignmentInclude,
     });
+  }).catch((error) => {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (message.startsWith('BLOCKED_ASSIGNMENT_REMOVAL:')) {
+      const blockedAssignments = JSON.parse(
+        message.replace('BLOCKED_ASSIGNMENT_REMOVAL:', '')
+      );
+
+      return {
+        blocked: true as const,
+        blockedAssignments,
+      };
+    }
+
+    throw error;
   });
+
+  if (!Array.isArray(assignments) && assignments.blocked) {
+    return jsonError(
+      'Standortzuweisung kann nicht entfernt werden, weil bereits eine Bewertung oder Compliance Matrix existiert.',
+      409,
+      {
+        blockedAssignments: assignments.blockedAssignments,
+      }
+    );
+  }
 
   return NextResponse.json(
     {
