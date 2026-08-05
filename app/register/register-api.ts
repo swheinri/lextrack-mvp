@@ -119,6 +119,28 @@ export function lawRowToCreatePayload(row: LawRow) {
   };
 }
 
+export function lawRowToUpdatePayload(row: Partial<LawRow>) {
+  const payload: Record<string, unknown> = {};
+
+  if (row.kuerzel !== undefined) payload.kuerzel = row.kuerzel;
+  if (row.bezeichnung !== undefined) payload.bezeichnung = row.bezeichnung;
+  if (row.themenfeld !== undefined) payload.themenfeld = row.themenfeld;
+  if (row.rechtsart !== undefined || row.dokumentenart !== undefined) {
+    payload.rechtsart = row.rechtsart ?? row.dokumentenart;
+  }
+  if (row.relevanz !== undefined) payload.relevanz = row.relevanz;
+  if (row.status !== undefined) payload.status = uiStatusToApiStatus(row.status);
+  if (row.herausgeber !== undefined) payload.herausgeber = row.herausgeber;
+  if (row.gueltigSeit !== undefined) payload.gueltigSeit = row.gueltigSeit;
+  if (row.gueltigBis !== undefined) payload.gueltigBis = row.gueltigBis;
+  if (row.publiziert !== undefined) payload.publiziert = row.publiziert;
+  if (row.frist !== undefined) payload.frist = row.frist;
+  if (row.dokumentUrl !== undefined) payload.dokumentUrl = row.dokumentUrl;
+  if (row.quelleUrl !== undefined) payload.quelleUrl = row.quelleUrl;
+
+  return payload;
+}
+
 export async function fetchRegisterDocuments(): Promise<LawRow[]> {
   const response = await fetch('/api/register-documents', {
     credentials: 'include',
@@ -147,6 +169,26 @@ export async function createRegisterDocument(row: LawRow): Promise<LawRow> {
 
   if (!response.ok || !data.success) {
     throw new Error(data.message ?? 'Registerdokument konnte nicht angelegt werden.');
+  }
+
+  return apiDocumentToLawRow(data.document);
+}
+
+
+export async function updateRegisterDocument(id: string, patch: Partial<LawRow>): Promise<LawRow> {
+  const response = await fetch(`/api/register-documents/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(lawRowToUpdatePayload(patch)),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !data.success) {
+    throw new Error(data.message ?? 'Registerdokument konnte nicht aktualisiert werden.');
   }
 
   return apiDocumentToLawRow(data.document);
