@@ -398,20 +398,11 @@ export default function Page() {
   };
 
   const toggleLocationSelection = (locationId: string) => {
-    const existingIds = locationDialogRow
-      ? assignmentLocationIdsByDocumentId[locationDialogRow.id] ?? []
-      : [];
-
-    setSelectedLocationIds((currentIds) => {
-      if (currentIds.includes(locationId)) {
-        // Bereits gespeicherte Zuweisungen werden in dieser Phase noch nicht entfernt.
-        if (existingIds.includes(locationId)) return currentIds;
-
-        return currentIds.filter((id) => id !== locationId);
-      }
-
-      return [...currentIds, locationId];
-    });
+    setSelectedLocationIds((currentIds) =>
+      currentIds.includes(locationId)
+        ? currentIds.filter((id) => id !== locationId)
+        : [...currentIds, locationId]
+    );
   };
 
   const saveLocationAssignmentDialog = async () => {
@@ -857,7 +848,7 @@ export default function Page() {
               <div>
                 <h3 className="text-lg font-semibold text-slate-900">Standorte zuweisen</h3>
                 <p className="mt-1 text-sm text-slate-600">
-                  {locationDialogRow.kuerzel} ? {locationDialogRow.bezeichnung}
+                  {locationDialogRow.kuerzel} - {locationDialogRow.bezeichnung}
                 </p>
               </div>
 
@@ -866,13 +857,13 @@ export default function Page() {
                 onClick={closeLocationAssignmentDialog}
                 className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
               >
-                Schlie?en
+                Schliessen
               </button>
             </div>
 
             <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Hinweis: Bestehende Zuweisungen k?nnen in dieser Version noch nicht entfernt werden.
-              Neue Standorte k?nnen hinzugef?gt und gespeichert werden.
+              Hinweis: Standortzuweisungen koennen durch An- und Abwahl angepasst werden.
+              Entfernen wird serverseitig blockiert, wenn bereits eine Bewertung oder Compliance Matrix existiert.
             </div>
 
             <div className="mt-4 grid max-h-80 grid-cols-1 gap-2 overflow-auto sm:grid-cols-2">
@@ -889,8 +880,7 @@ export default function Page() {
                       : false;
 
                   const labelClassName =
-                    "flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50 " +
-                    (alreadyAssigned ? "cursor-not-allowed opacity-75" : "cursor-pointer");
+                    "flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50";
 
                   return (
                     <label
@@ -900,7 +890,6 @@ export default function Page() {
                       <input
                         type="checkbox"
                         checked={checked}
-                        disabled={alreadyAssigned}
                         onChange={() => toggleLocationSelection(location.id)}
                         className="h-4 w-4"
                       />
@@ -913,7 +902,7 @@ export default function Page() {
 
                       {alreadyAssigned && (
                         <span className="ml-auto rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
-                          bereits zugewiesen
+                          aktuell zugewiesen
                         </span>
                       )}
                     </label>
@@ -941,7 +930,7 @@ export default function Page() {
               <button
                 type="button"
                 onClick={saveLocationAssignmentDialog}
-                disabled={isSavingLocationAssignments || selectedLocationIds.length === 0}
+                disabled={isSavingLocationAssignments}
                 className="rounded-lg bg-[#009A93] px-4 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60"
               >
                 {isSavingLocationAssignments ? 'Speichern ...' : 'Zuweisung speichern'}
