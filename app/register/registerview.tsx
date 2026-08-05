@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Info, Filter as FilterIcon, Trash2 } from 'lucide-react';
+import { Info, Filter as FilterIcon, MapPin, Trash2 } from 'lucide-react';
 import { useRegisterStore, LawRow, Relevanz, Status } from './registerstore';
 import RegisterExportMenu from './register-export-menu';
 import { useLanguage } from '../components/i18n/language';
@@ -17,6 +17,7 @@ type Props = {
   onOpen?: (row: LawRow) => void;
   onRemove?: (row: LawRow) => void;
   assignmentLabelsByDocumentId?: Record<string, string[]>;
+  onAssignLocations?: (row: LawRow) => void;
   /** Druckfunktion aus page.tsx (neues Layout) */
   onPrint?: () => void;
 };
@@ -215,7 +216,7 @@ function InfoModal({ onClose }: { onClose: () => void }) {
 
 /* ---------- Hauptkomponente ---------- */
 
-export default function Registerview({ role, onOpen, onRemove, onPrint, assignmentLabelsByDocumentId = {} }: Props) {
+export default function Registerview({ role, onOpen, onRemove, onPrint, assignmentLabelsByDocumentId = {}, onAssignLocations }: Props) {
   const { rows } = useRegisterStore();
   const { language } = useLanguage();
   const uiLang: Lang = language === 'en' ? 'en' : 'de';
@@ -697,6 +698,13 @@ export default function Registerview({ role, onOpen, onRemove, onPrint, assignme
 
                   {isAdmin && (
                     <td className={`${td} text-right`}>
+                      <button
+                        className="mr-1 inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 hover:border-[#009A93]/30 hover:bg-[#009A93]/5 hover:text-[#009A93]"
+                        title={uiLang === 'de' ? 'Standorte zuweisen' : 'Assign locations'}
+                        onClick={() => onAssignLocations?.(r)}
+                      >
+                        <MapPin size={14} />
+                      </button>
                       <button
                         className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
                         title={uiLang === 'de' ? 'Eintrag entfernen' : 'Remove entry'}
